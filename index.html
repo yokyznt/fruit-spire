@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Spire - Roguelike Deckbuilder</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Screen: Main Menu -->
+        <div id="screen-main-menu" class="screen active">
+            <div class="menu-content">
+                <h1 class="game-title">🍎 FRUIT SPIRE</h1>
+                <div class="menu-buttons">
+                    <button id="btn-continue" onclick="loadGame()">Continuar Partida</button>
+                    <button onclick="showCharacterSelect()">Nueva Partida</button>
+                    <button onclick="showCollection()">Colección de Cartas</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: Character Selection -->
+        <div id="screen-char-select" class="screen">
+            <div class="menu-content">
+                <h2>Elige tu Fruta</h2>
+                <div class="char-grid">
+                    <div class="char-card" onclick="selectCharacter('manzana')">
+                        <div class="char-icon">🍎</div>
+                        <h3>Manzana</h3>
+                        <p>Pasiva: Se cura 5 PV al finalizar un combate.</p>
+                    </div>
+                    <div class="char-card" onclick="selectCharacter('platanin')">
+                        <div class="char-icon">🍌</div>
+                        <h3>Platanin</h3>
+                        <p>Pasiva: +1 Bloqueo adicional por cada carta de defensa jugada.</p>
+                    </div>
+                    <div class="char-card" onclick="selectCharacter('kiwi')">
+                        <div class="char-icon">🥝</div>
+                        <h3>Kiwi</h3>
+                        <p>Pasiva: Refleja 2 de daño al enemigo cuando recibe daño.</p>
+                    </div>
+                </div>
+                <button class="btn-back" onclick="showMainMenu()">Volver</button>
+            </div>
+        </div>
+
+        <!-- Screen: Collection -->
+        <div id="screen-collection" class="screen">
+            <div class="menu-content">
+                <h2>Colección de Cartas</h2>
+                <div id="collection-grid" class="collection-grid">
+                    <!-- Cartas descubiertas se insertan aquí -->
+                </div>
+                <button class="btn-back" onclick="showMainMenu()">Volver</button>
+            </div>
+        </div>
+
+        <!-- The main app container for Map/Combat/Events -->
+        <div id="app"></div>
+    </div>
+
+    <!-- Datos del juego -->
+    <script src="js/data/cards.js"></script>
+    <script src="js/data/starter.js"></script>
+    <script src="js/data/enemies.js"></script>
+    <script src="js/data/relics.js"></script>
+    <script src="js/data/events.js"></script>
+
+    <!-- Motor del juego -->
+    <script src="js/engine/entities.js"></script>
+    <script src="js/engine/combat.js"></script>
+    <script src="js/engine/map.js"></script>
+
+    <!-- Controlador principal -->
+    <script src="js/game.js"></script>
+</body>
+</html>
