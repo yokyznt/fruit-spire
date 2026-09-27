@@ -1,78 +1,44 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fruit Spire - Roguelike Deckbuilder</title>
-    <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fruit Spire</title>
+<link rel="stylesheet" href="css/style.css?v=47">
 </head>
 <body>
-    <div id="game-container">
-        <!-- Screen: Main Menu -->
-        <div id="screen-main-menu" class="screen active">
-            <div class="menu-content">
-                <h1 class="game-title">🍎 FRUIT SPIRE</h1>
-                <div class="menu-buttons">
-                    <button id="btn-continue" onclick="loadGame()">Continuar Partida</button>
-                    <button onclick="showCharacterSelect()">Nueva Partida</button>
-                    <button onclick="showCollection()">Colección de Cartas</button>
-                </div>
-            </div>
-        </div>
+<div id="app"></div>
 
-        <!-- Screen: Character Selection -->
-        <div id="screen-char-select" class="screen">
-            <div class="menu-content">
-                <h2>Elige tu Fruta</h2>
-                <div class="char-grid">
-                    <div class="char-card" onclick="selectCharacter('manzana')">
-                        <div class="char-icon">🍎</div>
-                        <h3>Manzana</h3>
-                        <p>Pasiva: Se cura 5 PV al finalizar un combate.</p>
-                    </div>
-                    <div class="char-card" onclick="selectCharacter('platanin')">
-                        <div class="char-icon">🍌</div>
-                        <h3>Platanin</h3>
-                        <p>Pasiva: +1 Bloqueo adicional por cada carta de defensa jugada.</p>
-                    </div>
-                    <div class="char-card" onclick="selectCharacter('kiwi')">
-                        <div class="char-icon">🥝</div>
-                        <h3>Kiwi</h3>
-                        <p>Pasiva: Refleja 2 de daño al enemigo cuando recibe daño.</p>
-                    </div>
-                </div>
-                <button class="btn-back" onclick="showMainMenu()">Volver</button>
-            </div>
-        </div>
+<!-- Datos del juego: agrega/edita estados, cartas, enemigos, reliquias y eventos aquí -->
+<script src="js/data/statuses.js?v=47"></script>
+<script src="js/data/seeds.js?v=47"></script>
+    <script src="js/data/sprouts.js?v=47"></script>
+<script src="js/data/cards.js?v=47"></script>
+<script src="js/data/cards_characters.js?v=47"></script>
+<script src="js/data/starter.js?v=47"></script>
+<script src="js/data/enemies.js?v=47"></script>
+<script src="js/data/enemies_extra.js?v=47"></script>
+<script src="js/data/relics.js?v=47"></script>
+<script src="js/data/events.js?v=47"></script>
+<script src="js/data/characters.js?v=47"></script>
+<script src="js/data/difficulty.js?v=47"></script>
+<script src="js/data/cosmetics.js?v=47"></script>
 
-        <!-- Screen: Collection -->
-        <div id="screen-collection" class="screen">
-            <div class="menu-content">
-                <h2>Colección de Cartas</h2>
-                <div id="collection-grid" class="collection-grid">
-                    <!-- Cartas descubiertas se insertan aquí -->
-                </div>
-                <button class="btn-back" onclick="showMainMenu()">Volver</button>
-            </div>
-        </div>
+<!-- Arte: sprites SVG propios (estilo libro de stickers) -->
+<script src="js/art/sprites.js?v=47"></script>
+<script src="js/art/sprites2.js?v=47"></script>
+<script src="js/art/sprites3.js?v=47"></script>
+<script src="js/art/sprites4.js?v=47"></script>
 
-        <!-- The main app container for Map/Combat/Events -->
-        <div id="app"></div>
-    </div>
+<!-- Motor del juego: lógica pura -->
+<script src="js/engine/entities.js?v=47"></script>
+<script src="js/engine/combat.js?v=47"></script>
+<script src="js/engine/map.js?v=47"></script>
 
-    <!-- Datos del juego -->
-    <script src="js/data/cards.js"></script>
-    <script src="js/data/starter.js"></script>
-    <script src="js/data/enemies.js"></script>
-    <script src="js/data/relics.js"></script>
-    <script src="js/data/events.js"></script>
-
-    <!-- Motor del juego -->
-    <script src="js/engine/entities.js"></script>
-    <script src="js/engine/combat.js"></script>
-    <script src="js/engine/map.js"></script>
-
-    <!-- Controlador principal -->
-    <script src="js/game.js"></script>
+<!-- Flujo, efectos y pantallas -->
+<script src="js/game.js?v=47"></script>
+<script src="js/fx.js?v=47"></script>
+<script src="js/render.js?v=47"></script>
+<script src="js/tutorial.js?v=47"></script>
 </body>
 </html>

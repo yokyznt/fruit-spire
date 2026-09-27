@@ -4,104 +4,156 @@
 //
 // Campos:
 //   id, title, icon, desc
-//   options: arreglo de { text, effect(player, game) }
+//   acts: en qué niveles puede salir (opcional, por defecto en todos)
+//   options: arreglo de { text, effect(player, g), locked(player) }
+//     locked devuelve un texto si la opción no se puede elegir.
+//     g trae ayudantes del juego:
+//       g.grantRandomRelic(player) → texto
+//       g.addCard(id), g.randomCard(rareza?) → carta
+//       g.upgradeRandom(n) → nombres, g.removeRandom(soloBásicas) → nombre
+//       g.duplicateRandom() → nombre, g.act (nivel actual)
+// Arte: sprite con el mismo id en js/art/sprites.js (si no, el emoji).
 // ============================================================
 
 window.EVENT_DB = [
     {
-        id: 'fuente_magica',
-        title: 'Fuente Mágica',
-        icon: '⛲',
-        desc: 'Encuentras una fuente burbujeante de jugo brillante. ¿Bebes?',
+        id: 'fuente_magica', title: 'Fuente de Néctar', icon: '⛲',
+        desc: 'Una fuente burbujea néctar dorado entre las raíces. Huele a verano.',
+        options: [
+            { text: 'Beber (recuperas 20 ❤️)', effect: (p) => { p.heal(20); return 'El néctar te llena de jugo. +20 ❤️.'; } },
+            {
+                text: 'Bañar una carta (madura 1 carta al azar)',
+                effect: (p, g) => { const n = g.upgradeRandom(1); return n.length ? `${n[0]} maduró y brilla.` : 'No tenías cartas que madurar.'; }
+            },
+            { text: 'Seguir de largo', effect: () => 'Sigues tu camino sin tocar nada raro.' }
+        ]
+    },
+    {
+        id: 'comerciante_misterioso', title: 'Comerciante Encapuchado', icon: '🎭',
+        desc: 'Una ciruela pasa con capucha te ofrece algo envuelto en hojas.',
         options: [
             {
-                text: 'Beber (recuperas 15 HP)',
-                effect: (player) => { player.heal(15); return 'Sentiste una energía cálida recorrerte. +15 HP.'; }
+                text: 'Pagar 40 de oro por una reliquia al azar',
+                locked: (p) => (p.gold < 40 ? 'No te alcanza el oro' : ''),
+                effect: (p, g) => { p.gold -= 40; return g.grantRandomRelic(p); }
             },
             {
-                text: 'No arriesgarse',
-                effect: () => 'Sigues tu camino sin tocar nada raro.'
+                text: 'Pagar 25 de oro por una carta rara',
+                locked: (p) => (p.gold < 25 ? 'No te alcanza el oro' : ''),
+                effect: (p, g) => { p.gold -= 25; const c = g.randomCard('rare'); g.addCard(c.id); return `Desenvuelves las hojas: ¡${c.name}!`; }
+            },
+            { text: 'Rechazar la oferta', effect: () => 'La ciruela pasa desaparece entre las sombras.' }
+        ]
+    },
+    {
+        id: 'trampa_espinas', title: 'Zarzamora Espinosa', icon: '🌵',
+        desc: 'Te enredas en una zarzamora. Hay moras jugosas… y espinas por todos lados.',
+        options: [
+            { text: 'Forcejear (pierdes 8 ❤️)', effect: (p) => { p.hp = Math.max(1, p.hp - 8); return 'Te liberas, pero te costó 8 ❤️.'; } },
+            {
+                text: 'Comerte las moras (+6 ❤️ máx. y un Gusano Interior)',
+                effect: (p, g) => { p.maxHp += 6; p.hp += 6; g.addCard('gusano_interior'); return 'Deliciosas… pero algo se movió dentro de una. +6 ❤️ máx.'; }
+            },
+            {
+                text: 'Pagarle 20 de oro a un escarabajo',
+                locked: (p) => (p.gold < 20 ? 'No te alcanza el oro' : ''),
+                effect: (p) => { p.gold -= 20; return 'El escarabajo corta las ramas. Sales sin un rasguño.'; }
             }
         ]
     },
     {
-        id: 'comerciante_misterioso',
-        title: 'Comerciante Misterioso',
-        icon: '🎭',
-        desc: 'Una figura encapuchada te ofrece una reliquia a cambio de oro.',
+        id: 'altar_poder', title: 'Altar del Sabor', icon: '🗿',
+        desc: 'Un altar antiguo promete madurez a cambio de pulpa.',
         options: [
             {
-                text: 'Pagar 35 oro por una reliquia al azar',
-                effect: (player, game) => {
-                    if (player.gold < 35) return 'No traes suficiente oro.';
-                    player.gold -= 35;
-                    return game.grantRandomRelic(player);
+                text: 'Dar 8 ❤️ máx. (empiezas cada combate con +2 de Madurez)',
+                effect: (p) => {
+                    p.maxHp = Math.max(10, p.maxHp - 8);
+                    p.hp = Math.min(p.hp, p.maxHp);
+                    p.permanentStrength = (p.permanentStrength || 0) + 2;
+                    return 'Te sientes más madura que nunca. +2 de Madurez en cada combate.';
                 }
             },
-            {
-                text: 'Rechazar la oferta',
-                effect: () => 'El comerciante desaparece entre las sombras.'
-            }
+            { text: 'Alejarse del altar', effect: () => 'Decides no arriesgar tu pulpa.' }
         ]
     },
     {
-        id: 'trampa_espinas',
-        title: 'Trampa de Espinas',
-        icon: '🌵',
-        desc: 'Pisas una trampa oculta entre las hojas.',
+        id: 'baul_escondido', title: 'Baúl Escondido', icon: '🧰',
+        desc: 'Detrás de unas hojas grandes hay un baúl semienterrado. Algo tintinea adentro.',
         options: [
             {
-                text: 'Forcejear (pierdes 10 HP)',
-                effect: (player) => { player.hp = Math.max(1, player.hp - 10); return 'Te liberas, pero te costó 10 HP.'; }
-            },
-            {
-                text: 'Pagar 15 oro para que alguien te ayude',
-                effect: (player) => {
-                    if (player.gold < 15) {
-                        player.hp = Math.max(1, player.hp - 10);
-                        return 'No traes oro y las espinas te lastiman igual (-10 HP).';
-                    }
-                    player.gold -= 15;
-                    return 'Un viajero te ayuda a salir sin heridas.';
-                }
-            }
-        ]
-    },
-    {
-        id: 'altar_poder',
-        title: 'Altar del Sabor',
-        icon: '🗿',
-        desc: 'Un altar antiguo promete poder a cambio de vitalidad.',
-        options: [
-            {
-                text: 'Sacrificar 10 HP máx. por +3 de Fuerza permanente',
-                effect: (player) => {
-                    player.maxHp = Math.max(10, player.maxHp - 10);
-                    player.hp = Math.min(player.hp, player.maxHp);
-                    player.permanentStrength = (player.permanentStrength || 0) + 3;
-                    return 'Sientes el poder correr por tus venas. +3 Fuerza permanente.';
-                }
-            },
-            {
-                text: 'Alejarse del altar',
-                effect: () => 'Decides no arriesgar tu salud.'
-            }
-        ]
-    },
-    {
-        id: 'baul_escondido',
-        title: 'Baúl Escondido',
-        icon: '🧰',
-        desc: 'Detrás de unas hojas grandes hay un baúl semienterrado.',
-        options: [
-            {
-                text: 'Abrirlo',
-                effect: (player) => {
-                    const gold = 20 + Math.floor(Math.random() * 25);
-                    player.gold += gold;
+                text: 'Abrirlo con cuidado',
+                effect: (p, g) => {
+                    if (Math.random() < 0.25) { p.hp = Math.max(1, p.hp - 6); return '¡Era una trampa para ratones! Pierdes 6 ❤️.'; }
+                    const gold = (20 + Math.floor(Math.random() * 25)) * g.act;
+                    p.gold += gold;
                     return `Encontraste ${gold} de oro.`;
                 }
+            },
+            { text: 'Dejarlo en paz', effect: () => 'Algunos baúles es mejor no abrirlos.' }
+        ]
+    },
+    {
+        id: 'arbol_sabio', title: 'Árbol Sabio', icon: '🌳',
+        desc: 'Un árbol viejísimo abre los ojos. "Puedo enseñarte… si aguantas la lección."',
+        options: [
+            {
+                text: 'Escuchar la lección (madura 2 cartas al azar y pierdes 10 ❤️)',
+                effect: (p, g) => { p.hp = Math.max(1, p.hp - 10); const n = g.upgradeRandom(2); return n.length ? `Aprendiste mucho: ${n.join(' y ')} maduraron.` : 'No tenías nada que aprender.'; }
+            },
+            { text: 'Dormir a su sombra (recuperas 12 ❤️)', effect: (p) => { p.heal(12); return 'Una siesta fresca. +12 ❤️.'; } }
+        ]
+    },
+    {
+        id: 'monton_compost', title: 'Montón de Compost', icon: '🪱',
+        desc: 'Un montón humeante de cáscaras viejas. Las lombrices te miran con curiosidad.',
+        options: [
+            {
+                text: 'Enterrar una carta básica (quitas un Golpe o un Jugo)',
+                effect: (p, g) => { const n = g.removeRandom(true); return n ? `Enterraste ${n}. Las lombrices están felices.` : 'No te quedan cartas básicas.'; }
+            },
+            {
+                text: 'Hurgar (50%: una reliquia, 50%: un Gusano Interior)',
+                effect: (p, g) => {
+                    if (Math.random() < 0.5) return g.grantRandomRelic(p);
+                    g.addCard('gusano_interior');
+                    return 'Sacaste la mano… con un gusano pegado. Recibes Gusano Interior.';
+                }
+            },
+            { text: 'Taparte la nariz y seguir', effect: () => 'Hay cosas que es mejor no oler.' }
+        ]
+    },
+    {
+        id: 'gota_rocio', title: 'Gota de Rocío', icon: '💧',
+        desc: 'Una gota de rocío gigante refleja tu mazo como un espejo.',
+        options: [
+            { text: 'Tocar el reflejo (copia 1 carta al azar)', effect: (p, g) => { const n = g.duplicateRandom(); return n ? `Ahora tienes otra ${n}.` : 'El reflejo estaba vacío.'; } },
+            { text: 'Beberla (recuperas 8 ❤️)', effect: (p) => { p.heal(8); return 'Fresquita. +8 ❤️.'; } }
+        ]
+    },
+    {
+        id: 'puesto_abandonado', title: 'Puesto Abandonado', icon: '🧺', acts: [2, 3],
+        desc: 'Un puesto del mercado sin dueño. Hay fruta, una caja registradora… y nadie mirando.',
+        options: [
+            {
+                text: 'Llevarte el oro (+60 oro y una Fruta Magullada)',
+                effect: (p, g) => { p.gold += 60; g.addCard('fruta_magullada'); return 'Te llevas el oro, pero la culpa te deja magullada.'; }
+            },
+            {
+                text: 'Ordenar el puesto (madura 1 carta al azar)',
+                effect: (p, g) => { const n = g.upgradeRandom(1); return n.length ? `El trabajo honesto madura: ${n[0]}.` : 'Todo ya estaba en orden.'; }
             }
+        ]
+    },
+    {
+        id: 'tanque_jugo', title: 'Tanque de Jugo', icon: '🛢️', acts: [3],
+        desc: 'Un tanque enorme de jugo concentrado. Una válvula gotea.',
+        options: [
+            {
+                text: 'Darte un chapuzón (+10 ❤️ máx. y pierdes 5 ❤️)',
+                effect: (p) => { p.maxHp += 10; p.hp = Math.max(1, p.hp - 5); return 'Sales más jugosa que nunca. +10 ❤️ máx.'; }
+            },
+            { text: 'Cerrar la válvula (1 reliquia al azar y pierdes 12 ❤️)', effect: (p, g) => { p.hp = Math.max(1, p.hp - 12); return g.grantRandomRelic(p); } }
         ]
     }
 ];
