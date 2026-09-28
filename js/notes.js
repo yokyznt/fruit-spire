@@ -66,7 +66,7 @@ window.renderNotes = function () {
         <div class="panel notes-panel">
             <h1 class="hand-title">Notas de la versión</h1>
             <a class="creator-card" href="${window.CREATOR.url}" target="_blank" rel="noopener noreferrer" ${tip(['Instagram', 'Se abre en una pestaña nueva.'])}>
-                <span class="creator-ig">📸</span>
+                <span class="creator-ig">${art('ui_insta', '', { size: 'md' })}</span>
                 <span><b class="hand">¡Sígueme en Instagram!</b><br>Creador del juego: <u>${window.CREATOR.handle}</u></span>
             </a>
             <div class="notes-scroll">

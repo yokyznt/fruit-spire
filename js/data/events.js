@@ -174,7 +174,7 @@ window.EVENT_DB = [
         ]
     },
     {
-        id: 'trampilla', title: 'Trampilla Podrida', icon: '🕳️', sprite: 'node_mystery',
+        id: 'trampilla', title: 'Trampilla Podrida', icon: '🕳️',
         desc: 'El suelo suena hueco bajo tus pies. Una trampilla mal cerrada esconde algo debajo.',
         options: [
             { text: 'Asomarte a mirar', dungeon: true },

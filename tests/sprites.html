@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Álbum de dibujos — Fruit Spire</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+    html, body { height: auto !important; min-height: 100%; overflow: auto !important; position: static !important; background: #FFF9EC; font-family: system-ui, sans-serif; }
+    h2 { margin: 18px 12px 6px; font-size: 18px; color: #4A3428; }
+    .grid { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 12px 12px; }
+    .cell { width: 132px; background: #fff; border-radius: 12px; box-shadow: 0 0 0 2px #E6D6BC; padding: 6px; text-align: center; font-size: 11px; color: #6b5444; }
+    .cell .pair { display: flex; justify-content: center; gap: 2px; }
+    .cell .art { width: 60px; height: 60px; }
+    .cell.big .art { width: 118px; height: 118px; }
+</style>
+</head>
+<body>
+<div id="out"></div>
+<script>
+// Página de desarrollo: muestra todos los dibujos, agrupados por el archivo que los define.
+// ?file=sprites6 muestra solo ese archivo · &big=1 en grande · &hurt=0 sin la versión "auch".
+const params = new URLSearchParams(location.search);
+const FILES = ['sprites', 'sprites2', 'sprites3', 'sprites4', 'sprites5', 'sprites6', 'sprites7', 'sprites8'];
+const groups = {};
+function load(i) {
+    if (i >= FILES.length) return draw();
+    const before = new Set(Object.keys(window.SPRITES || {}));
+    const s = document.createElement('script');
+    s.src = `../js/art/${FILES[i]}.js?t=${Date.now()}`;
+    s.onload = s.onerror = () => {
+        groups[FILES[i]] = Object.keys(window.SPRITES || {}).filter((k) => !before.has(k));
+        load(i + 1);
+    };
+    document.body.appendChild(s);
+}
+function draw() {
+    const only = params.get('file');
+    const big = params.get('big') === '1';
+    const hurt = params.get('hurt') !== '0';
+    let html = '';
+    Object.keys(groups).forEach((f) => {
+        if (only && only !== f) return;
+        html += `<h2>${f}.js (${groups[f].length})</h2><div class="grid">`;
+        groups[f].forEach((id) => {
+            let a = '', b = '';
+            try { a = window.art(id, '❌', { size: 'md' }); } catch (e) { a = `<b style="color:red">ERROR ${e.message}</b>`; }
+            try { if (hurt) b = window.art(id, '❌', { size: 'md', mood: 'hurt' }); } catch (e) { b = ''; }
+            html += `<div class="cell ${big ? 'big' : ''}"><div class="pair">${a}${b}</div>${id}</div>`;
+        });
+        html += '</div>';
+    });
+    document.getElementById('out').innerHTML = html;
+    document.title = 'listo';
+}
+load(0);
+</script>
+</body>
+</html>

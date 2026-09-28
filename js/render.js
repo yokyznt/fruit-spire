@@ -440,7 +440,7 @@ function renderMainMenu() {
             <button class="btn-grape" onclick="openWardrobe()">Vestidor</button>
             <button class="secondary" onclick="openCollection()">Álbum de cartas</button>
         </div>
-        <button class="notes-btn" onclick="openNotes()" ${tip(['Notas de la versión', 'Las novedades y arreglos del juego, y el Instagram del creador.'])}>📝 Notas${window.notesAreNew && notesAreNew() ? '<i class="new-dot"></i>' : ''}</button>
+        <button class="notes-btn" onclick="openNotes()" ${tip(['Notas de la versión', 'Las novedades y arreglos del juego, y el Instagram del creador.'])}>${art('ui_notes', '', { size: 'sm' })} Notas${window.notesAreNew && notesAreNew() ? '<i class="new-dot"></i>' : ''}</button>
         <button class="fullscreen-btn" onclick="toggleFullscreen()" ${tip(['Pantalla completa', 'Entrar o salir de la pantalla completa (también con F11).'])}>⛶</button>
         <button class="fullscreen-btn sound-btn" onclick="toggleGameSound()" ${tip(['Sonido', 'Silenciar o activar los efectos y el ambiente.'])}>${window.isMuted && window.isMuted() ? '🔇' : '🔊'}</button>
     </div>`;
@@ -484,7 +484,7 @@ function renderCharacterSelect() {
                     const tipText = locked ? `Bloqueado: gana una partida en ${prev.name} con ${selChar.name} para desbloquearlo.` : d.desc;
                     return `
                 <button class="diff-chip ${d.id === sel.id ? 'selected' : ''} ${locked ? 'locked' : ''}" onclick="selectDifficulty('${d.id}')" ${explain(`${d.name}${locked ? ' 🔒' : ''}`, tipText)}>
-                    ${art(d.sprite, '🍎', { size: 'sm' })}<span>${d.name}</span>${locked ? '<i class="lock">🔒</i>' : ''}
+                    ${art(d.sprite, '🍎', { size: 'sm' })}<span>${d.name}</span>${locked ? `<i class="lock">${art('ui_lock', '', { size: 'xs' })}</i>` : ''}
                 </button>`;
                 }).join('')}
             </div>
@@ -546,7 +546,7 @@ function renderActIntro() {
         ${logoHtml(act.name, 'act-logo')}
         <div class="act-subtitle hand">${act.subtitle}</div>
         ${act.floor === 1 ? `<div class="act-story hand">${act.castle.story}</div>` : ''}
-        ${act.theme.rule ? `<div class="act-rule" ${tip(['Regla del piso', 'Cada piso cambia un poco cómo se juega. Se ve en la esquina de cada combate.'])}><span>${act.theme.rule.icon}</span><div><b class="hand">${act.theme.rule.name}</b><small>${act.theme.rule.desc}</small></div></div>` : ''}
+        ${act.theme.rule ? `<div class="act-rule" ${tip(['Regla del piso', 'Cada piso cambia un poco cómo se juega. Se ve en la esquina de cada combate.'])}>${art(act.theme.rule.sprite, act.theme.rule.icon, { size: 'md' })}<div><b class="hand">${act.theme.rule.name}</b><small>${act.theme.rule.desc}</small></div></div>` : ''}
         ${GAME.actHealed > 0 && (act.n > 1 || act.floor > 1) ? `<div class="act-heal">${art('ui_heal', '❤️', { size: 'xs' })} Recuperaste ${GAME.actHealed} ❤️ en el camino.</div>` : ''}
         <div class="act-boss" ${tip([boss.name, last ? 'El guardián del Rey Fruta. Vencerlo lo libera.' : guardian ? 'El guardián de este piso. Vencerlo te deja subir al siguiente.' : 'El jefe de este castillo. Vencerlo te lleva al siguiente.'])}>
             ${art(boss.sprite || boss.id, boss.icon, { size: 'md' })}
@@ -602,10 +602,11 @@ function renderMap() {
     // adornos del tema (siempre los mismos para un mismo piso: salen de su semilla)
     let seed = (GAME.walls.seed || 1234567) >>> 0;
     const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-    const decoSet = act.theme.deco && act.theme.deco.length ? act.theme.deco : ['✨'];
+    const decoSet = act.theme.deco && act.theme.deco.length ? act.theme.deco : ['deco_pasto'];
     const decoCount = Math.round(cols * rows * 0.45);
     for (let i = 0; i < decoCount; i++) {
-        html += `<span class="map-deco" style="left:${(rnd() * w).toFixed(0)}px;top:${(rnd() * h).toFixed(0)}px;font-size:${(34 + rnd() * 46).toFixed(0)}px;--r:${(rnd() * 60 - 30).toFixed(0)}deg">${decoSet[Math.floor(rnd() * decoSet.length)]}</span>`;
+        const size = (34 + rnd() * 46).toFixed(0);
+        html += `<span class="map-deco" style="left:${(rnd() * w).toFixed(0)}px;top:${(rnd() * h).toFixed(0)}px;width:${size}px;height:${size}px;--r:${(rnd() * 60 - 30).toFixed(0)}deg">${art(decoSet[Math.floor(rnd() * decoSet.length)], '', {})}</span>`;
     }
     // caminitos: un puntejado entre casillas vecinas que no tienen muro ni obstáculo
     const walkable = (x, y) => GAME.map[y] && GAME.map[y][x] && GAME.map[y][x] !== T.BLOCKED;
@@ -697,7 +698,7 @@ function renderMap() {
         <aside class="map-legend panel">
             <h2 class="hand-title">Castillo ${act.n}</h2>
             <div class="legend-act hand">Piso ${act.floor}: ${act.name}</div>
-            ${act.theme.rule ? `<div class="legend-rule" ${tip([`Regla: ${act.theme.rule.name}`, act.theme.rule.desc])}>${act.theme.rule.icon} ${act.theme.rule.name}</div>` : ''}
+            ${act.theme.rule ? `<div class="legend-rule" ${tip([`Regla: ${act.theme.rule.name}`, act.theme.rule.desc])}>${art(act.theme.rule.sprite, act.theme.rule.icon, { size: 'xs' })} ${act.theme.rule.name}</div>` : ''}
             <div class="legend-variant hand" ${tip(['Forma del mapa', 'Cada piso tiene una forma distinta: más o menos muros y ríos.'])}>Mapa ${variant.toLowerCase()} · ${cols - 1}×${rows}</div>
             <ul class="legend-list">
                 ${legendRow(charSprite(char), char.icon, 'Tú', 'Tu fruta. Muévete con clic.')}
@@ -1008,7 +1009,7 @@ function renderCombat() {
     const act = currentAct();
     return `
     <div class="combat-stage act-${act.n} bg-${GAME.combatBg || 'kitchen'} ${GAME.combatEnter ? 'entering' : ''} ${playerTurn ? 'is-player-turn' : 'is-enemy-turn'}">
-        ${c.rule ? `<div class="rule-chip" ${tip([`Regla del piso: ${c.rule.name}`, c.rule.desc])}><span>${c.rule.icon}</span> ${c.rule.name}</div>` : ''}
+        ${c.rule ? `<div class="rule-chip" ${tip([`Regla del piso: ${c.rule.name}`, c.rule.desc])}>${art(c.rule.sprite, c.rule.icon, { size: 'sm' })} ${c.rule.name}</div>` : ''}
         <div class="arena ${multi ? 'multi' : ''}">
             <div class="combatant player" style="--blink:2.3s">
                 ${p.characterId === 'uva' || (p.garden && p.garden.length) ? gardenHtml(p) : ''}
@@ -1120,7 +1121,7 @@ function renderWardrobe() {
         const text = (c.type === 'pet' ? `${c.bonus} ` : '') + (!owned ? (c.type === 'pet' ? `Bloqueada. Para desbloquearla: ${window.petHowText(c)}` : 'Aún no lo tienes. Se gana subiendo de nivel en el Pase de Batalla (menú principal).')
             : on ? (c.type === 'skin' ? 'Es el color que lleva puesto.' : c.type === 'pet' ? 'Te acompaña. Toca para dejarla en casa.' : 'Lo lleva puesto. Toca para quitarlo.') : c.type === 'pet' ? 'Toca para llevarla contigo.' : 'Toca para ponérselo.');
         return `<button class="ward-item ${owned ? '' : 'locked'} ${on ? 'on' : ''}" onclick="wardrobeEquip('${c.id}')" ${tip([owned || c.type === 'pet' ? c.name : '???', text])}>
-            ${owned ? cosmeticIcon(c, 'md') : c.type === 'pet' ? `<span class="pet-locked">${cosmeticIcon(c, 'md', true)}<i>🔒</i></span>` : '<span class="ward-q">?</span>'}<small>${owned || c.type === 'pet' ? c.name : '???'}</small></button>`;
+            ${owned ? cosmeticIcon(c, 'md') : c.type === 'pet' ? `<span class="pet-locked">${cosmeticIcon(c, 'md', true)}<i>${art('ui_lock', '', { size: 'xs' })}</i></span>` : '<span class="ward-q">?</span>'}<small>${owned || c.type === 'pet' ? c.name : '???'}</small></button>`;
     };
     const slotRow = (slot) => {
         const items = window.COSMETICS.filter((c) => c.slot === slot && (!c.char || c.char === cid));
@@ -1194,7 +1195,7 @@ function renderDungeon() {
             let icon;
             if (isPlayer) icon = fruitArt(char.id, { size: 'md' });
             else if (isExit) icon = art('node_stairs', '🪜', { size: 'md' });
-            else if (cleared) icon = '<span class="dg-bones">🦴</span>';
+            else if (cleared) icon = art('dg_bones', '', { size: 'md', cls: 'dg-bones' });
             else icon = art(((d.deco + x * 3 + y) % 3 === 0) ? 'dg_ghost' : 'dg_skull', '💀', { size: 'md' });
             const guard = isExit && !cleared ? `<i class="dg-guard">${art('dg_skull', '💀', { size: 'xs' })}</i>` : '';
             const label = isPlayer ? 'Estás aquí' : isExit ? (cleared ? 'La escalera (despejada)' : 'La escalera de salida: la vigila un guardián') : cleared ? 'Ya despejada' : 'Algo se mueve en la oscuridad…';
@@ -1266,11 +1267,18 @@ function renderBossRelic() {
         <button class="secondary" onclick="skipBossRelic()">Omitir</button>`, 'celebrate wide');
 }
 
+// Las frutas rescatadas (las 4 jugables y las mascotitas) saltando junto al Rey Fruta
+function rescueRowHtml() {
+    const fruits = Object.keys(window.CHARACTER_DB).map((id) => art(id, '', { size: 'md' }));
+    const pets = window.COSMETICS.filter((c) => c.type === 'pet').slice(0, 6).map((c) => `<span class="art art-md"><svg class="sprite" viewBox="0 0 100 100"><g transform="translate(50 61) scale(1.95)">${c.draw()}</g></svg></span>`);
+    const all = [...fruits.slice(0, 2), ...pets.slice(0, 3), art('rey_fruta', '', { size: 'lg' }), ...pets.slice(3), ...fruits.slice(2)];
+    return all.map((h, i) => `<span class="${h.includes('art-lg') ? 'king' : ''}" style="--i:${i}">${h}</span>`).join('');
+}
 function renderVictory() {
     const p = GAME.player;
     const boss = window.ENEMY_DB[GAME.lastBossId] || actBossDef();
     return panel(playerArt('happy'), `¡Derrotaste a ${boss.name}!`, `
-        <div class="rescue-row">${['🍎', '🍌', '🥝', '🍇', '🍓', '🍍', '🍑', '🍒'].map((f, i) => `<span style="--i:${i}">${f}</span>`).join('')}<span class="king" style="--i:9">🤴</span></div>
+        <div class="rescue-row">${rescueRowHtml()}</div>
         <p>Subiste los 3 castillos y liberaste al <b>Rey Fruta</b> y a todas las frutas cautivas. ¡El reino de las frutas vuelve a ser libre!</p>
         ${GAME.unlockMsg ? `<p class="unlock-msg hand">🔓 ${GAME.unlockMsg}</p>` : ''}
         ${petUnlockBox()}

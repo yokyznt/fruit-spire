@@ -68,7 +68,7 @@
             ]
         },
         {
-            id: 'comodin_sonriente', title: 'Comodín Sonriente', icon: '🃏', sprite: 'node_mystery', w: 1,
+            id: 'comodin_sonriente', title: 'Comodín Sonriente', icon: '🃏', sprite: 'comodin_descarado', w: 1,
             desc: 'Un comodín se te pega al hombro con una sonrisa de oreja a oreja. "Tengo un trato para ti".',
             options: [
                 {

@@ -140,7 +140,7 @@
                 <div class="pass-name">${c.name}</div>
                 ${claimed ? '<div class="pass-tag">✔ Reclamado</div>'
                     : reached ? `<button class="btn-mint" onclick="claimPassLevel(${r.level})">Reclamar</button>`
-                        : '<div class="pass-tag lock">🔒</div>'}
+                        : `<div class="pass-tag lock">${art('ui_lock', '', { size: 'xs' })}</div>`}
             </div>`;
         }).join('');
         return `

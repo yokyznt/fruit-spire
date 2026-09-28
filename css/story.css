@@ -165,3 +165,27 @@ button.btn-strawberry:hover { background: #FFB4C1; }
 .act-boss { margin: 4px 0 6px; padding: 3px 18px 3px 8px; font-size: 1.1em; }
 .act-rule { padding: 4px 18px 4px 12px; }
 .act-intro button { padding: 10px 40px; }
+
+/* ---------- dibujos en lugar de emojis ---------- */
+.map-deco .art { width: 100%; height: 100%; }
+.map-deco .art .sprite { filter: none; }
+.rule-chip .art { width: 30px; height: 30px; }
+.act-rule > .art { width: 52px; height: 52px; flex: none; }
+.legend-rule .art { width: 22px; height: 22px; vertical-align: -5px; }
+.dg-cell .dg-bones { opacity: .75; }
+.notes-btn .art { width: 30px; height: 30px; }
+.creator-ig .art { width: 48px; height: 48px; }
+.pass-tag.lock .art, .diff-chip .lock .art, .pet-locked i .art { width: 22px; height: 22px; }
+.rescue-row { gap: 4px; }
+.rescue-row .art-md { width: 58px; height: 58px; }
+.rescue-row .king .art-lg { width: 96px; height: 96px; }
+.die .art { width: 100%; height: 100%; }
+.die { background: none !important; box-shadow: none !important; font-size: 0 !important; }
+.die.rolling .art { filter: brightness(1.05); }
+.piece .art { width: 72px; height: 72px; }
+.piece.mine, .piece.theirs { -webkit-text-stroke: 0; text-shadow: none; font-size: 0; }
+.tray .art { width: 30px; height: 30px; }
+.tray span { display: inline-flex; }
+.rescue-row { margin: 14px 0 6px; align-items: flex-end; }
+.rescue-row .king { animation-name: kingHop; }
+@keyframes kingHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px) rotate(-3deg); } }

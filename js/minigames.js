@@ -201,15 +201,15 @@
     const BETS = [10, 25, 50];
     const KINDS = {
         dice: {
-            name: 'Veintiuno de Dados', icon: '🎲', sprite: 'node_game',
+            name: 'Veintiuno de Dados', icon: '🎲', sprite: 'act_dados',
             rules: 'Tira dados uno por uno y suma. Quien más se acerque a 21 sin pasarse gana. Si te pasas, pierdes. La casa tira hasta llegar a 17 o más. ¡Un 21 exacto paga triple!'
         },
         poker: {
-            name: 'Póker de Cinco Cartas', icon: '🃏', sprite: 'node_game',
+            name: 'Póker de Cinco Cartas', icon: '🃏', sprite: 'act_poker',
             rules: 'Recibes 5 cartas. Puedes cambiar las que quieras UNA sola vez. Gana la mejor mano: par, doble par, trío, escalera, color, full, póker… Un trío o mejor paga doble.'
         },
         chess: {
-            name: 'Torre de Ajedrez', icon: '♟️', sprite: 'node_game',
+            name: 'Torre de Ajedrez', icon: '♟️', sprite: 'act_ajedrez',
             rules: 'Tablero chiquito de 5 columnas. No hay jaque: gana quien se COMA TODAS las piezas del rival (¡incluido el rey!). Los peones avanzan 1 casilla, comen en diagonal y se coronan reinas. Si ganas, te llevas un objeto y oro; si pierdes, sales lastimado.'
         }
     };
@@ -284,9 +284,8 @@
     };
 
     // ---------- DADOS ----------
-    const DIE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
     const sum = (a) => a.reduce((s, x) => s + x, 0);
-    const dieHtml = (v, cls) => `<span class="die ${cls || ''}" data-v="${v}">${DIE[v] || '?'}</span>`;
+    const dieHtml = (v, cls) => `<span class="die ${cls || ''}" data-v="${v}">${window.SPRITE_KIT2 ? `<span class="art">${SPRITE_KIT2.dieSvg(v)}</span>` : v}</span>`;
     async function animateRoll(m, who) {
         m.busy = true;
         for (let i = 0; i < 7; i++) {
@@ -409,6 +408,13 @@
     };
 
     // ---------- AJEDREZ ----------
+    // piezas dibujadas: las tuyas verdes y felices, las rivales moradas y enojadas
+    function pieceArt(p, small) {
+        const K = window.SPRITE_KIT2;
+        if (!K) return GLYPH[p.t];
+        const inner = K.chessPiece(p.t, p.c === 0 ? '#9BD66A' : '#7A68AE', p.c === 0 ? 'happy' : 'angry', !small);
+        return `<span class="art"><svg class="sprite" viewBox="0 0 100 100">${inner}</svg></span>`;
+    }
     function chessDepth() { const c = GAME.player ? GAME.player.act : 1; return c >= 3 ? 3 : c === 2 ? 2 : 1; }
     function chessSloppy() { const c = GAME.player ? GAME.player.act : 1; return c >= 3 ? 0 : c === 2 ? 0.08 : 0.3; }
     function startChess(m) {
@@ -434,10 +440,10 @@
                 const last = m.last && ((m.last.fr === r && m.last.fc === c) || (m.last.tr === r && m.last.tc === c));
                 const clickable = m.phase === 'play' && m.turn === 'player' && !m.busy;
                 cells.push(`<div class="sq ${(r + c) % 2 ? 'dark' : 'light'} ${isSel ? 'sel' : ''} ${target ? (p ? 'cap' : 'dot') : ''} ${last ? 'last' : ''}" ${clickable ? `onclick="mgChessClick(${r},${c})"` : ''}>
-                    ${p ? `<span class="piece ${p.c === 0 ? 'mine' : 'theirs'}">${GLYPH[p.t]}&#xFE0E;</span>` : ''}</div>`);
+                    ${p ? `<span class="piece ${p.c === 0 ? 'mine' : 'theirs'}">${pieceArt(p)}</span>` : ''}</div>`);
             }
         }
-        const tray = (list, cls) => `<div class="tray ${cls}">${list.map((t) => `<span>${GLYPH[t]}&#xFE0E;</span>`).join('') || '<i>—</i>'}</div>`;
+        const tray = (list, cls) => `<div class="tray ${cls}">${list.map((t) => `<span>${pieceArt({ t, c: cls === 'won' ? 1 : 0 }, true)}</span>`).join('') || '<i>—</i>'}</div>`;
         const mine = MG.countPieces(m.board, 0), theirs = MG.countPieces(m.board, 1);
         return panel(art(info.sprite, info.icon, { size: 'md' }), info.name, `
             <div class="chess-layout">

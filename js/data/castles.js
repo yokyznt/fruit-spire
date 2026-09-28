@@ -29,35 +29,35 @@ window.registerTheme = function (def) {
     registerTheme({
         id: 'huerto', castle: 1, name: 'El Huerto', subtitle: 'Donde los bichos se comen la fruta caída', icon: '🌳',
         weak: A[0].weak, normal: A[0].normal, elites: [['cuervo_ladron'], ['topo_excavador'], ['escarabajo_gordo']],
-        bosses: ['avispon_capitan'], deco: ['🌱', '🌼', '🍃', '🪨', '🌿'], variant: 'open'
+        bosses: ['avispon_capitan'], deco: ['deco_pasto', 'deco_flor', 'deco_hoja', 'deco_piedra'], variant: 'open'
     });
     registerTheme({
         id: 'gallinero', castle: 1, name: 'El Gallinero', subtitle: 'Plumas, huevos y un zorro con mala pinta', icon: '🐔',
         weak: [['gallina_clueca'], ['pollito_furioso', 'pollito_furioso'], ['zorro_astuto'], ['cuervo_joven', 'cuervo_joven'], ['mosca_podrida']],
         normal: [['gallina_clueca', 'pollito_furioso'], ['zorro_astuto', 'cuervo_joven'], ['gallina_clueca', 'zorro_astuto'],
             ['pollito_furioso', 'pollito_furioso', 'pollito_furioso'], ['cucaracha_blindada', 'cuervo_joven'], ['mango_zombie']],
-        elites: [['gallo_vigia'], ['cuervo_ladron']], bosses: ['espantapajaros'], deco: ['🪶', '🥚', '🌾', '🪵'], variant: 'classic'
+        elites: [['gallo_vigia'], ['cuervo_ladron']], bosses: ['espantapajaros'], deco: ['deco_pluma', 'deco_huevo', 'deco_pasto', 'deco_piedra'], variant: 'classic'
     });
     registerTheme({
         id: 'estanque', castle: 1, name: 'El Estanque Turbio', subtitle: 'Ranas, mosquitos y aguas poco recomendables', icon: '🪷',
         weak: [['rana_toxica'], ['mosquito_tigre', 'mosquito_tigre'], ['pez_globo'], ['cangrejo_pinza']],
         normal: [['rana_toxica', 'mosquito_tigre'], ['pez_globo', 'pez_globo'], ['cangrejo_pinza', 'mosquito_tigre'], ['rana_toxica', 'pez_globo'],
             ['mosquito_tigre', 'mosquito_tigre', 'mosquito_tigre'], ['cangrejo_pinza', 'rana_toxica'], ['babosa_grande']],
-        elites: [['sapo_gigante'], ['topo_excavador']], bosses: ['lucio_gigante'], deco: ['🪷', '💧', '🐚', '🌊'], variant: 'rivers'
+        elites: [['sapo_gigante'], ['topo_excavador']], bosses: ['lucio_gigante'], deco: ['deco_nenufar', 'deco_gota', 'deco_pasto', 'deco_piedra'], variant: 'rivers'
     });
     registerTheme({
         id: 'invernadero', castle: 1, name: 'El Invernadero', subtitle: 'Plantas hambrientas detrás del cristal', icon: '🪴',
         weak: [['planta_carnivora'], ['enredadera'], ['polen_furioso', 'polen_furioso'], ['girasol_soldado'], ['hongo_venenoso']],
         normal: [['planta_carnivora', 'polen_furioso'], ['enredadera', 'girasol_soldado'], ['enredadera', 'polen_furioso', 'polen_furioso'],
             ['girasol_soldado', 'planta_carnivora'], ['hongo_venenoso', 'enredadera'], ['semilla_bomba', 'semilla_bomba', 'polen_furioso']],
-        elites: [['orquidea_letal'], ['escarabajo_gordo']], bosses: ['rosa_reina'], deco: ['🌺', '🌻', '🌿', '🍄'], variant: 'maze'
+        elites: [['orquidea_letal'], ['escarabajo_gordo']], bosses: ['rosa_reina'], deco: ['deco_flor', 'deco_hoja', 'deco_hongo', 'deco_pasto'], variant: 'maze'
     });
     registerTheme({
         id: 'bodega', castle: 1, name: 'La Bodega Húmeda', subtitle: 'Barriles, murciélagos y algo que fermenta', icon: '🍷',
         weak: [['barril_rodante'], ['murcielago', 'murcielago'], ['arana_bodeguera'], ['moho_viscoso'], ['gusano_venenoso']],
         normal: [['barril_rodante', 'murcielago'], ['arana_bodeguera', 'murcielago'], ['moho_viscoso', 'arana_bodeguera'], ['barril_rodante', 'barril_rodante'],
             ['murcielago', 'murcielago', 'murcielago'], ['ciruela_podrida', 'moho_viscoso']],
-        elites: [['tonel_maldito'], ['topo_excavador']], bosses: ['sommelier_fantasma'], deco: ['🕸️', '🍷', '🪨', '🦇'], variant: 'maze'
+        elites: [['tonel_maldito'], ['topo_excavador']], bosses: ['sommelier_fantasma'], deco: ['deco_tela', 'deco_barril', 'deco_piedra', 'deco_vela'], variant: 'maze'
     });
 
     // =========================================================
@@ -68,21 +68,21 @@ window.registerTheme = function (def) {
         weak: [['dado_pequeno', 'dado_pequeno'], ['dado_travieso'], ['ficha_dorada'], ['cubilete_saltarin']],
         normal: [['dado_travieso', 'dado_pequeno'], ['dado_cargado'], ['ficha_dorada', 'dado_travieso'], ['cubilete_saltarin', 'dado_travieso'],
             ['dado_cargado', 'dado_pequeno', 'dado_pequeno'], ['ficha_dorada', 'ficha_dorada']],
-        elites: [['gran_dado'], ['pina_espinosa']], bosses: ['cubilete_maldito'], games: 3, gameKind: 'dice', deco: ['🎲', '🪙', '⚀', '⚅'], variant: 'open'
+        elites: [['gran_dado'], ['pina_espinosa']], bosses: ['cubilete_maldito'], games: 3, gameKind: 'dice', deco: ['deco_dado', 'deco_ficha', 'deco_dado', 'deco_ficha'], variant: 'open'
     });
     registerTheme({
         id: 'poker', castle: 2, name: 'El Salón de Póker', subtitle: 'Cartas marcadas y sonrisas falsas', icon: '🃏',
         weak: [['as_espadas'], ['joker'], ['diamante_afilado'], ['trebol_tramposo']],
         normal: [['as_espadas', 'diamante_afilado'], ['joker', 'trebol_tramposo'], ['rey_corazones'], ['trebol_tramposo', 'diamante_afilado', 'as_espadas'],
             ['rey_corazones', 'joker'], ['as_espadas', 'joker']],
-        elites: [['flor_imperial'], ['fresa_vengativa']], bosses: ['crupier_marcado'], games: 3, gameKind: 'poker', deco: ['♠️', '♥️', '♦️', '♣️', '🃏'], variant: 'classic'
+        elites: [['flor_imperial'], ['fresa_vengativa']], bosses: ['crupier_marcado'], games: 3, gameKind: 'poker', deco: ['deco_palo', 'deco_ficha', 'deco_palo'], variant: 'classic'
     });
     registerTheme({
         id: 'ajedrez', castle: 2, name: 'La Torre de Ajedrez', subtitle: 'Cada casilla es una decisión', icon: '♟️',
         weak: [['peon_negro', 'peon_negro'], ['peon_negro'], ['caballo_negro'], ['alfil_negro']],
         normal: [['caballo_negro', 'peon_negro'], ['alfil_negro', 'peon_negro', 'peon_negro'], ['torre_negra'], ['caballo_negro', 'alfil_negro'],
             ['torre_negra', 'peon_negro'], ['peon_negro', 'peon_negro', 'peon_negro']],
-        elites: [['reina_negra']], bosses: ['rey_ajedrez'], games: 3, gameKind: 'chess', deco: ['♟️', '♜', '♞', '♝', '♛'], variant: 'maze'
+        elites: [['reina_negra']], bosses: ['rey_ajedrez'], games: 3, gameKind: 'chess', deco: ['deco_peon', 'deco_corona', 'deco_peon'], variant: 'maze'
     });
 
     // =========================================================
@@ -90,7 +90,7 @@ window.registerTheme = function (def) {
     // =========================================================
     registerTheme({
         id: 'mercado', castle: 3, name: 'El Mercado Negro', subtitle: 'Ratas, cuchillos y gente muy hambrienta', icon: '🧺',
-        weak: A[1].weak, normal: A[1].normal, elites: A[1].elites, bosses: ['rey_raton', 'reloj_cocina'], deco: ['🧺', '🥖', '🐀', '🕯️'], variant: 'classic'
+        weak: A[1].weak, normal: A[1].normal, elites: A[1].elites, bosses: ['rey_raton', 'reloj_cocina'], deco: ['deco_barril', 'deco_vela', 'deco_piedra'], variant: 'classic'
     });
     registerTheme({
         id: 'cocina', castle: 3, name: 'La Cocina Infernal', subtitle: 'Todo lo que corta, pincha o hierve', icon: '🍳',
@@ -98,11 +98,11 @@ window.registerTheme = function (def) {
         normal: [['tenedor_gloton', 'tenedor_gloton'], ['pelador_oxidado', 'tenedor_gloton'], ['vela_cera', 'vela_cera'],
             ['gelatina_temblorosa', 'hormiga_obrera', 'hormiga_obrera'], ['pelador_oxidado', 'vela_cera'], ['tostadora_saltarina']],
         elites: [['cuchillo_carnicero'], ['rallador_furioso'], ['cafetera_rabiosa']], bosses: ['chef_cuchilla', 'reloj_cocina'],
-        deco: ['🍳', '🔪', '🥄', '🔥'], variant: 'rivers'
+        deco: ['deco_sarten', 'deco_vela', 'deco_engrane'], variant: 'rivers'
     });
     registerTheme({
         id: 'fabrica', castle: 3, name: 'La Fábrica de Jugos', subtitle: 'Aquí termina toda fruta… o no', icon: '🏭',
-        weak: A[2].weak, normal: A[2].normal, elites: A[2].elites, bosses: ['robot_gigante'], deco: ['⚙️', '🔩', '🧃', '🏭'], variant: 'maze'
+        weak: A[2].weak, normal: A[2].normal, elites: A[2].elites, bosses: ['robot_gigante'], deco: ['deco_engrane', 'deco_gota', 'deco_engrane'], variant: 'maze'
     });
     registerTheme({
         id: 'torre_rey', castle: 3, name: 'La Torre del Rey', subtitle: 'En lo más alto espera el Rey Fruta', icon: '👑',
@@ -110,7 +110,7 @@ window.registerTheme = function (def) {
         normal: [['caballero_cuchillas', 'mayordomo_batidor'], ['guardia_hielo', 'bufon_explosivo'], ['caballero_cuchillas', 'caballero_cuchillas'],
             ['mayordomo_batidor', 'guardia_hielo'], ['exprimidor_mecanico', 'caballero_cuchillas'], ['bufon_explosivo', 'bufon_explosivo', 'tapa_saltarina'],
             ['robot_limpiador', 'guardia_hielo']],
-        elites: [['capitan_guardia'], ['verdugo_jugo'], ['cortadora_industrial']], bosses: [], games: 2, deco: ['👑', '⚔️', '🕯️', '🏰'], variant: 'classic'
+        elites: [['capitan_guardia'], ['verdugo_jugo'], ['cortadora_industrial']], bosses: [], games: 2, deco: ['deco_corona', 'deco_vela', 'deco_piedra'], variant: 'classic'
     });
 
     // =========================================================
@@ -215,7 +215,7 @@ window.registerTheme = function (def) {
             }
         }
     };
-    Object.keys(RULES).forEach((id) => { window.FLOOR_THEMES[id].rule = RULES[id]; });
+    Object.keys(RULES).forEach((id) => { RULES[id].sprite = `rule_${id}`; window.FLOOR_THEMES[id].rule = RULES[id]; });
 
     // =========================================================
     // LOS CASTILLOS
