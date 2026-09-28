@@ -546,6 +546,7 @@ function renderActIntro() {
         ${logoHtml(act.name, 'act-logo')}
         <div class="act-subtitle hand">${act.subtitle}</div>
         ${act.floor === 1 ? `<div class="act-story hand">${act.castle.story}</div>` : ''}
+        ${act.theme.rule ? `<div class="act-rule" ${tip(['Regla del piso', 'Cada piso cambia un poco cómo se juega. Se ve en la esquina de cada combate.'])}><span>${act.theme.rule.icon}</span><div><b class="hand">${act.theme.rule.name}</b><small>${act.theme.rule.desc}</small></div></div>` : ''}
         ${GAME.actHealed > 0 && (act.n > 1 || act.floor > 1) ? `<div class="act-heal">${art('ui_heal', '❤️', { size: 'xs' })} Recuperaste ${GAME.actHealed} ❤️ en el camino.</div>` : ''}
         <div class="act-boss" ${tip([boss.name, last ? 'El guardián del Rey Fruta. Vencerlo lo libera.' : guardian ? 'El guardián de este piso. Vencerlo te deja subir al siguiente.' : 'El jefe de este castillo. Vencerlo te lleva al siguiente.'])}>
             ${art(boss.sprite || boss.id, boss.icon, { size: 'md' })}
@@ -696,6 +697,7 @@ function renderMap() {
         <aside class="map-legend panel">
             <h2 class="hand-title">Castillo ${act.n}</h2>
             <div class="legend-act hand">Piso ${act.floor}: ${act.name}</div>
+            ${act.theme.rule ? `<div class="legend-rule" ${tip([`Regla: ${act.theme.rule.name}`, act.theme.rule.desc])}>${act.theme.rule.icon} ${act.theme.rule.name}</div>` : ''}
             <div class="legend-variant hand" ${tip(['Forma del mapa', 'Cada piso tiene una forma distinta: más o menos muros y ríos.'])}>Mapa ${variant.toLowerCase()} · ${cols - 1}×${rows}</div>
             <ul class="legend-list">
                 ${legendRow(charSprite(char), char.icon, 'Tú', 'Tu fruta. Muévete con clic.')}
@@ -982,12 +984,14 @@ function renderCombat() {
             if (e.getStatus('frozen')) classes.push('is-frozen');
         }
         const intent = intentInfo(c, e);
+        const hidden = !!(c.rule && c.rule.hideIntent && c.turnNumber % 2 === 1);
         const acting = !playerTurn && GAME.actingEnemy === i;
         const aim = GAME.seedTargeting != null && e.isAlive();
         if (aim) classes.push('seed-aim');
         return `
             <div class="${classes.join(' ')}" id="enemy-${i}" style="${style}" ${aim ? `onclick="useSeedOn(${i})"` : ''}>
-                ${e.isAlive() ? `<div class="intent-bubble ${intent.cls} ${acting ? 'acting' : ''}" ${tip(intent.tips)}>
+                ${e.isAlive() && hidden ? `<div class="intent-bubble unknown ${acting ? 'acting' : ''}" ${tip([c.rule.name, 'Está muy oscuro: en los turnos impares no ves lo que hará el enemigo.'])}><span>?</span></div>` : ''}
+                ${e.isAlive() && !hidden ? `<div class="intent-bubble ${intent.cls} ${acting ? 'acting' : ''}" ${tip(intent.tips)}>
                     ${art(intent.sprite, '❔', { size: 'sm' })}
                     ${intent.label ? `<span>${intent.label}</span>` : ''}
                     ${intent.extras.map((x) => `<i class="intent-extra">${art(x.sprite, '✨', { size: 'sm' })}${x.value ? `<b>${x.value}</b>` : ''}</i>`).join('')}
@@ -1004,6 +1008,7 @@ function renderCombat() {
     const act = currentAct();
     return `
     <div class="combat-stage act-${act.n} bg-${GAME.combatBg || 'kitchen'} ${GAME.combatEnter ? 'entering' : ''} ${playerTurn ? 'is-player-turn' : 'is-enemy-turn'}">
+        ${c.rule ? `<div class="rule-chip" ${tip([`Regla del piso: ${c.rule.name}`, c.rule.desc])}><span>${c.rule.icon}</span> ${c.rule.name}</div>` : ''}
         <div class="arena ${multi ? 'multi' : ''}">
             <div class="combatant player" style="--blink:2.3s">
                 ${p.characterId === 'uva' || (p.garden && p.garden.length) ? gardenHtml(p) : ''}

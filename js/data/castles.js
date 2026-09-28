@@ -114,6 +114,110 @@ window.registerTheme = function (def) {
     });
 
     // =========================================================
+    // REGLAS DE CADA PISO — cada tema cambia un poco cómo se juega ahí.
+    //   onCombatStart / onTurnStart / onTurnEnd (ctx, turno) / onCardPlayed (ctx, carta)
+    //   hideIntent: no se ven las intenciones en los turnos impares
+    //   ctx es el de las cartas; ctx.say('texto') muestra un aviso.
+    // =========================================================
+    const dropHp = (ctx, e, n) => {
+        const lost = e.loseHp(n);
+        ctx.combat.pushEvent('damage', e, lost, { thorns: true });
+        if (!e.isAlive()) ctx.combat.onEnemyDeath(e);
+    };
+    const RULES = {
+        huerto: {
+            icon: '☀️', name: 'Sol radiante', desc: 'Cada 3.er turno ganas 1 de energía.',
+            onTurnStart: (ctx, turn) => { if (turn % 3 === 0) { ctx.gainEnergy(1); ctx.say('☀️ ¡Sol radiante! +1 de energía'); } }
+        },
+        gallinero: {
+            icon: '🥚', name: 'Nidos', desc: 'Al empezar cada turno recibes 1 Pepita.',
+            onTurnStart: (ctx) => { ctx.addToHand('semilla', 1); }
+        },
+        estanque: {
+            icon: '🌊', name: 'Aguas turbias', desc: 'Al empezar cada combate, tú y los enemigos empiezan con 1 de Marchitez.',
+            onCombatStart: (ctx) => { ctx.buff('weak', 1); ctx.applyAll('weak', 1); }
+        },
+        invernadero: {
+            icon: '🌿', name: 'Aire vivificante', desc: 'Al final de cada turno, tú y los enemigos recuperan 2 ❤️.',
+            onTurnEnd: (ctx) => {
+                ctx.combat.healEntity(ctx.player, 2);
+                ctx.combat.aliveEnemies().forEach((e) => ctx.combat.healEntity(e, 2));
+            }
+        },
+        bodega: {
+            icon: '🌑', name: 'Oscuridad', desc: 'En los turnos impares no ves lo que van a hacer los enemigos.', hideIntent: true
+        },
+        dados: {
+            icon: '🎲', name: 'Dado del turno', desc: 'Al empezar cada turno se tira un dado: 1 pierdes 1 de energía · 2 nada · 3 cáscara · 4 robas · 5 Madurez · 6 energía.',
+            onTurnStart: (ctx) => {
+                const r = 1 + Math.floor(Math.random() * 6);
+                const p = ctx.player;
+                if (r === 1) { p.energy = Math.max(0, p.energy - 1); ctx.say('🎲 Sacas 1: pierdes 1 de energía'); }
+                else if (r === 2) ctx.say('🎲 Sacas 2: no pasa nada');
+                else if (r === 3) { ctx.combat.gainBlock(p, 4, false); ctx.say('🎲 Sacas 3: +4 de cáscara'); }
+                else if (r === 4) { ctx.draw(1); ctx.say('🎲 Sacas 4: robas 1 carta'); }
+                else if (r === 5) { ctx.buff('strength', 2); ctx.buff('flex', 2); ctx.say('🎲 Sacas 5: +2 de Madurez este turno'); }
+                else { ctx.gainEnergy(1); ctx.say('🎲 ¡Sacas 6! +1 de energía'); }
+            }
+        },
+        poker: {
+            icon: '🃏', name: 'Combo de Póker', desc: 'Jugar 3 cartas del mismo tipo en un turno te da 1 de energía (una vez por turno).',
+            onTurnStart: (ctx) => { ctx.state.counts = {}; ctx.state.done = false; },
+            onCardPlayed: (ctx, card) => {
+                ctx.state.counts = ctx.state.counts || {};
+                ctx.state.counts[card.type] = (ctx.state.counts[card.type] || 0) + 1;
+                if (!ctx.state.done && ctx.state.counts[card.type] >= 3) { ctx.state.done = true; ctx.gainEnergy(1); ctx.say('🃏 ¡Trío! +1 de energía'); }
+            }
+        },
+        ajedrez: {
+            icon: '♟️', name: 'Blancas y negras', desc: 'Turnos impares: tus ataques hacen +2 de daño. Turnos pares: empiezas con 4 de cáscara.',
+            onTurnStart: (ctx, turn) => {
+                if (turn % 2 === 1) { ctx.player.dmgBonus = 2; ctx.say('♙ Blancas: tus ataques hacen +2'); }
+                else { ctx.player.dmgBonus = 0; ctx.combat.gainBlock(ctx.player, 4, false); ctx.say('♟️ Negras: +4 de cáscara'); }
+            }
+        },
+        mercado: {
+            icon: '🧤', name: 'Carteristas', desc: 'En los turnos pares te roban hasta 6 de oro (lo recuperas al derrotar al ladrón).',
+            onTurnStart: (ctx, turn) => {
+                if (turn % 2 !== 0 || ctx.player.gold <= 0) return;
+                const thief = ctx.combat.aliveEnemies()[0];
+                if (!thief) return;
+                const g = Math.min(6, ctx.player.gold);
+                ctx.player.gold -= g;
+                thief.stolenGold = (thief.stolenGold || 0) + g;
+                ctx.say(`🧤 Te roban ${g} de oro`);
+            }
+        },
+        cocina: {
+            icon: '🔥', name: 'Fuego alto', desc: 'Al final de tu turno pierdes 1 ❤️ por cada 3 cartas que te queden en la mano.',
+            onTurnEnd: (ctx) => {
+                const n = Math.floor(ctx.player.hand.length / 3);
+                if (n > 0) { ctx.loseHp(Math.min(n, ctx.player.hp - 1)); ctx.say(`🔥 Se queman ${n} ❤️: juega tus cartas`); }
+            }
+        },
+        fabrica: {
+            icon: '⚡', name: 'Sobrecarga', desc: 'Cada 3 turnos hay una descarga eléctrica: 5 de daño directo a todos (tú también).',
+            onTurnStart: (ctx, turn) => {
+                if (turn % 3 !== 0) return;
+                ctx.say('⚡ ¡Descarga eléctrica!');
+                const p = ctx.player;
+                const lost = p.loseHp(Math.min(5, p.hp - 1));
+                if (lost) ctx.combat.pushEvent('damage', p, lost, { poison: true });
+                ctx.combat.aliveEnemies().forEach((e) => dropHp(ctx, e, 5));
+                ctx.combat.checkEnd();
+            }
+        },
+        torre_rey: {
+            icon: '👑', name: 'Guardia Real', desc: 'Los enemigos empiezan cada combate con 6 de cáscara; tú empiezas con 1 de Firmeza.',
+            onCombatStart: (ctx) => {
+                ctx.combat.aliveEnemies().forEach((e) => ctx.combat.gainBlock(e, 6, false));
+                ctx.buff('dexterity', 1);
+            }
+        }
+    };
+    Object.keys(RULES).forEach((id) => { window.FLOOR_THEMES[id].rule = RULES[id]; });
+
+    // =========================================================
     // LOS CASTILLOS
     //   sizes: [cols, rows] de cada uno de sus 3 pisos (crecen con el castillo)
     //   pool / pick / last: temas posibles, cuántos se sortean y cuál va siempre al final

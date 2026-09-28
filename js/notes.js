@@ -16,6 +16,7 @@ window.PATCH_NOTES = [
             '3 castillos × 3 pisos = 9 mapas. Cada castillo tiene su temática y cada piso su subtema: Huerto, Gallinero, Estanque, Invernadero y Bodega; el Castillo del Azar con la Sala de Dados, el Salón de Póker y la Torre de Ajedrez; y La Torre del Rey con Mercado, Cocina, Fábrica y la sala del trono. En cada partida se sortean y cambian de orden.',
             'Más de 50 enemigos, élites y jefes nuevos. Los pisos 1 y 2 tienen jefes guardianes y el último de cada castillo un jefe grande. Cada piso es más difícil que el anterior.',
             'Los mapas crecen con cada castillo y cambian de forma (clásico, despejado, laberinto, de ríos), con caminitos y adornos del tema.',
+            'Cada piso tiene su propia regla que cambia cómo se juega: dado del turno, oscuridad que oculta las intenciones, combo de póker, blancas y negras, carteristas, descargas eléctricas y más. Se ve en la esquina del combate.',
             'Nueva casilla Mesa de Juegos: Veintiuno de Dados, Póker de 5 cartas y Ajedrez chiquito de 5 columnas (¡hay que comerse todas las piezas del rival!).',
             'Pase de Batalla: ganas experiencia por cada enemigo derrotado y desbloqueas colores y accesorios. Ya no salen en cofres ni regalos (se quitaron los regalos del mapa).',
             'Más de 20 objetos nuevos inspirados en otros juegos (Balatro, The Binding of Isaac, Hades, Undertale, Slay the Spire…). Las reliquias ahora se llaman "objetos".',

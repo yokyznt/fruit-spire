@@ -33,6 +33,8 @@ class Combat {
         opts = opts || {};
         this.player = player;
         this.mods = opts.mods || {};
+        this.rule = opts.rule || null; // regla del piso (ver js/data/castles.js)
+        this.ruleState = {};
         this.enemies = (Array.isArray(enemyDefs) ? enemyDefs : [enemyDefs]).map((d) => new EnemyInstance(d, this.mods));
         this.target = null;
         this.onUpdate = onUpdate || function () {};
@@ -75,6 +77,15 @@ class Combat {
             relic[name](ctx, ...args);
         });
     }
+    // Regla del piso: mismos ganchos que los objetos, con su propio estado
+    ruleHook(name, ...args) {
+        const r = this.rule;
+        if (!r || !r[name]) return;
+        const ctx = this.makeCtx(null);
+        ctx.state = this.ruleState;
+        ctx.say = (text) => this.pushEvent('rule', this.player, 0, { text });
+        r[name](ctx, ...args);
+    }
     relicSum(field) {
         return this.player.relics.reduce((s, rid) => s + ((window.RELIC_DB[rid] || {})[field] || 0), 0);
     }
@@ -95,6 +106,7 @@ class Combat {
         const char = window.CHARACTER_DB[p.characterId];
         if (char && char.onCombatStart) char.onCombatStart(this);
         this.relicHook('onCombatStart');
+        this.ruleHook('onCombatStart');
         const pet = window.petFor ? window.petFor(p.characterId) : null;
         if (pet && pet.onCombatStart) pet.onCombatStart(this.makeCtx(null));
         this.enemies.forEach((e) => e.chooseMove(this));
@@ -122,6 +134,7 @@ class Combat {
         if (p.garden && p.garden.length) this.growGarden(1);
         for (let k = 0; k < p.getStatus('vine'); k++) this.plant('agria');
         this.relicHook('onTurnStart');
+        this.ruleHook('onTurnStart', this.turnNumber);
         this.onUpdate();
     }
 
@@ -467,6 +480,7 @@ class Combat {
         else p.discardPile.push(cardId);
 
         this.relicHook('onCardPlayed', card);
+        this.ruleHook('onCardPlayed', card);
         this.enemyReactions(card);
         this.checkEnd();
         this.onUpdate();
@@ -550,6 +564,7 @@ class Combat {
             return true;
         });
         this.relicHook('onTurnEnd');
+        this.ruleHook('onTurnEnd', this.turnNumber);
         const flex = p.getStatus('flex');
         if (flex) { p.addStatus('strength', -flex); delete p.statuses.flex; }
         // lo que se conserva en la mano

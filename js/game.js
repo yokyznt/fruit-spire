@@ -642,7 +642,7 @@ function startCombat(enemyIds, kind) {
             }, 350);
         }
         setTimeout(() => onCombatEnd(result, kind), 1500);
-    }, { mods: window.scaledMods(difficulty().mods, GAME.player.act, currentFloorNo()) });
+    }, { mods: window.scaledMods(difficulty().mods, GAME.player.act, currentFloorNo()), rule: GAME.tutorial ? null : currentTheme().rule });
     if (GAME.tutorial && GAME.tutorial.firstFight) {
         GAME.tutorial.firstFight = false;
         const hand = GAME.combat.player.hand;

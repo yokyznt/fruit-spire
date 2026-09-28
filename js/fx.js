@@ -655,6 +655,7 @@ function spawnSingleFx(ev, opts) {
         reshuffleFx(ev.amount);
         return;
     }
+    if (T === 'rule') { showToast(ev.text); return; }
     if (T === 'relic') {
         const sticker = document.querySelector(`.relic-sticker[data-relic="${ev.relicId}"]`);
         restartClass(sticker, 'flash');
