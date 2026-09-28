@@ -186,6 +186,11 @@ async function playCard(i, targetIdx, drop) {
         }
         targetIdx = alive[0];
     }
+    // Provocación: el golpe se desvía al enemigo que provoca
+    if (needsTarget && c.tauntIndex) {
+        const ti = c.tauntIndex();
+        if (ti >= 0 && ti !== targetIdx && !c.enemies[targetIdx].getStatus('taunt')) { targetIdx = ti; showToast('¡Provocación! Tu golpe tiene que ir contra este enemigo'); }
+    }
     GAME.anim = true;
     if (window.Sfx) (card.type === 'attack' ? Sfx.cardAttack : card.type === 'power' ? Sfx.cardPower : Sfx.cardSkill)();
     const flySide = needsTarget ? `enemy-${targetIdx}` : 'player';
@@ -656,6 +661,32 @@ function spawnSingleFx(ev, opts) {
         return;
     }
     if (T === 'rule') { showToast(ev.text); return; }
+    if (T === 'taunt') {
+        const el = portraitEl(ev.target);
+        if (el) restartClass(el.querySelector('.hit-layer'), 'shiver');
+        showToast('¡Provocación! Tu golpe tiene que ir contra este enemigo');
+        return;
+    }
+    if (T === 'stealcard') {
+        const card = window.getCard(ev.cardId);
+        floatText('player', `${art('st_thief', '🃏', { size: 'md' })}<span class="fx-text">-1<small> ${card ? card.name : 'carta'}</small></span>`, 'fx-damage');
+        restartClass(document.getElementById('pile-draw'), 'bump');
+        return;
+    }
+    if (T === 'returncards') {
+        floatText('player', `${art('st_thief', '🃏', { size: 'md' })}<span class="fx-text">+${ev.amount}<small> cartas recuperadas</small></span>`, 'fx-heal');
+        restartClass(document.getElementById('pile-discard'), 'bump');
+        return;
+    }
+    if (T === 'breed') {
+        floatText(ev.target, `${art('st_breed', '🥚', { size: 'md' })}<span class="fx-text">¡Cría!</span>`, 'fx-status');
+        return;
+    }
+    if (T === 'drainenergy') {
+        restartClass(document.querySelector('.energy-orange'), 'nope');
+        floatText('player', `${art('st_drained', '🔋', { size: 'md' })}<span class="fx-text">-${ev.amount}<small> energía</small></span>`, 'fx-poison');
+        return;
+    }
     if (T === 'relic') {
         const sticker = document.querySelector(`.relic-sticker[data-relic="${ev.relicId}"]`);
         restartClass(sticker, 'flash');

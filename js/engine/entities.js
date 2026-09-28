@@ -84,6 +84,7 @@ class EnemyInstance extends Entity {
         this.turns = 0;
         this.phase = 0;          // para jefes con fases
         this.stolenGold = 0;
+        this.stolenCards = [];   // cartas que te robó (vuelven a tu descarte si lo derrotas)
         if (def.start) Object.keys(def.start).forEach((id) => this.addStatus(id, def.start[id]));
     }
     // Elige la siguiente jugada. Si el enemigo tiene `ai`, decide él;

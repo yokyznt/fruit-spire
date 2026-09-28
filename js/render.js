@@ -866,6 +866,10 @@ function intentInfo(c, e) {
         set('debuff', 'ui_coin', `${m.stealGold}`, m.stealGold);
         lines.push('Te robará oro. Si lo derrotas, lo recuperas.');
     }
+    if (m.stealCard) {
+        set('debuff', 'st_thief', `${m.stealCard}`, m.stealCard);
+        lines.push(`Te robará ${m.stealCard === 1 ? 'una carta' : `${m.stealCard} cartas`} de tu pila de robo. Si lo derrotas, las recuperas.`);
+    }
     let addCardShown = null;
     if (m.addCard) {
         const card = window.getCard(m.addCard.id);

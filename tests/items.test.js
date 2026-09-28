@@ -5,7 +5,7 @@ const path = require('path');
 const root = process.argv[2] || path.resolve(__dirname, '..');
 const files = [
     'js/data/statuses.js', 'js/data/seeds.js', 'js/data/sprouts.js', 'js/data/cards.js', 'js/data/cards_characters.js', 'js/data/starter.js',
-    'js/data/enemies.js', 'js/data/enemies_extra.js', 'js/data/enemies_castles.js', 'js/data/castles.js',
+    'js/data/enemies.js', 'js/data/enemies_extra.js', 'js/data/enemies_castles.js', 'js/data/castles.js', 'js/data/enemies_more.js',
     'js/data/relics.js', 'js/data/relics_indie.js', 'js/data/characters.js', 'js/data/difficulty.js',
     'js/engine/entities.js', 'js/engine/combat.js'
 ];

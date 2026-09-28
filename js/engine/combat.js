@@ -58,6 +58,20 @@ class Combat {
     }
     aliveEnemies() { return this.enemies.filter((e) => e.isAlive()); }
 
+    // Elige el objetivo de una carta o semilla. Provocación: si hay un enemigo con
+    // Provocación, los golpes a un solo objetivo tienen que ir contra él.
+    setTarget(targetIndex) {
+        if (targetIndex == null || !this.enemies[targetIndex]) return;
+        let t = this.enemies[targetIndex];
+        const taunter = this.aliveEnemies().find((e) => e.getStatus('taunt'));
+        if (taunter && t !== taunter && !t.getStatus('taunt')) { t = taunter; this.pushEvent('taunt', taunter, 0); }
+        this.target = t;
+    }
+    tauntIndex() {
+        const taunter = this.aliveEnemies().find((e) => e.getStatus('taunt'));
+        return taunter ? this.enemies.indexOf(taunter) : -1;
+    }
+
     targetKey(entity) {
         return entity === this.player ? 'player' : `enemy-${this.enemies.indexOf(entity)}`;
     }
@@ -121,6 +135,9 @@ class Combat {
         this.enemies.forEach((e) => { e._capLost = 0; });
         if (!p.getStatus('barricade')) p.block = 0;
         p.energy = p.maxEnergy;
+        // Agotamiento: empiezas el turno con menos energía
+        const drained = p.getStatus('drained');
+        if (drained) { p.energy = Math.max(0, p.energy - drained); delete p.statuses.drained; this.pushEvent('drainenergy', p, drained); }
         const fire = p.getStatus('inner_fire');
         if (fire) {
             const lost = p.loseHp(1);
@@ -210,6 +227,8 @@ class Combat {
         }
         // Pulpa Blanda: cada golpe que le quita vida le da cáscara
         if (hpLoss > 0 && target.isAlive() && target.getStatus('malleable')) this.gainBlock(target, target.getStatus('malleable'), false);
+        // Rabia: cada golpe que le quita vida lo pone más fuerte
+        if (hpLoss > 0 && target.isAlive() && target.getStatus('rage')) this.applyStatus(target, 'strength', target.getStatus('rage'));
         // Divisible: a media vida se parte en dos
         if (target !== this.player && target.isAlive() && target.getStatus('split') && target.hp <= target.maxHp / 2) this.splitEnemy(target);
         if (target === this.player && hpLoss > 0) this.relicHook('onHpLoss', hpLoss);
@@ -333,10 +352,12 @@ class Combat {
                 if (!e.getStatus('minion')) return;
                 e._fled = true;
                 e._deathHandled = true;
+                this.returnStolenCards(e);
                 e.hp = 0;
                 this.pushEvent('flee', e, 0);
             });
         }
+        this.returnStolenCards(enemy);
         if (enemy.stolenGold) {
             this.player.gold += enemy.stolenGold;
             this.pushEvent('gold', this.player, enemy.stolenGold);
@@ -344,6 +365,25 @@ class Combat {
         }
         if (enemy.def.onDeath) enemy.def.onDeath(enemy, this.makeCtx(null));
         this.relicHook('onEnemyDeath', enemy);
+    }
+
+    // Robacartas: se lleva cartas de tu pila de robo (o del descarte). Vuelven al derrotarlo.
+    stealCards(enemy, n) {
+        const P = this.player;
+        for (let k = 0; k < n; k++) {
+            const pile = P.drawPile.length ? P.drawPile : P.discardPile;
+            const idx = pile.map((id, i) => i).filter((i) => { const c = window.getCard(pile[i]); return c && c.type !== 'curse' && c.type !== 'status'; });
+            if (!idx.length) break;
+            const [id] = pile.splice(idx[Math.floor(Math.random() * idx.length)], 1);
+            enemy.stolenCards.push(id);
+            this.pushEvent('stealcard', P, 1, { cardId: id, from: this.targetKey(enemy) });
+        }
+    }
+    returnStolenCards(enemy) {
+        if (!enemy.stolenCards || !enemy.stolenCards.length) return;
+        this.player.discardPile.push(...enemy.stolenCards);
+        this.pushEvent('returncards', this.player, enemy.stolenCards.length);
+        enemy.stolenCards = [];
     }
 
     // Se parte en dos: desaparece y deja dos de def.splitInto con su vida actual
@@ -429,7 +469,7 @@ class Combat {
         const seed = window.SEED_DB[seedId];
         if (!seed || this.ended || this.turn !== 'player') return false;
         this.lastEvents = [];
-        if (targetIndex != null && this.enemies[targetIndex]) this.target = this.enemies[targetIndex];
+        this.setTarget(targetIndex);
         this.pushEvent('seed', this.player, 0, { seedId });
         seed.use(this.makeCtx(null));
         this.checkEnd();
@@ -454,7 +494,7 @@ class Combat {
         this.lastEvents = [];
         p.energy -= card.cost;
         p.hand.splice(handIndex, 1);
-        if (targetIndex != null && this.enemies[targetIndex]) this.target = this.enemies[targetIndex];
+        this.setTarget(targetIndex);
 
         // Frasco de Almíbar: el primer ataque del combate pega doble
         const jar = this.relicState.frasco_almibar;
@@ -533,6 +573,12 @@ class Combat {
             if (entity.statuses[s] > 0) entity.addStatus(s, -1);
         });
         // Mecha: cuenta regresiva; al llegar a 0 explota contra el jugador
+        // Plaga: se reproduce al final de su turno si hay lugar
+        const breed = entity.getStatus('breed');
+        if (breed && entity !== this.player && this.aliveEnemies().length < 3) {
+            const child = this.summon(entity.def.breedInto || entity.def.id, Math.max(4, Math.ceil(entity.maxHp / 3)));
+            if (child) { entity.addStatus('breed', -1); this.pushEvent('breed', entity, 0); }
+        }
         const fuse = entity.getStatus('fuse');
         if (fuse && entity !== this.player) {
             if (fuse <= 1) {
@@ -593,7 +639,7 @@ class Combat {
         if (this.ended || this.turn !== 'enemy') return null;
         const enemy = this.enemies[index];
         if (!enemy || !enemy.isAlive()) return null;
-        enemy.block = 0;
+        if (!enemy.getStatus('shell')) enemy.block = 0; // Caparazón: su cáscara se acumula
         this.lastEvents = [];
         if (enemy.getStatus('frozen')) {
             delete enemy.statuses.frozen;
@@ -631,6 +677,7 @@ class Combat {
             }
         }
         if (move.addCard) this.addCards(move.addCard.id, move.addCard.n || 1, move.addCard.to || 'discard');
+        if (move.stealCard && enemy.isAlive()) this.stealCards(enemy, move.stealCard);
         if (move.summon) move.summon.forEach((id) => this.summon(id));
         if (move.special) move.special(enemy, ctx);
 

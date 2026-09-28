@@ -110,6 +110,26 @@ registerStatus({
     help: 'El próximo golpe que reciba no le hace daño. Baja 1 por cada golpe.'
 });
 registerStatus({
+    id: 'taunt', noCount: true, name: 'Provocación', word: 'provocación', icon: '📣', sprite: 'st_taunt', kind: 'buff', cls: 'block',
+    help: 'Tus cartas y semillas que van a un solo enemigo tienen que ir contra él.'
+});
+registerStatus({
+    id: 'rage', name: 'Rabia', word: 'rabia', icon: '💢', sprite: 'st_rage', kind: 'buff', cls: 'str',
+    help: 'Cada vez que un golpe le quita vida, gana 1 de Madurez por cada punto.'
+});
+registerStatus({
+    id: 'shell', noCount: true, name: 'Caparazón', word: 'caparazón', icon: '🐢', sprite: 'st_shell', kind: 'buff', cls: 'block',
+    help: 'Su cáscara no se pierde al empezar su turno: se va acumulando.'
+});
+registerStatus({
+    id: 'drained', name: 'Agotamiento', word: 'agotamiento', icon: '🔋', sprite: 'st_drained', kind: 'debuff', cls: 'energy',
+    help: 'Al empezar su próximo turno pierde 1 de energía por cada punto.'
+});
+registerStatus({
+    id: 'breed', name: 'Plaga', word: 'plaga', icon: '🥚', sprite: 'st_breed', kind: 'buff', cls: 'poison',
+    help: 'Al final de su turno, si hay lugar, tiene una cría. Baja 1 por cada cría.'
+});
+registerStatus({
     id: 'fertile', name: 'Tierra Fértil', word: 'tierra fértil', icon: '🪴', sprite: 'tierra_fertil', kind: 'buff', cls: 'heal',
     help: 'Cada brote que cosecha le da 1 de cáscara por cada punto.'
 });
