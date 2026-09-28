@@ -776,7 +776,7 @@ function takeRewardSeed() {
     if (!addSeed(GAME.rewardSeed)) { showToast('Tu bolsa está llena: tira una semilla para hacer espacio'); return; }
     GAME.rewardSeedTaken = true;
     render();
-    restartClass(document.querySelector('.hud-seeds'), 'bump');
+    restartClass(document.querySelector('.hud-bag'), 'bump');
 }
 // Tocar una semilla abre su menú (usar / tirar)
 function clickSeed(i) {
@@ -811,6 +811,7 @@ function useSeedFromMenu(i) {
     }
     useSeed(i, seed.target === 'enemy' ? alive[0] : null);
 }
+function cancelSeedAim() { GAME.seedTargeting = null; render(); }
 function useSeedOn(k) {
     if (GAME.seedTargeting == null) return;
     const i = GAME.seedTargeting;
@@ -1016,7 +1017,7 @@ function buyShopSeed(index, el) {
     if (!item) return;
     if (GAME.player.gold < item.price) { cantAfford(el); return; }
     if (GAME.player.seeds.indexOf(null) < 0) { restartClass(el.closest('.shop-item'), 'nope'); showToast('Tu bolsa de semillas está llena'); return; }
-    shopPurchase(el, '.hud-seeds', () => {
+    shopPurchase(el, '.hud-bag', () => {
         GAME.player.gold -= item.price;
         addSeed(item.seed.id);
         GAME.shopStock.seeds.splice(index, 1);
@@ -1200,6 +1201,6 @@ Object.assign(window, {
     restHeal, setRestMode, leaveRest, restUpgradeCard, restRemoveCard,
     buyShopCard, buyShopRelic, openShopRemoval, shopRemoveCard, closeShopPicker, leaveShop,
     resolveEventOption, closeEventResult,
-    wearNewPet, clickSeed, discardSeed, useSeedFromMenu, useSeedOn, takeRewardSeed, buyShopSeed,
+    wearNewPet, clickSeed, discardSeed, useSeedFromMenu, useSeedOn, cancelSeedAim, takeRewardSeed, buyShopSeed,
     tossWellCoin, leaveWell, enterDungeonCell, leaveDungeon
 });

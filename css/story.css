@@ -2,75 +2,7 @@
    HISTORIA ANIMADA, PASE DE BATALLA, NOTAS Y MENÚ (v48)
    ============================================================ */
 
-/* ---------- historia ---------- */
-.screen-story .stage { padding: 0; }
-.screen-story { background: #1c1026; }
-.story { position: relative; width: 100%; height: 100%; overflow: hidden; background: linear-gradient(#8FD3F4 0%, #FFE9B8 62%, #FFD9A0 100%); transition: background 2.5s; }
-.story.ph1 { background: linear-gradient(#7C86C9 0%, #E8B98F 62%, #E39C7A 100%); }
-.story.ph2 { background: linear-gradient(#4E4F86 0%, #B07A86 62%, #A65E6E 100%); }
-.story.ph3, .story.ph4 { background: linear-gradient(#2B2358 0%, #6A4A7C 62%, #8A4F6E 100%); }
-.story-sky, .story-dark, .story-mountains { position: absolute; inset: 0; pointer-events: none; }
-.cloud { position: absolute; width: 190px; height: 56px; border-radius: 99px; background: rgba(255, 255, 255, .85); animation: cloudDrift 46s linear infinite; }
-.cloud::before, .cloud::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
-.cloud::before { width: 80px; height: 80px; left: 26px; top: -34px; }
-.cloud::after { width: 60px; height: 60px; left: 92px; top: -22px; }
-.cloud.c1 { top: 12%; left: -14%; }
-.cloud.c2 { top: 26%; left: 30%; animation-duration: 60s; transform: scale(.7); }
-.cloud.c3 { top: 8%; left: 64%; animation-duration: 52s; transform: scale(.85); }
-@keyframes cloudDrift { from { translate: 0 0; } to { translate: 140vw 0; } }
-.sun { position: absolute; left: 8%; top: 10%; font-size: 100px; transition: transform 3s, opacity 3s; filter: drop-shadow(0 0 30px rgba(255, 210, 90, .9)); }
-.story.ph1 .sun { transform: translateY(80px); }
-.story.ph2 .sun, .story.ph3 .sun, .story.ph4 .sun { transform: translateY(260px); opacity: 0; }
-.story-dark { background: radial-gradient(circle at 50% 40%, transparent 30%, rgba(20, 8, 40, .7) 100%); opacity: 0; transition: opacity 2.5s; }
-.story.ph1 .story-dark { opacity: .45; }
-.story.ph2 .story-dark, .story.ph3 .story-dark, .story.ph4 .story-dark { opacity: .85; }
-.story-mountains { top: auto; height: 42%; background: linear-gradient(135deg, transparent 49.5%, #6D5A8A 50%) 0 100% / 34% 70% no-repeat, linear-gradient(225deg, transparent 49.5%, #7A66A0 50%) 30% 100% / 40% 90% no-repeat, linear-gradient(135deg, transparent 49.5%, #6D5A8A 50%) 62% 100% / 38% 60% no-repeat; opacity: .55; }
-.story-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 26%; background: linear-gradient(#7BBF5A, #4E9A3D); border-top: 6px solid #3E7F30; box-shadow: 0 -10px 0 rgba(0, 0, 0, .06); }
-.story-ground::after { content: ''; position: absolute; left: -5%; right: -5%; top: 26%; height: 26px; background: #C9A25F; transform: rotate(-4deg); border-radius: 30px; box-shadow: 0 5px 0 rgba(0, 0, 0, .18); }
-
-/* castillos: uno más grande que otro, cada vez más arriba */
-.story-castles { position: absolute; inset: 0; pointer-events: none; }
-.story-castle { position: absolute; display: block; width: var(--px); height: var(--px); transition: transform 2.5s var(--ease-out), filter 2.5s; }
-.story-castle .art { width: 100%; height: 100%; }
-.story-castle.c1 { left: 54%; bottom: 27%; }
-.story-castle.c2 { left: 67%; bottom: 33%; }
-.story-castle.c3 { left: 80%; bottom: 40%; }
-.story-castle .story-king { position: absolute; left: 50%; top: 4%; font-size: 40px; transform: translate(-50%, 0) scale(0); opacity: 0; transition: transform 1s var(--ease-back), opacity 1s; z-index: 2; }
-.story-castle .story-glow { position: absolute; left: 50%; top: 12%; width: 130px; height: 130px; margin-left: -65px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 226, 122, .95), transparent 70%); opacity: 0; transition: opacity 1.5s; z-index: 0; }
-.story.ph3 .story-castle.c3, .story.ph4 .story-castle.c3 { transform: scale(1.14); filter: drop-shadow(0 0 22px rgba(255, 226, 122, .9)); }
-.story.ph3 .story-king, .story.ph4 .story-king { opacity: 1; transform: translate(-50%, 0) scale(1); animation: kingBob 1.4s ease-in-out infinite 1s; }
-.story.ph3 .story-glow, .story.ph4 .story-glow { opacity: 1; animation: glowPulse 1.6s ease-in-out infinite alternate; }
-@keyframes kingBob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
-@keyframes glowPulse { from { transform: scale(.9); } to { transform: scale(1.2); } }
-
-/* aldea feliz del principio */
-.story-village { position: absolute; left: 3%; bottom: 8%; display: flex; gap: 14px; font-size: 62px; transition: opacity 1.2s, transform 1.2s; }
-.story-village span { display: inline-block; animation: villageHop .8s ease-in-out infinite; animation-delay: calc(var(--i) * .13s); }
-@keyframes villageHop { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-22px) rotate(4deg); } }
-.story.ph1 .story-village, .story.ph2 .story-village, .story.ph3 .story-village, .story.ph4 .story-village { opacity: 0; transform: translateY(40px); }
-
-/* la marcha de los captores con sus jaulas */
-.story-march { position: absolute; inset: 0; pointer-events: none; }
-.marcher { position: absolute; left: -16%; bottom: 10%; display: none; align-items: flex-end; opacity: 0; }
-.story.ph1 .marcher, .story.ph2 .marcher, .story.ph3 .marcher, .story.ph4 .marcher { display: flex; animation: marchAll 10.5s ease-in-out forwards; animation-delay: calc(var(--i) * .5s); }
-.m-enemy { font-size: 68px; line-height: 1; display: inline-block; animation: marchBob .38s ease-in-out infinite alternate; }
-.m-cage { position: relative; display: inline-block; margin-left: -8px; margin-bottom: 26px; animation: cageSwing .7s ease-in-out infinite alternate; transform-origin: 50% 0; }
-.m-cage .art { width: 70px; height: 70px; }
-.m-fruit { position: absolute; left: 50%; top: 56%; font-size: 26px; transform: translate(-50%, -50%); }
-@keyframes marchBob { from { transform: translateY(0) rotate(-4deg); } to { transform: translateY(-10px) rotate(4deg); } }
-@keyframes cageSwing { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
-@keyframes marchAll {
-    0% { left: -16%; bottom: 10%; opacity: 1; }
-    58% { left: 56%; bottom: 25%; opacity: 1; }
-    100% { left: 86%; bottom: 58%; opacity: 0; }
-}
-
-.story-caption { position: absolute; left: 50%; top: 5%; transform: translateX(-50%); width: min(880px, 86%); text-align: center; z-index: 5; }
-.story-caption p { margin: 0; padding: 14px 26px; font-size: 1.9em; line-height: 1.25; color: var(--ink); background: rgba(255, 249, 236, .94); border-radius: 18px; box-shadow: 0 0 0 3px var(--ink), 5px 9px 0 rgba(0, 0, 0, .28); }
-.story-caption.pop-in { animation: pop .5s var(--ease-back); }
-.story-buttons { position: absolute; right: 22px; bottom: 18px; display: flex; gap: 12px; align-items: center; z-index: 6; }
-.story-buttons .hidden { display: none; }
-.story-buttons #story-go { font-size: 1.3em; padding: 12px 34px; animation: bob 1.2s ease-in-out infinite; }
+/* (la historia animada ahora vive en css/intro.css) */
 
 /* ---------- menú principal: subtítulo y botón de notas ---------- */
 .menu-goal { font-size: 1.5em; color: var(--ink-soft); margin: -2px 0 6px; text-align: center; }
@@ -189,3 +121,5 @@ button.btn-strawberry:hover { background: #FFB4C1; }
 .rescue-row { margin: 14px 0 6px; align-items: flex-end; }
 .rescue-row .king { animation-name: kingHop; }
 @keyframes kingHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px) rotate(-3deg); } }
+.replay-btn { align-self: center; margin: 0 0 10px; display: inline-flex; align-items: center; gap: 8px; }
+.replay-btn .art { width: 26px; height: 26px; }

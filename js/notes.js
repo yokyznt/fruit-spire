@@ -6,9 +6,23 @@
 // ============================================================
 
 window.CREATOR = { handle: '@yokyznt', url: 'https://www.instagram.com/yokyznt/' };
-window.GAME_VERSION = '2.0';
+window.GAME_VERSION = '2.1';
 
 window.PATCH_NOTES = [
+    {
+        version: '2.1', date: '28 sep 2026', title: 'Todo dibujado a mano',
+        items: [
+            'Nueva historia animada al empezar: la aldea feliz, la invasión de noche, el convoy de carretas con las frutas enjauladas (y la carroza del Rey tirada por la Oruga Reina), los tres castillos y la Torre del Rey. Tu fruta se esconde en un arbusto… ¡y es la única que puede salvarlos! Se puede ver otra vez desde aquí.',
+            'Adiós a los emojis: más de 120 dibujos nuevos en el mismo estilo de stickers (todos los enemigos y jefes nuevos, objetos, eventos como la Fuente del Hada, portadas de cada piso, adornos del mapa, dados y piezas de ajedrez).',
+            'Mochila: tus objetos y semillas ahora viven juntos en una mochila. Tócala (o pulsa I) para verlos en grande con su rareza, qué hacen y su guiño a otros juegos. Brilla en combate cuando puedes usar una semilla.',
+            '17 enemigos nuevos con 6 mecánicas nuevas: Provocación (tus golpes tienen que ir contra él), Rabia (se hace más fuerte al recibir golpes), Caparazón (su cáscara se acumula), Agotamiento (te quita energía), Robacartas (te roba cartas; las recuperas al vencerlo) y Plaga (tiene crías). También hay enemigos intangibles.',
+            'Nueva élite del Mercado (Reina Hormiga) y de la Torre del Rey (Caballero Espejo).'
+        ],
+        fixes: [
+            'La barra de arriba ya no se llena con objetos ni semillas: todo va a la mochila.',
+            'El tablero de ajedrez y los dados del minijuego ahora son dibujos.'
+        ]
+    },
     {
         version: '2.0', date: '28 sep 2026', title: 'El Rescate del Rey Fruta',
         items: [
@@ -69,6 +83,7 @@ window.renderNotes = function () {
                 <span class="creator-ig">${art('ui_insta', '', { size: 'md' })}</span>
                 <span><b class="hand">¡Sígueme en Instagram!</b><br>Creador del juego: <u>${window.CREATOR.handle}</u></span>
             </a>
+            <button class="btn-banana replay-btn" onclick="replayStory()">${art('ui_play', '', { size: 'xs' })} Ver la historia otra vez</button>
             <div class="notes-scroll">
                 ${window.PATCH_NOTES.map((n, i) => `
                 <section class="note ${i === 0 ? 'latest' : ''}">

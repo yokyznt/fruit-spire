@@ -34,10 +34,6 @@
 .inv-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .inv-head .art-lg { width: 64px; height: 64px; animation: bob 2.4s ease-in-out infinite; }
 .inv-head .hand-title { margin: 0 8px 0 0; font-size: 2.3em; }
-.inv-tabs { display: flex; gap: 8px; }
-.inv-tabbtn { padding: 8px 18px; font-size: 1.05em; background: var(--edge); }
-.inv-tabbtn b { margin-left: 6px; background: var(--banana-soft); padding: 0 8px; border-radius: 99px; font-weight: normal; font-family: var(--f-display); }
-.inv-tabbtn.on { background: var(--banana); transform: translateY(-2px) rotate(-1deg); }
 .inv-close { margin-left: auto; width: 46px; height: 46px; padding: 0; font-size: 1.2em; }
 
 .inv-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 2px 10px; }
@@ -97,15 +93,40 @@
 .inv-empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--ink-soft); text-align: center; }
 .inv-empty .hand { font-size: 1.5em; margin: 8px 0 0; }
 
-.inv-seeds { display: flex; gap: 22px; justify-content: center; margin-top: 18px; }
-.inv-seed {
-    width: 290px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 16px; text-align: center;
-    border-radius: 18px; background: var(--paper-2); box-shadow: 0 0 0 2px var(--ink), 0 6px 0 2px rgba(74, 52, 40, .18);
-}
-.inv-seed .art-lg { width: 96px; height: 96px; animation: bob 2.4s ease-in-out infinite; }
-.inv-seed b { font-size: 1.5em; font-weight: normal; }
-.inv-seed p { min-height: 3.6em; margin: 4px 0; }
-.inv-seed.empty { justify-content: center; background: rgba(255, 255, 255, .5); box-shadow: 0 0 0 2px #D9C8AE; color: #A48F76; min-height: 280px; }
-.inv-seed.empty .seed-slot { width: 64px; height: 64px; }
-.panel.inventory > .inv-tip { max-width: none; text-align: center; margin: 6px 0 0; }
-.panel.inventory .inv-seed p, .panel.inventory .inv-detail p { max-width: none; }
+
+/* ---------- mochila unificada: semillas arriba, objetos abajo ---------- */
+.panel.modal.inventory { gap: 8px; }
+.inv-sub { font-size: 1.2em; color: var(--ink-soft); }
+.inv-section { display: flex; flex-direction: column; min-height: 0; }
+.inv-section.relics { flex: 1; }
+.inv-h { margin: 0; font-size: 1.45em; font-weight: normal; display: flex; align-items: baseline; gap: 8px; }
+.inv-h b { font-family: var(--f-display); font-weight: normal; font-size: .8em; background: var(--banana-soft); padding: 0 10px; border-radius: 99px; box-shadow: 0 0 0 2px var(--ink); }
+.inv-h small { font-family: var(--f-body, inherit); font-size: .62em; color: var(--ink-soft); }
+.inv-section.seeds { padding: 8px 12px 10px; border-radius: 16px; background: #EEF8EC; box-shadow: inset 0 0 0 2px #CFE8C8; }
+.inv-seeds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 6px; }
+.inv-seed { display: flex; gap: 10px; align-items: center; padding: 8px 12px; min-height: 104px; border-radius: 14px; background: var(--paper-2); box-shadow: 0 0 0 2px var(--ink), 0 4px 0 2px rgba(74, 52, 40, .18); text-align: left; }
+.inv-seed > .art-md { width: 64px; height: 64px; flex: none; animation: bob 2.4s ease-in-out infinite; }
+.inv-seed-text { min-width: 0; flex: 1; }
+.inv-seed-text b { font-size: 1.25em; font-weight: normal; }
+.inv-seed-text p { margin: 2px 0 6px; font-size: .9em; line-height: 1.25; max-width: none; }
+.inv-seed-btns { display: flex; gap: 8px; }
+.inv-seed-btns button { padding: 4px 16px; font-size: .92em; }
+.inv-seed.empty { justify-content: center; flex-direction: column; background: rgba(255, 255, 255, .55); box-shadow: 0 0 0 2px #CFE8C8; color: #8FAF86; }
+.inv-seed.empty .seed-slot { width: 44px; height: 44px; }
+.inv-toolbar { margin: 4px 2px 8px; }
+.inv-toolbar .inv-counts { flex: 1; margin-left: 6px; }
+.panel.modal.inventory .inv-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.panel.modal.inventory .inv-tile { min-height: 136px; }
+.panel.modal.inventory .inv-art .art-lg { width: 68px; height: 68px; }
+.panel.modal.inventory .inv-detail-art .art-xxl { width: 140px; height: 140px; }
+/* botón de la barra: objetos + semillas */
+.hud-bag .bag-seeds { display: flex; gap: 2px; margin-left: 6px; padding: 2px 5px; border-radius: 99px; background: rgba(255, 255, 255, .7); box-shadow: 0 0 0 1.5px rgba(74, 52, 40, .35); }
+.hud-bag .bag-seed { display: inline-flex; width: 22px; height: 22px; }
+.hud-bag .bag-seed .art-xs { width: 22px; height: 22px; }
+.hud-bag .bag-seed.empty { border-radius: 50%; box-shadow: inset 0 0 0 2px #D9C8AE; transform: scale(.7); }
+.hud-bag.seed-ready .bag-seeds { background: #D8F4E8; box-shadow: 0 0 0 2px var(--mint-dark), 0 0 10px 3px rgba(92, 201, 167, .6); animation: seedReady 1.2s ease-in-out infinite alternate; }
+@keyframes seedReady { from { transform: scale(1); } to { transform: scale(1.08); } }
+/* aviso al apuntar una semilla */
+.seed-aim-banner { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 6px; border-radius: 99px; background: #FFF6D2; box-shadow: 0 0 0 2px var(--ink), 0 4px 0 2px rgba(74, 52, 40, .2); animation: pop .35s var(--ease-back); }
+.seed-aim-banner .hand { font-size: 1.2em; }
+.seed-aim-banner button { padding: 4px 14px; font-size: .9em; }

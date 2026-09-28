@@ -50,7 +50,7 @@ const TUT_STEPS = [
 
     // ---------- el resto del mapa ----------
     { screen: 'reward', pos: 'bl', spot: '.reward-row .card', until: tutScreen('map'), text: '¡Ganaste! Te llevas oro y tienes que elegir una carta nueva para tu mazo. Toca la que más te guste.' },
-    { screen: 'map', pos: 'bl', next: true, spot: '.hud-seeds', text: '¡También ganaste una semilla! Está arriba, en tu bolsa. En combate, tócala en tu turno para usarla. Cada una sirve una sola vez.' },
+    { screen: 'map', pos: 'bl', next: true, spot: '.hud-bag', text: '¡También ganaste una semilla! Se guarda en tu mochila, arriba, junto a tus objetos. En combate, abre la mochila en tu turno para usarla. Cada una sirve una sola vez.' },
     { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('rest'), text: 'Ahora ve al campamento, la casilla de la fogata.' },
     {
         screen: 'rest', pos: 'bl', spot: '.rest-option, .reward-row.picker .card, button[onclick*="setRestMode"]', until: tutScreen('map'),

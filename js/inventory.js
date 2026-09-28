@@ -1,8 +1,10 @@
 // ============================================================
-// INVENTORY.JS — La mochila: un botón en la barra de arriba (con cuántos
-// objetos llevas y los últimos 3) que abre una ventana con todos tus
-// objetos y semillas. Al tocar un objeto se ve en grande con su rareza,
-// qué hace, su guiño a otro juego y su estado (usado, contador…).
+// INVENTORY.JS — La mochila: TODO lo que llevas en un solo lugar.
+// En la barra de arriba hay un botón (cuántos objetos llevas, los
+// últimos y tus semillas) que abre una ventana con:
+//   · arriba tus semillas (se usan en combate, en tu turno)
+//   · abajo tus objetos; al tocar uno se ve en grande con su rareza,
+//     qué hace, su guiño a otro juego y su estado.
 // Se abre también con la tecla I y se cierra con Esc.
 // ============================================================
 
@@ -22,31 +24,40 @@
         if (r.id === 'desafio_muerte') return c.used ? 'Ya te salvó en esta partida' : 'Listo para salvarte una vez';
         return '';
     }
+    const seedsReady = () => (GAME.player.seeds || []).some(Boolean) && canUseSeedNow();
 
     // ---------- botón de la barra de arriba ----------
     window.hudBagHtml = function (p) {
         const n = p.relics.length;
-        const last = p.relics.slice(-3).reverse().map((rid, i) => {
+        const seeds = p.seeds || [];
+        const nSeeds = seeds.filter(Boolean).length;
+        const last = p.relics.slice(-2).reverse().map((rid, i) => {
             const r = window.RELIC_DB[rid];
             return r ? `<span class="bag-peek relic-sticker ${r.tier === 'boss' ? 'boss' : ''}" data-relic="${r.id}" style="--k:${i}">${art(r.sprite || r.id, r.icon, { size: 'xs' })}</span>` : '';
         }).join('');
-        return `<button class="hud-bag ${n ? '' : 'empty'}" onclick="openInventory()" ${tip(['Mochila', n ? `Llevas ${n} objeto${n === 1 ? '' : 's'}. Toca para verlos todos (tecla I).` : 'Todavía no tienes objetos. Salen en tesoros, élites, jefes, tiendas y eventos.'])}>
+        const dots = seeds.map((id) => {
+            const s = window.SEED_DB[id];
+            return s ? `<span class="bag-seed">${seedArt(s, 'xs')}</span>` : '<span class="bag-seed empty"></span>';
+        }).join('');
+        const ready = GAME.screen === 'combat' && seedsReady();
+        const text = `${n ? `Llevas ${n} objeto${n === 1 ? '' : 's'}` : 'Todavía no tienes objetos'} y ${nSeeds} de ${window.SEED_SLOTS} semillas. Toca para ver todo (tecla I).${ready ? ' ¡Puedes usar una semilla ahora!' : ''}`;
+        return `<button class="hud-bag ${n ? '' : 'empty'} ${ready ? 'seed-ready' : ''}" onclick="openInventory()" ${tip(['Mochila', text])}>
             ${art('ui_bag', '🎒', { size: 'sm' })}
             <span class="bag-count">${n}</span>
             <span class="bag-peeks">${last}</span>
+            <span class="bag-seeds">${dots}</span>
         </button>`;
     };
 
     // ---------- abrir / cerrar ----------
-    window.openInventory = function (tab) {
+    window.openInventory = function () {
         if (!GAME.player) return;
         hideTip();
-        GAME.inventory = { tab: tab || (GAME.inventory && GAME.inventory.tab) || 'relics', sel: null, sort: (GAME.inventory && GAME.inventory.sort) || 'recent' };
+        GAME.inventory = { sel: null, sort: (GAME.inventory && GAME.inventory.sort) || 'recent' };
         if (window.Sfx) Sfx.pop();
         render();
     };
     window.closeInventory = function () { GAME.inventory = null; render(); };
-    window.invTab = function (tab) { if (GAME.inventory) { GAME.inventory.tab = tab; GAME.inventory.sel = null; render(); } };
     window.invSort = function (s) { if (GAME.inventory) { GAME.inventory.sort = s; render(); } };
     window.invSelect = function (id) {
         if (!GAME.inventory) return;
@@ -55,9 +66,42 @@
         render();
     };
     window.invUseSeed = function (i) { GAME.inventory = null; useSeedFromMenu(i); };
-    window.invDropSeed = function (i) { if (confirm('¿Tirar esta semilla?')) { discardSeed(i); GAME.inventory = { tab: 'seeds', sel: null, sort: 'recent' }; render(); } };
+    window.invDropSeed = function (i) {
+        if (!confirm('¿Tirar esta semilla?')) return;
+        const keep = GAME.inventory;
+        discardSeed(i);
+        GAME.inventory = keep;
+        render();
+    };
 
-    // ---------- la ventana ----------
+    // ---------- semillas (arriba) ----------
+    function seedsSection(p) {
+        const usable = canUseSeedNow();
+        const nSeeds = (p.seeds || []).filter(Boolean).length;
+        const cards = (p.seeds || []).map((id, i) => {
+            const s = window.SEED_DB[id];
+            if (!s) return `<div class="inv-seed empty"><span class="seed-slot empty"></span><span class="hand">Hueco libre</span></div>`;
+            return `<div class="inv-seed" ${seedTip(s)}>
+                ${seedArt(s, 'md')}
+                <div class="inv-seed-text">
+                    <b class="hand">${s.name}</b> <span class="inv-tier">${SEED_RARITY[s.rarity] || ''}</span>
+                    <p>${highlightDesc(s.desc)}</p>
+                    <div class="inv-seed-btns">
+                        <button class="btn-mint" onclick="invUseSeed(${i})" ${usable ? '' : 'disabled'}>Usar</button>
+                        <button class="secondary" onclick="invDropSeed(${i})">Tirar</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+        return `
+        <section class="inv-section seeds">
+            <h3 class="inv-h hand">Semillas <b>${nSeeds}/${window.SEED_SLOTS}</b>
+                <small>${usable ? '¡Es tu turno: puedes usarlas!' : 'Se usan una vez, en combate y durante tu turno.'}</small></h3>
+            <div class="inv-seeds">${cards}</div>
+        </section>`;
+    }
+
+    // ---------- objetos (abajo) ----------
     function relicTile(r, idx, selected) {
         const t = TIERS[r.tier] || TIERS.common;
         return `<button class="inv-tile ${t.cls} ${selected ? 'sel' : ''}" style="--i:${Math.min(idx, 30)}" onclick="invSelect('${r.id}')" ${explainRelic(r)}>
@@ -83,7 +127,7 @@
             ${r.ref ? `<p class="inv-ref">${r.ref}</p>` : ''}
         </div>`;
     }
-    function relicsTab(p, inv) {
+    function relicsSection(p, inv) {
         let list = p.relics.map((rid, k) => ({ r: window.RELIC_DB[rid], k })).filter((x) => x.r);
         if (inv.sort === 'recent') list.reverse();
         else if (inv.sort === 'tier') list.sort((a, b) => (TIERS[a.r.tier] || TIERS.common).order - (TIERS[b.r.tier] || TIERS.common).order || a.r.name.localeCompare(b.r.name));
@@ -92,53 +136,35 @@
         p.relics.forEach((rid) => { const r = window.RELIC_DB[rid]; if (r) counts[r.tier] = (counts[r.tier] || 0) + 1; });
         const sel = inv.sel && window.RELIC_DB[inv.sel];
         return `
-        <div class="inv-toolbar">
-            <div class="inv-counts">${Object.keys(TIERS).filter((k) => counts[k]).map((k) => `<span class="inv-count ${TIERS[k].cls}">${counts[k]} ${TIERS[k].name.toLowerCase()}</span>`).join('') || '<span class="hand">Sin objetos todavía</span>'}</div>
-            <div class="inv-sorts">${Object.keys(SORTS).map((s) => `<button class="inv-sort ${inv.sort === s ? 'on' : ''}" onclick="invSort('${s}')">${SORTS[s]}</button>`).join('')}</div>
-        </div>
-        <div class="inv-body">
-            <div class="inv-grid">${list.map(({ r }, i) => relicTile(r, i, sel && sel.id === r.id)).join('')
-                || `<div class="inv-empty">${art('ui_bag', '🎒', { size: 'xl' })}<p class="hand">Tu mochila está vacía… ¡por ahora!</p><p>Consigue objetos en tesoros, élites, jefes, la tiendita y eventos.</p></div>`}</div>
-            ${relicDetail(sel, p)}
-        </div>`;
+        <section class="inv-section relics">
+            <div class="inv-toolbar">
+                <h3 class="inv-h hand">Objetos <b>${p.relics.length}</b></h3>
+                <div class="inv-counts">${Object.keys(TIERS).filter((k) => counts[k]).map((k) => `<span class="inv-count ${TIERS[k].cls}">${counts[k]} ${TIERS[k].name.toLowerCase()}</span>`).join('')}</div>
+                <div class="inv-sorts">${Object.keys(SORTS).map((s) => `<button class="inv-sort ${inv.sort === s ? 'on' : ''}" onclick="invSort('${s}')">${SORTS[s]}</button>`).join('')}</div>
+            </div>
+            <div class="inv-body">
+                <div class="inv-grid">${list.map(({ r }, i) => relicTile(r, i, sel && sel.id === r.id)).join('')
+                    || `<div class="inv-empty">${art('ui_bag', '🎒', { size: 'lg' })}<p class="hand">Todavía no tienes objetos… ¡por ahora!</p><p>Salen en tesoros, élites, jefes, la tiendita y eventos.</p></div>`}</div>
+                ${relicDetail(sel, p)}
+            </div>
+        </section>`;
     }
-    function seedsTab(p) {
-        const usable = canUseSeedNow();
-        const slots = (p.seeds || []).map((id, i) => {
-            const s = window.SEED_DB[id];
-            if (!s) return `<div class="inv-seed empty"><span class="seed-slot empty"></span><p class="hand">Hueco libre</p></div>`;
-            return `<div class="inv-seed">
-                ${seedArt(s, 'lg')}
-                <b class="hand">${s.name}</b>
-                <span class="inv-tier">${SEED_RARITY[s.rarity] || ''}</span>
-                <p>${highlightDesc(s.desc)}</p>
-                <div class="controls-row">
-                    <button class="btn-mint" onclick="invUseSeed(${i})" ${usable ? '' : `disabled ${tip(['Aún no', 'Las semillas se usan en combate, en tu turno.'])}`}>Usar</button>
-                    <button class="secondary" onclick="invDropSeed(${i})">Tirar</button>
-                </div>
-            </div>`;
-        }).join('');
-        return `<p class="inv-tip">Las semillas se usan una sola vez, en combate y durante tu turno. Caben ${window.SEED_SLOTS} en tu bolsa.</p>
-            <div class="inv-seeds">${slots}</div>`;
-    }
+
     window.renderInventory = function () {
         const inv = GAME.inventory;
         const p = GAME.player;
         if (!inv || !p) return '';
-        const seedsN = (p.seeds || []).filter(Boolean).length;
         return `
         <div class="modal-backdrop inv-backdrop" onclick="closeInventory()">
             <div class="modal panel inventory" onclick="event.stopPropagation()">
                 <div class="inv-head">
                     ${art('ui_bag', '🎒', { size: 'lg' })}
                     <h2 class="hand-title">Mochila</h2>
-                    <div class="inv-tabs">
-                        <button class="inv-tabbtn ${inv.tab === 'relics' ? 'on' : ''}" onclick="invTab('relics')">Objetos <b>${p.relics.length}</b></button>
-                        <button class="inv-tabbtn ${inv.tab === 'seeds' ? 'on' : ''}" onclick="invTab('seeds')">Semillas <b>${seedsN}/${window.SEED_SLOTS}</b></button>
-                    </div>
+                    <span class="inv-sub hand">Tus semillas y objetos, todo junto</span>
                     <button class="inv-close secondary" onclick="closeInventory()" ${tip(['Cerrar', 'También con Esc.'])}>✕</button>
                 </div>
-                ${inv.tab === 'seeds' ? seedsTab(p) : relicsTab(p, inv)}
+                ${seedsSection(p)}
+                ${relicsSection(p, inv)}
             </div>
         </div>`;
     };

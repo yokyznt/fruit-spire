@@ -1,7 +1,7 @@
 // ============================================================
 // SEEDS.JS — Semillas: objetos de un solo uso (como pociones).
 // Tu bolsa guarda hasta SEED_SLOTS semillas. Se usan en combate, en
-// tu turno, tocándolas arriba en la barra. Salen en recompensas de
+// tu turno, desde la mochila (js/inventory.js). Salen en recompensas de
 // combate, en la tiendita y en algunos eventos.
 // Cada semilla tiene un efecto ÚNICO (nada de "pociones" genéricas).
 //

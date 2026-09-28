@@ -289,7 +289,6 @@ function renderHud() {
             ${hpBar(p, 'hud', 'juice-bar')}
         </div>
         <div class="hud-chip gold" ${tip(['Oro', 'Se gana en los combates. Úsalo en la tiendita.'])}>${art('ui_coin', '🪙', { size: 'xs' })}<b>${p.gold}</b></div>
-        ${seedBagHtml(p)}
         ${hudBagHtml(p)}
         <div class="hud-deck" onclick="openDeckView()" ${tip(['Tu mazo', 'Mira todas las cartas que tienes.'])}>
             <div class="mini-stack"><span class="card-back"></span><span class="card-back"></span></div>
@@ -331,25 +330,6 @@ function seedArt(seed, size) {
 const SEED_RARITY = { common: 'Común', uncommon: 'Poco común', rare: 'Rara' };
 function seedTip(seed) {
     return explain(seed.name, `${seed.desc} Se usa una vez, en tu turno.`);
-}
-function seedBagHtml(p) {
-    const slots = (p.seeds || []).map((id, i) => {
-        const seed = window.SEED_DB[id];
-        if (!seed) return `<span class="seed-slot empty" ${tip(['Hueco vacío', 'Aquí cabe una semilla. Salen en los botines y en la tiendita.'])}></span>`;
-        const open = GAME.seedMenu === i;
-        const aiming = GAME.seedTargeting === i;
-        return `<span class="seed-slot ${open ? 'open' : ''} ${aiming ? 'aiming' : ''}" ${open ? '' : seedTip(seed)}>
-            <button class="seed-btn" onclick="clickSeed(${i})">${seedArt(seed, 'sm')}</button>
-            ${open ? `<div class="seed-menu">
-                <b>${seed.name}</b><span>${seed.desc}</span>
-                <div class="seed-actions">
-                    <button class="btn-mint" onclick="useSeedFromMenu(${i})" ${canUseSeedNow() ? '' : 'disabled'}>Usar</button>
-                    <button class="secondary" onclick="discardSeed(${i})">Tirar</button>
-                </div>
-            </div>` : ''}
-        </span>`;
-    }).join('');
-    return `<div class="hud-seeds" ${tip(['Semillas', 'Objetos de un solo uso. Tócalas en tu turno para usarlas.'])}>${slots}</div>`;
 }
 function seedRewardBox() {
     const seed = window.SEED_DB[GAME.rewardSeed];
@@ -1008,6 +988,7 @@ function renderCombat() {
     const act = currentAct();
     return `
     <div class="combat-stage act-${act.n} bg-${GAME.combatBg || 'kitchen'} ${GAME.combatEnter ? 'entering' : ''} ${playerTurn ? 'is-player-turn' : 'is-enemy-turn'}">
+        ${GAME.seedTargeting != null && window.SEED_DB[p.seeds[GAME.seedTargeting]] ? `<div class="seed-aim-banner">${seedArt(window.SEED_DB[p.seeds[GAME.seedTargeting]], 'sm')}<span class="hand">Toca al enemigo para usar <b>${window.SEED_DB[p.seeds[GAME.seedTargeting]].name}</b></span><button class="secondary" onclick="event.stopPropagation(); cancelSeedAim()">Cancelar</button></div>` : ''}
         ${c.rule ? `<div class="rule-chip" ${tip([`Regla del piso: ${c.rule.name}`, c.rule.desc])}>${art(c.rule.sprite, c.rule.icon, { size: 'sm' })} ${c.rule.name}</div>` : ''}
         <div class="arena ${multi ? 'multi' : ''}">
             <div class="combatant player" style="--blink:2.3s">
