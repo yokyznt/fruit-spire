@@ -304,7 +304,7 @@ function grantRandomRelic(player) {
 // ---------------------------------------------------------
 // MENÚ / SELECCIÓN DE PERSONAJE Y DIFICULTAD
 // ---------------------------------------------------------
-function showMainMenu() { exitTutorial(); GAME.screen = 'menu'; GAME.modal = null; render(); }
+function showMainMenu() { GAME.inventory = null; exitTutorial(); GAME.screen = 'menu'; GAME.modal = null; render(); }
 function goToCharacterSelect() { GAME.screen = 'character-select'; render(); }
 function openCollection() { GAME.screen = 'collection'; render(); }
 function openWardrobe() {
@@ -607,6 +607,7 @@ function playCombatIntro(enemyIds, kind) {
 }
 
 function startCombat(enemyIds, kind) {
+    GAME.inventory = null;
     const defs = enemyIds.map((id) => window.ENEMY_DB[id]);
     GAME.screen = 'combat';
     GAME.combatKind = kind;
@@ -876,7 +877,7 @@ function pickBossRelic(id, el) {
     giveRelic(GAME.player, relic);
     if (el) {
         el.closest('.boss-relic-row').querySelectorAll('.relic-card').forEach((c) => { if (c !== el) c.classList.add('fade-away'); });
-        flyGhost(el, '.hud-relics');
+        flyGhost(el, '.hud-bag');
     }
     setTimeout(() => { GAME.anim = false; startNextAct(); }, 850);
 }
@@ -1003,7 +1004,7 @@ function buyShopRelic(index, el) {
     const item = GAME.shopStock.relics[index];
     if (!item) return;
     if (GAME.player.gold < item.price) { cantAfford(el); return; }
-    shopPurchase(el, '.hud-relics', () => {
+    shopPurchase(el, '.hud-bag', () => {
         GAME.player.gold -= item.price;
         giveRelic(GAME.player, item.relic);
         GAME.shopStock.relics.splice(index, 1);

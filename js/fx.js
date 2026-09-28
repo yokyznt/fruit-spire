@@ -690,6 +690,13 @@ function spawnSingleFx(ev, opts) {
     if (T === 'relic') {
         const sticker = document.querySelector(`.relic-sticker[data-relic="${ev.relicId}"]`);
         restartClass(sticker, 'flash');
+        const bag = document.querySelector('.hud-bag');
+        const r = window.RELIC_DB[ev.relicId];
+        if (bag && r) {
+            restartClass(bag, 'bump');
+            const at = canvasPoint(bag, 1);
+            overlayAdd('relic-pop', art(r.sprite || r.id, r.icon, { size: 'md' }), { x: at.x, y: at.y + 6 }, 1100);
+        }
         return;
     }
     if (T === 'exhaust') {

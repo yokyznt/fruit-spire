@@ -58,8 +58,8 @@ const TUT_STEPS = [
     },
     { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('treasure'), text: 'Sigue hacia el cofre del tesoro.' },
     {
-        screen: 'treasure', pos: 'bl', spot: 'button[onclick*="closeEventResult"], .hud-relics', until: tutScreen('map'),
-        text: '¡Un objeto! Te ayuda durante todo el viaje. Tus objetos salen arriba, junto a tu oro; pasa el mouse sobre ellos para leerlos. Pulsa Continuar.'
+        screen: 'treasure', pos: 'bl', spot: 'button[onclick*="closeEventResult"], .hud-bag', until: tutScreen('map'),
+        text: '¡Un objeto! Te ayuda durante todo el viaje. Tus objetos se guardan en la mochila de arriba: tócala cuando quieras para verlos. Pulsa Continuar.'
     },
     { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('event'), text: 'El sobre es un misterio: un evento con decisiones. ¡Vamos!' },
     { screen: 'event', pos: 'bl', spot: '.event-options button', until: tutScreen('event-result'), text: 'Lee y elige una opción. Algunas tienen premio y otras, riesgo.' },

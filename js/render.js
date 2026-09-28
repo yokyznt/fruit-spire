@@ -186,7 +186,7 @@ function render() {
     // las animaciones de reposo usan esta fase como retraso negativo, así
     // siguen justo donde iban aunque se redibuje la pantalla
     screen.style.setProperty('--now', `${(-performance.now() / 1000).toFixed(3)}s`);
-    screen.innerHTML = renderHud() + `<main class="stage">${renderScreen()}</main>` + renderModal();
+    screen.innerHTML = renderHud() + `<main class="stage">${renderScreen()}</main>` + renderModal() + (window.renderInventory ? renderInventory() : '');
     heartifyDom(document.getElementById('screen'));
     if (window.setAmbientMood) {
         const strong = GAME.combatKind === 'boss' || GAME.combatKind === 'elite';
@@ -274,11 +274,6 @@ function renderHud() {
     const char = window.CHARACTER_DB[p.characterId] || {};
     const act = currentAct();
     const diff = difficulty();
-    const relics = p.relics.map((rid) => {
-        const r = window.RELIC_DB[rid];
-        const tierNote = r.tier === 'boss' ? ' (de jefe)' : '';
-        return `<span class="relic-sticker ${r.tier === 'boss' ? 'boss' : ''}" data-relic="${r.id}" ${explainRelic(r, tierNote)}>${art(r.sprite || r.id, r.icon, { size: 'sm' })}</span>`;
-    }).join('');
     return `
     <header class="hud">
         <div class="hud-title" ${tip(['Volver al menú', 'Tu progreso se guarda al salir del combate.'])} onclick="if(!GAME.anim) showMainMenu();">
@@ -295,7 +290,7 @@ function renderHud() {
         </div>
         <div class="hud-chip gold" ${tip(['Oro', 'Se gana en los combates. Úsalo en la tiendita.'])}>${art('ui_coin', '🪙', { size: 'xs' })}<b>${p.gold}</b></div>
         ${seedBagHtml(p)}
-        <div class="hud-relics ${p.relics.length > 24 ? 'tiny' : p.relics.length > 9 ? 'many' : ''}">${relics || '<span class="hand muted">sin objetos todavía…</span>'}</div>
+        ${hudBagHtml(p)}
         <div class="hud-deck" onclick="openDeckView()" ${tip(['Tu mazo', 'Mira todas las cartas que tienes.'])}>
             <div class="mini-stack"><span class="card-back"></span><span class="card-back"></span></div>
             <b>Mazo</b><span class="count">${p.deck.length}</span>
