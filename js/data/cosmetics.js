@@ -1,7 +1,7 @@
 // ============================================================
 // COSMETICS.JS — Vestidor: colores (skins) y accesorios de las frutas.
-// Se consiguen en los regalos 🎁 del mapa, en cofres de tesoro y en
-// los botines (jefes siempre, élites a veces, combates normales rara vez).
+// Colores y accesorios se ganan en el Pase de Batalla (js/battlepass.js);
+// las mascotitas, con sus retos.
 // Lo conseguido y lo que lleva puesto cada fruta se guarda en el navegador.
 //
 // Skins:       { id, type: 'skin', char, name, colors: { body, body2, core, leaf } }
@@ -284,7 +284,7 @@
     // ---------- retos de las mascotitas ----------
     window.petHowText = function (c) {
         const who = (window.CHARACTER_DB[c.char] || {}).name || c.char;
-        if (c.req.bossAct) return `Vence al jefe del Nivel ${c.req.bossAct} jugando con ${who}.`;
+        if (c.req.bossAct) return `Vence al jefe del Castillo ${c.req.bossAct} jugando con ${who}.`;
         const d = window.getDifficulty(c.req.win);
         return `Gana una partida con ${who} en grado ${d.name}${c.req.win === 'podrida' ? '' : ' o más difícil'}.`;
     };

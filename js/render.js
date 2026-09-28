@@ -265,7 +265,7 @@ function afterRender() {
 
 function renderHud() {
     const p = GAME.player;
-    if (!p || ['menu', 'character-select', 'collection', 'wardrobe'].includes(GAME.screen)) return '';
+    if (!p || ['menu', 'character-select', 'collection', 'wardrobe', 'story', 'pass', 'notes'].includes(GAME.screen)) return '';
     const char = window.CHARACTER_DB[p.characterId] || {};
     const act = currentAct();
     const diff = difficulty();
@@ -360,6 +360,9 @@ function renderScreen() {
         case 'character-select': return renderCharacterSelect();
         case 'collection': return renderCollection();
         case 'wardrobe': return renderWardrobe();
+        case 'story': return renderStory();
+        case 'pass': return renderPass();
+        case 'notes': return renderNotes();
         case 'gift': return renderGift();
         case 'well': return renderWell();
         case 'key-found': return renderKeyFound();
@@ -416,13 +419,16 @@ function renderMainMenu() {
     <div class="menu-screen">
         <div class="menu-fruits">${fruits}</div>
         ${logoHtml('Fruit Spire', 'big')}
+        <div class="menu-goal hand">Sube la torre y rescata al Rey Fruta</div>
         <div class="menu-buttons">
             <button ${canContinue ? '' : 'disabled'} onclick="continueGame()">Continuar partida</button>
             <button class="btn-mint" onclick="goToCharacterSelect()">Partida nueva</button>
             <button class="btn-banana" onclick="startTutorial()">Cómo jugar</button>
+            <button class="btn-strawberry" onclick="openPass()">Pase de Batalla${(window.PASS && PASS.unclaimed()) ? `<span class="menu-badge">${PASS.unclaimed()}</span>` : ''}</button>
             <button class="btn-grape" onclick="openWardrobe()">Vestidor</button>
             <button class="secondary" onclick="openCollection()">Álbum de cartas</button>
         </div>
+        <button class="notes-btn" onclick="openNotes()" ${tip(['Notas de la versión', 'Las novedades y arreglos del juego, y el Instagram del creador.'])}>📝 Notas${window.notesAreNew && notesAreNew() ? '<i class="new-dot"></i>' : ''}</button>
         <button class="fullscreen-btn" onclick="toggleFullscreen()" ${tip(['Pantalla completa', 'Entrar o salir de la pantalla completa (también con F11).'])}>⛶</button>
         <button class="fullscreen-btn sound-btn" onclick="toggleGameSound()" ${tip(['Sonido', 'Silenciar o activar los efectos y el ambiente.'])}>${window.isMuted && window.isMuted() ? '🔇' : '🔊'}</button>
     </div>`;
@@ -1094,7 +1100,7 @@ function renderWardrobe() {
     const item = (c) => {
         const owned = window.isCosmeticOwned(c.id);
         const on = c.type === 'skin' ? currentSkin === c.id : eq[c.slot] === c.id;
-        const text = (c.type === 'pet' ? `${c.bonus} ` : '') + (!owned ? (c.type === 'pet' ? `Bloqueada. Para desbloquearla: ${window.petHowText(c)}` : 'Aún no lo tienes. Búscalo en los regalos del mapa, en los cofres y en los botines.')
+        const text = (c.type === 'pet' ? `${c.bonus} ` : '') + (!owned ? (c.type === 'pet' ? `Bloqueada. Para desbloquearla: ${window.petHowText(c)}` : 'Aún no lo tienes. Se gana subiendo de nivel en el Pase de Batalla (menú principal).')
             : on ? (c.type === 'skin' ? 'Es el color que lleva puesto.' : c.type === 'pet' ? 'Te acompaña. Toca para dejarla en casa.' : 'Lo lleva puesto. Toca para quitarlo.') : c.type === 'pet' ? 'Toca para llevarla contigo.' : 'Toca para ponérselo.');
         return `<button class="ward-item ${owned ? '' : 'locked'} ${on ? 'on' : ''}" onclick="wardrobeEquip('${c.id}')" ${tip([owned || c.type === 'pet' ? c.name : '???', text])}>
             ${owned ? cosmeticIcon(c, 'md') : c.type === 'pet' ? `<span class="pet-locked">${cosmeticIcon(c, 'md', true)}<i>🔒</i></span>` : '<span class="ward-q">?</span>'}<small>${owned || c.type === 'pet' ? c.name : '???'}</small></button>`;
@@ -1113,7 +1119,7 @@ function renderWardrobe() {
             <div class="wardrobe-preview">${fruitArt(cid, { size: 'xxl' })}</div>
             <div class="hand ward-name">${ch.name}</div>
             <div class="ward-count">${window.ownedCosmeticCount()} de ${window.COSMETICS.length} conseguidos</div>
-            <p class="ward-hint">Cada mascotita da una pequeña ayuda en los combates y se desbloquea con un reto difícil (pasa el mouse encima para verlo). Los colores y accesorios salen en los 🎁 regalos del mapa, en los cofres y en los botines de los combates.</p>
+            <p class="ward-hint">Cada mascotita da una pequeña ayuda en los combates y se desbloquea con un reto difícil (pasa el mouse encima para verlo). Los colores y accesorios se ganan en el 🏆 Pase de Batalla: cada enemigo que derrotas te da experiencia.</p>
             <button class="secondary" onclick="backToMenu()">Volver</button>
         </div>
         <div class="wardrobe-right panel">
@@ -1223,6 +1229,7 @@ function renderReward() {
         <div class="reward-scroll">
             <p>Ganaste ${art('ui_coin', '🪙', { size: 'xs' })} <b>${GAME.rewardGold}</b> de oro.${relic ? ' ¡Y un objeto!' : ''} <b>Tienes que elegir</b> un sticker nuevo para tu mazo:</p>
             ${petUnlockBox()}
+            ${window.passGainBox ? passGainBox() : ''}
             ${seedRewardBox()}
             ${cosmeticBox(GAME.newCosmetic)}
             ${relic ? `<div class="reward-relic" ${explain(relic.name, relic.description)}>${art(relic.sprite || relic.id, relic.icon, { size: 'md' })}<div><b>${relic.name}</b><span>${relic.description}</span></div></div>` : ''}
@@ -1257,6 +1264,7 @@ function renderGameOver() {
     const p = GAME.player;
     return panel(playerArt('hurt'), 'Game over…', `
         <p>Tu fruta cayó en el castillo ${p.act}, piso ${currentFloorNo()} (${currentAct().name}) con ${p.relics.length} objetos y ${p.gold} de oro.</p>
+        ${window.passGainBox ? passGainBox() : ''}
         <button onclick="showMainMenu()">Volver al menú</button>`, 'sad');
 }
 
