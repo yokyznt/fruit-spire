@@ -166,6 +166,14 @@ window.EVENT_DB = [
         ]
     },
     {
+        id: 'pozo_deseos', title: 'Pozo de los Deseos', icon: '🪙', sprite: 'node_well',
+        desc: 'Un pozo de piedra musgosa. El agua brilla como si tuviera algo que ofrecer.',
+        options: [
+            { text: 'Tirar una moneda y pedir un deseo', well: true },
+            { text: 'Seguir de largo', effect: () => 'Decides no tentar tu suerte hoy.' }
+        ]
+    },
+    {
         id: 'tanque_jugo', title: 'Tanque de Jugo', icon: '🛢️', acts: [3],
         desc: 'Un tanque enorme de jugo concentrado. Una válvula gotea.',
         options: [

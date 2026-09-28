@@ -25,7 +25,9 @@ window.NODE_TYPES = {
     SHOP: 'shop',
     MYSTERY: 'mystery',
     GIFT: 'gift',
-    WELL: 'well',
+    KEY: 'key',
+    VAULT: 'vault',
+    BLOCKED: 'blocked',
     BOSS: 'boss'
 };
 
@@ -35,38 +37,50 @@ const WALL_CHANCE_H = 0.45; // muros horizontales (bloquean subir/bajar)
 
 // wallsV[y][x] = true → muro entre (x,y) y (x+1,y)
 // wallsH[y][x] = true → muro entre (x,y) y (x,y+1)
-window.canStep = function (map, x, y, nx, ny) {
+// grid: contenido de las casillas (para saber si el destino está bloqueado,
+// ej. un árbol caído). Es un parámetro aparte porque en el estado guardado
+// de la partida los muros (GAME.walls) y el contenido (GAME.map) viven en
+// objetos distintos.
+window.canStep = function (walls, grid, x, y, nx, ny) {
     const COLS = window.MAP_COLS, ROWS = window.MAP_ROWS;
     if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return false;
-    if (nx === x + 1 && ny === y) return !map.wallsV[y][x];          // adelante
-    if (nx === x && ny === y - 1) return !map.wallsH[ny][x];         // arriba
-    if (nx === x && ny === y + 1) return !map.wallsH[y][x];          // abajo
-    return false;                                                    // atrás / diagonal: prohibido
+    if (grid && grid[ny] && grid[ny][nx] === window.NODE_TYPES.BLOCKED) return false;
+    if (nx === x + 1 && ny === y) return !walls.wallsV[y][x];          // adelante
+    if (nx === x && ny === y - 1) return !walls.wallsH[ny][x];         // arriba
+    if (nx === x && ny === y + 1) return !walls.wallsH[y][x];          // abajo
+    return false;                                                     // atrás / diagonal: prohibido
 };
 
 // Movimiento completo: muros + casillas pisadas + última columna hacia el jefe
-window.canMove = function (map, visited, x, y, nx, ny) {
+window.canMove = function (walls, grid, visited, x, y, nx, ny) {
     if (x === window.MAP_COLS - 1) return false; // ya estás en la guarida
-    if (!window.canStep(map, x, y, nx, ny)) return false;
+    if (!window.canStep(walls, grid, x, y, nx, ny)) return false;
     return !visited.has(`${nx},${ny}`);
 };
 
 // Abre los muros necesarios para que no existan trampas. También sirve
 // para arreglar mapas guardados con versiones anteriores del juego.
-window.ensureNoTraps = function (map) {
+// grid es opcional (partidas viejas no tienen casillas bloqueadas): si se
+// pasa, una casilla bloqueada corta el tramo (como un muro horizontal) y
+// nunca es el extremo que recibe la salida forzada, porque ahí nunca habrá
+// nadie parado.
+window.ensureNoTraps = function (map, grid) {
     const COLS = window.MAP_COLS, ROWS = window.MAP_ROWS;
     const { wallsV, wallsH } = map;
+    const blocked = (x, y) => !!(grid && grid[y] && grid[y][x] === window.NODE_TYPES.BLOCKED);
     // última columna: pasillo abierto hasta el jefe
     for (let y = 0; y < ROWS - 1; y++) wallsH[y][COLS - 1] = false;
     // en cada columna, los extremos de cada tramo vertical tienen salida
     for (let x = 0; x < COLS - 1; x++) {
-        let top = 0;
+        let top = -1;
         for (let y = 0; y < ROWS; y++) {
-            const endOfRun = y === ROWS - 1 || wallsH[y][x];
+            if (blocked(x, y)) { top = -1; continue; }
+            if (top === -1) top = y;
+            const endOfRun = y === ROWS - 1 || wallsH[y][x] || blocked(x, y + 1);
             if (!endOfRun) continue;
             wallsV[top][x] = false;
             wallsV[y][x] = false;
-            top = y + 1;
+            top = -1;
         }
     }
     return map;
@@ -109,7 +123,12 @@ function fillContent(grid, opts) {
     place(T.MYSTERY, 15, range(1, preBoss - 1), 2);
     place(T.TREASURE, 1, range(3, preBoss - 1), 1);
     place(T.GIFT, 2 + (Math.random() < 0.5 ? 1 : 0), range(2, preBoss - 1), 1);
-    place(T.WELL, 2, range(2, preBoss - 1), 1);
+    // la llave siempre en la primera mitad del camino, el cofre en la
+    // segunda: para cuando la encuentres, tenga sentido que sirva más adelante
+    place(T.KEY, 1, range(1, mid), 1);
+    place(T.VAULT, 1, range(mid + 1, preBoss - 1), 1);
+    // árboles/obstáculos: bloquean la casilla entera (no solo un borde)
+    place(T.BLOCKED, 3, range(1, preBoss - 1), 1);
     // 4) relleno: enemigos, ya bastante menos frecuentes que antes, y
     // evitando amontonarse entre ellos para que el mapa se sienta variado
     for (let x = 1; x < preBoss; x++) {
@@ -141,10 +160,50 @@ window.generateMap = function (startY, opts) {
     // la última columna entera es la guarida del jefe
     for (let y = 0; y < ROWS; y++) grid[y][COLS - 1] = T.BOSS;
 
+    // --- río: una columna que solo se cruza por un puente ---
+    const preBoss = COLS - 2, mid = Math.floor(COLS / 2) - 1;
+    const riverCandidates = [];
+    for (let x = 2; x <= preBoss - 2; x++) if (x < mid - 1 || x > mid + 1) riverCandidates.push(x);
+    const riverCol = riverCandidates.length ? riverCandidates[Math.floor(Math.random() * riverCandidates.length)] : null;
+    if (riverCol != null) {
+        // ni la columna del río ni la de aterrizaje pueden tener un árbol: al
+        // entrar solo por el puente, un árbol partiría la columna en dos
+        // mitades y una se quedaría sin ninguna entrada posible
+        for (let y = 0; y < ROWS; y++) {
+            if (grid[y][riverCol] === T.BLOCKED) grid[y][riverCol] = T.EMPTY;
+            if (grid[y][riverCol + 1] === T.BLOCKED) grid[y][riverCol + 1] = T.EMPTY;
+        }
+    }
+    // Dos árboles en diagonal pueden "pinzar" la casilla de en medio y
+    // dejarla sin ninguna entrada posible (sobre todo pegada a un borde,
+    // donde ya le falta un lado). Si eso pasa, se quita uno de los dos.
+    for (let y = 0; y < ROWS; y++) {
+        for (let x = 1; x < COLS - 1; x++) {
+            if (grid[y][x] === T.BLOCKED) continue;
+            const candidates = [[x - 1, y], [x, y - 1], [x, y + 1]].filter(([, cy]) => cy >= 0 && cy < ROWS);
+            if (candidates.some(([cx, cy]) => grid[cy][cx] !== T.BLOCKED)) continue;
+            const toClear = candidates.find(([cx, cy]) => grid[cy][cx] === T.BLOCKED);
+            if (toClear) grid[toClear[1]][toClear[0]] = T.EMPTY;
+        }
+    }
+    let blockedCount = 0;
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (grid[y][x] === T.BLOCKED) blockedCount++;
+
     // --- muros al azar ---
     const wallsV = Array(ROWS).fill(null).map(() => Array(COLS - 1).fill(false).map(() => Math.random() < WALL_CHANCE_V));
     const wallsH = Array(ROWS - 1).fill(null).map(() => Array(COLS).fill(false).map(() => Math.random() < WALL_CHANCE_H));
     const map = { grid, wallsV, wallsH, bossY };
+
+    const bridgeRow = riverCol != null ? Math.floor(Math.random() * ROWS) : null;
+    const forceRiver = () => {
+        if (riverCol == null) return;
+        // toda la columna del río Y la de aterrizaje quedan como un solo
+        // tramo (se puede subir/bajar libre) para que, entrando solo por el
+        // puente, se llegue a cualquier fila de la columna de aterrizaje
+        for (let y = 0; y < ROWS - 1; y++) { wallsH[y][riverCol] = false; wallsH[y][riverCol + 1] = false; }
+        for (let y = 0; y < ROWS; y++) wallsV[y][riverCol] = (y !== bridgeRow); // solo el puente cruza
+    };
+    forceRiver();
 
     const key = (x, y) => `${x},${y}`;
     const neighbors = (x, y) => [[x + 1, y], [x, y - 1], [x, y + 1]];
@@ -154,7 +213,7 @@ window.generateMap = function (startY, opts) {
         while (stack.length) {
             const [x, y] = stack.pop();
             neighbors(x, y).forEach(([nx, ny]) => {
-                if (window.canStep(map, x, y, nx, ny) && !seen.has(key(nx, ny))) {
+                if (window.canStep(map, grid, x, y, nx, ny) && !seen.has(key(nx, ny))) {
                     seen.add(key(nx, ny)); stack.push([nx, ny]);
                 }
             });
@@ -167,18 +226,23 @@ window.generateMap = function (startY, opts) {
         else wallsH[y][x] = false;
     };
 
-    // Quitar muros hasta que no haya zonas encerradas: toda casilla se
-    // puede alcanzar desde el inicio (entrando por la izquierda, arriba o abajo).
+    // Quitar muros hasta que no haya zonas encerradas: toda casilla que no
+    // esté bloqueada se puede alcanzar desde el inicio (entrando por la
+    // izquierda, arriba o abajo). El cruce del río nunca se destapa aquí:
+    // el único paso permitido es el puente ya fijado arriba.
     const entrances = (x, y) => [[x - 1, y], [x, y - 1], [x, y + 1]]
         .filter(([px, py]) => px >= 0 && py >= 0 && py < ROWS);
+    const targetReach = COLS * ROWS - blockedCount;
     for (let guard = 0; guard < 1000; guard++) {
         const reach = reachFromStart();
-        if (reach.size === COLS * ROWS) break;
+        if (reach.size >= targetReach) break;
         const frontier = [];
         for (let x = 0; x < COLS; x++) {
             for (let y = 0; y < ROWS; y++) {
-                if (reach.has(key(x, y))) continue;
+                if (grid[y][x] === T.BLOCKED || reach.has(key(x, y))) continue;
                 entrances(x, y).forEach(([px, py]) => {
+                    if (grid[py] && grid[py][px] === T.BLOCKED) return;
+                    if (riverCol != null && px === riverCol && x === riverCol + 1 && py === y && y !== bridgeRow) return;
                     if (reach.has(key(px, py))) frontier.push([px, py, x, y]);
                 });
             }
@@ -189,6 +253,10 @@ window.generateMap = function (startY, opts) {
     }
 
     // Sin trampas con la regla de "no volver a pisar"
-    window.ensureNoTraps(map);
+    window.ensureNoTraps(map, grid);
+    // red de seguridad: ensureNoTraps no sabe del río, así que se reafirma
+    forceRiver();
+    map.riverCol = riverCol;
+    map.bridgeRow = bridgeRow;
     return map;
 };

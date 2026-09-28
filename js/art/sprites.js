@@ -256,6 +256,36 @@
         <path d="M30 20 L30 34 M70 20 L70 34" ${st(4)} fill="none"/>
         <rect x="42" y="16" width="16" height="14" rx="2" fill="#8C6A3F" ${st(2.5)}/>
         <path d="M50 20 L50 8" ${st(2)} fill="none"/>`);
+    S.node_key = () => svg(`
+        <circle cx="30" cy="50" r="18" fill="#FFCF4D" ${st()}/>
+        <circle cx="30" cy="50" r="7" fill="#FFF6E9" ${st(3)}/>
+        <rect x="46" y="44" width="42" height="12" rx="3" fill="#FFCF4D" ${st()}/>
+        <rect x="70" y="56" width="8" height="12" fill="#FFCF4D" ${st(2.5)}/>
+        <rect x="82" y="56" width="8" height="16" fill="#FFCF4D" ${st(2.5)}/>
+        ${sparkle(80, 24, 0.8)}${sparkle(16, 78, 0.5, '#FFE58A')}`);
+    S.node_vault = () => svg(`
+        <path d="M14 46 Q14 22 50 22 Q86 22 86 46 Z" fill="#6E5A9E" ${st()}/>
+        <rect x="14" y="46" width="72" height="38" rx="5" fill="#4F4270" ${st()}/>
+        <path d="M28 46 Q24 64 28 84 M72 46 Q76 64 72 84" stroke="#3A3054" stroke-width="4" fill="none"/>
+        <circle cx="50" cy="58" r="12" fill="#FFCF4D" ${st(2.5)}/>
+        <path d="M44 58 Q44 48 50 48 Q56 48 56 58" ${st(2.5)} fill="none"/>
+        <rect x="44" y="58" width="12" height="14" rx="2" fill="#8C6A3F" ${st(2)}/>`);
+    S.obstaculo_arbol = () => svg(`
+        <path d="M20 82 L84 70" stroke="#8C6A3F" stroke-width="16" stroke-linecap="round"/>
+        <path d="M20 82 L84 70" ${st(3)} fill="none"/>
+        <circle cx="24" cy="80" r="12" fill="#B0703F" ${st(2.5)}/>
+        ${leaf(60, 40, -20, 1.1)}${leaf(72, 30, 10, 0.9)}${leaf(50, 24, -50, 0.8)}`);
+    S.obstaculo_cajas = () => svg(`
+        <rect x="16" y="46" width="30" height="30" rx="3" fill="#D9A066" ${st()}/>
+        <rect x="50" y="50" width="34" height="34" rx="3" fill="#C9915A" ${st()}/>
+        <rect x="30" y="20" width="30" height="30" rx="3" fill="#E8B87C" ${st()}/>
+        <path d="M16 61 L46 61 M31 46 L31 76 M50 67 L84 67 M67 50 L67 84 M30 35 L60 35 M45 20 L45 50" ${st(2)} fill="none" opacity=".5"/>`);
+    S.obstaculo_maquina = () => svg(`
+        <rect x="16" y="24" width="68" height="60" rx="8" fill="#8C857C" ${st()}/>
+        <rect x="26" y="34" width="48" height="24" rx="4" fill="#4F4A4A" ${st(2.5)}/>
+        <circle cx="34" cy="70" r="7" fill="#B0703F" ${st(2)}/><circle cx="66" cy="70" r="7" fill="#B0703F" ${st(2)}/>
+        <path d="M40 46 L48 38 M52 46 L60 38" stroke="#FF9E7A" stroke-width="3" stroke-linecap="round"/>
+        ${sparkle(80, 14, 0.7, '#FFD95A')}`);
     S.node_boss = (o) => S.licuadora_suprema(o || {});
 
     // =========================================================

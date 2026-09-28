@@ -65,6 +65,7 @@ class Player extends Entity {
         this.removals = 0;       // cuántas cartas se han quitado en tiendas (sube el precio)
         this.seeds = [null, null, null]; // bolsa de semillas (ids o null)
         this.garden = [];        // viñedo de la Uva: [{ type, timer }]
+        this.hasGoldenKey = false; // Llave Dorada del nivel actual (ver Cofre Sellado)
     }
 }
 

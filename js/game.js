@@ -30,9 +30,18 @@ const NODE_INFO = {
     shop: { sprite: 'node_shop', icon: '🏪', label: 'Tiendita', desc: 'Cartas, reliquias y quitar cartas, a cambio de oro.' },
     mystery: { sprite: 'node_mystery', icon: '❓', label: 'Misterio', desc: 'Un evento al azar… ¿bueno o malo?' },
     gift: { sprite: 'node_gift', icon: '🎁', label: 'Regalo', desc: 'Algo nuevo para tu vestidor: un color o un accesorio.' },
-    well: { sprite: 'node_well', icon: '🪙', label: 'Pozo de los Deseos', desc: 'Tira monedas y pide un deseo. Cuesta más cada vez, pero puedes parar cuando quieras.' },
+    key: { sprite: 'node_key', icon: '🗝️', label: 'Llave Dorada', desc: 'Una llave brillante. Te servirá más adelante en este nivel.' },
+    vault: { sprite: 'node_vault', icon: '🔒', label: 'Cofre Sellado', desc: 'Con la Llave Dorada da un premio mucho mejor.' },
     boss: { sprite: 'node_boss', icon: '🌀', label: 'Jefe', desc: '' }
 };
+
+// Los obstáculos que bloquean una casilla entera cambian de disfraz según
+// el nivel, igual que los jefes (ver actBossDef).
+const BLOCKED_BY_ACT = [
+    { sprite: 'obstaculo_arbol', icon: '🌳', label: 'Árbol Caído', desc: 'Un árbol caído bloquea el camino. Hay que rodearlo.' },
+    { sprite: 'obstaculo_cajas', icon: '📦', label: 'Cajas Apiladas', desc: 'Un montón de cajas bloquea el pasillo del mercado.' },
+    { sprite: 'obstaculo_maquina', icon: '⚙️', label: 'Máquina Averiada', desc: 'Una máquina rota bloquea el paso en la fábrica.' }
+];
 
 // ---------------------------------------------------------
 // POZO DE LOS DESEOS: tira monedas por un premio al azar; cada vez
@@ -130,7 +139,7 @@ function saveGame() {
                 hp: p.hp, maxHp: p.maxHp, gold: p.gold, maxEnergy: p.maxEnergy,
                 relics: p.relics, relicCounters: p.relicCounters, deck: p.deck,
                 permanentStrength: p.permanentStrength, act: p.act, difficulty: p.difficulty, removals: p.removals,
-                seeds: p.seeds
+                seeds: p.seeds, hasGoldenKey: p.hasGoldenKey
             },
             map: GAME.map,
             walls: GAME.walls,
@@ -167,7 +176,7 @@ function loadGame() {
         if (GAME.walls.bossY == null) {
             GAME.walls.bossY = GAME.map.findIndex((row) => row[window.MAP_COLS - 1] === 'boss');
         }
-        window.ensureNoTraps(GAME.walls);
+        window.ensureNoTraps(GAME.walls, GAME.map);
         GAME.map.forEach((row) => { row[window.MAP_COLS - 1] = 'boss'; });
         GAME.visited = data.visited || [];
         GAME.playerPos = data.playerPos;
@@ -369,10 +378,14 @@ function startNewGameWithCharacter(id) {
 
 // Mapa nuevo para el nivel actual
 function newActMap() {
+    if (GAME.player) GAME.player.hasGoldenKey = false; // la llave es de este nivel nada más
     GAME.playerPos = { x: 0, y: Math.floor(window.MAP_ROWS / 2) };
     const generated = window.generateMap(GAME.playerPos.y, { elites: difficulty().elites });
     GAME.map = generated.grid;
-    GAME.walls = { wallsV: generated.wallsV, wallsH: generated.wallsH, bossY: generated.bossY, bossId: window.pickBoss(GAME.player.act) };
+    GAME.walls = {
+        wallsV: generated.wallsV, wallsH: generated.wallsH, bossY: generated.bossY, bossId: window.pickBoss(GAME.player.act),
+        riverCol: generated.riverCol, bridgeRow: generated.bridgeRow
+    };
     GAME.visited = [`${GAME.playerPos.x},${GAME.playerPos.y}`];
     GAME.mapPan = null;
 }
@@ -403,7 +416,7 @@ function closeModal() { GAME.modal = null; render(); }
 // ---------------------------------------------------------
 // Adelante, arriba o abajo, nunca atrás ni a una casilla ya pisada.
 function isReachable(x, y) {
-    return window.canMove(GAME.walls, new Set(GAME.visited), GAME.playerPos.x, GAME.playerPos.y, x, y);
+    return window.canMove(GAME.walls, GAME.map, new Set(GAME.visited), GAME.playerPos.x, GAME.playerPos.y, x, y);
 }
 function movePlayer(x, y) {
     if (GAME.anim || !isReachable(x, y)) return;
@@ -462,10 +475,28 @@ function enterNode(type) {
         GAME.newCosmetic = rewardCosmetic();
         GAME.screen = 'gift';
         saveGame();
-    } else if (type === T.WELL) {
-        GAME.wellSpins = 0;
-        GAME.wellLastMsg = '';
-        GAME.screen = 'well';
+    } else if (type === T.KEY) {
+        if (window.Sfx) Sfx.sparkle();
+        GAME.player.hasGoldenKey = true;
+        GAME.screen = 'key-found';
+        saveGame();
+    } else if (type === T.VAULT) {
+        const p = GAME.player;
+        if (p.hasGoldenKey) {
+            p.hasGoldenKey = false;
+            const gold = 40 + Math.floor(Math.random() * 20);
+            p.gold += gold;
+            GAME.lastRelic = null;
+            GAME.lastEventMsg = `${grantRandomRelic(p)} Además, ${gold} de oro brillante.`;
+            GAME.vaultOpened = true;
+        } else {
+            const gold = 15 + Math.floor(Math.random() * 10);
+            p.gold += gold;
+            GAME.lastEventMsg = `El cofre está sellado. Sin la Llave Dorada solo puedes forzar la cerradura: consigues ${gold} de oro.`;
+            GAME.vaultOpened = false;
+        }
+        if (window.Sfx) Sfx.chestOpen();
+        GAME.screen = 'vault';
         saveGame();
     } else if (type === T.SHOP) {
         openShop();
@@ -944,6 +975,16 @@ function resolveEventOption(idx) {
         GAME.currentEvent = null;
         const enemies = window.pickEncounter(GAME.player.act, GAME.playerPos.x, 'enemy', null);
         playCombatIntro(enemies, 'enemy');
+        return;
+    }
+    if (option.well) {
+        // otras casillas de misterio son el Pozo de los Deseos
+        GAME.currentEvent = null;
+        GAME.wellSpins = 0;
+        GAME.wellLastMsg = '';
+        GAME.screen = 'well';
+        saveGame();
+        render();
         return;
     }
     const msg = option.effect(GAME.player, eventHelpers());

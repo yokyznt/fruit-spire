@@ -362,6 +362,8 @@ function renderScreen() {
         case 'wardrobe': return renderWardrobe();
         case 'gift': return renderGift();
         case 'well': return renderWell();
+        case 'key-found': return renderKeyFound();
+        case 'vault': return renderVault();
         case 'tutorial-end': return renderTutorialEnd();
         case 'act-intro': return renderActIntro();
         case 'map': return renderMap();
@@ -536,6 +538,7 @@ function mapBoardSize() {
 const cellPos = (i) => MAP_GAP + i * (MAP_CELL + MAP_GAP);
 
 function nodeInfo(type) {
+    if (type === 'blocked') return BLOCKED_BY_ACT[currentAct().n - 1] || BLOCKED_BY_ACT[0];
     if (type !== 'boss') return NODE_INFO[type];
     const boss = actBossDef();
     return {
@@ -567,6 +570,7 @@ function renderMap() {
             if (reachable) classes += ' reachable';
             if (type === T.BOSS) classes += ' boss';
             if (type === T.ELITE) classes += ' elite';
+            if (type === T.BLOCKED) classes += ' blocked';
             if (type === T.EMPTY && !isCurrent) classes += ' empty';
             if (!isCurrent && visited.has(`${x},${y}`)) classes += ' visited';
 
@@ -579,11 +583,19 @@ function renderMap() {
         }
     }
 
-    // muros verticales: entre (x,y) y (x+1,y)
+    // muros verticales: entre (x,y) y (x+1,y). Los del río se ven distinto,
+    // y el único cruce (el puente) lleva su propia decoración encima.
+    const riverCol = GAME.walls.riverCol, bridgeRow = GAME.walls.bridgeRow;
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols - 1; x++) {
+            const isRiver = x === riverCol;
+            if (isRiver && y === bridgeRow) {
+                html += `<div class="bridge" style="left:${cellPos(x + 1) - MAP_GAP}px;top:${cellPos(y) - MAP_GAP / 2}px;width:${MAP_GAP}px;height:${MAP_CELL + MAP_GAP}px" ${tip(['Puente de Cáscara', 'El único cruce del Río de Pulpa en esta columna.'])}></div>`;
+                continue;
+            }
             if (!wallsV[y][x]) continue;
-            html += `<div class="wall wall-v tape-${(x + y) % 3}" style="left:${cellPos(x + 1) - MAP_GAP}px;top:${cellPos(y) - MAP_GAP / 2}px;width:${MAP_GAP}px;height:${MAP_CELL + MAP_GAP}px"></div>`;
+            const cls = isRiver ? 'wall-river' : `tape-${(x + y) % 3}`;
+            html += `<div class="wall wall-v ${cls}" style="left:${cellPos(x + 1) - MAP_GAP}px;top:${cellPos(y) - MAP_GAP / 2}px;width:${MAP_GAP}px;height:${MAP_CELL + MAP_GAP}px"></div>`;
         }
     }
     // muros horizontales: entre (x,y) y (x,y+1)
@@ -620,7 +632,8 @@ function renderMap() {
             <div class="legend-act hand">${act.name}</div>
             <ul class="legend-list">
                 ${legendRow(charSprite(char), char.icon, 'Tú', 'Tu fruta. Muévete con clic.')}
-                ${['enemy', 'elite', 'rest', 'treasure', 'shop', 'mystery', 'gift', 'well'].map((t) => legendRow(NODE_INFO[t].sprite, NODE_INFO[t].icon, NODE_INFO[t].label, NODE_INFO[t].desc)).join('')}
+                ${['enemy', 'elite', 'rest', 'treasure', 'shop', 'mystery', 'gift', 'key', 'vault'].map((t) => legendRow(NODE_INFO[t].sprite, NODE_INFO[t].icon, NODE_INFO[t].label, NODE_INFO[t].desc)).join('')}
+                ${(() => { const b = nodeInfo('blocked'); return legendRow(b.sprite, b.icon, b.label, b.desc); })()}
                 ${legendRow(boss.sprite, boss.icon, 'Jefe', boss.label)}
             </ul>
             <ul class="legend-list swatches">
@@ -1079,6 +1092,18 @@ function renderWell() {
             <button class="btn-mint" onclick="tossWellCoin()" ${p.gold < cost ? 'disabled' : ''}>Tirar moneda (${art('ui_coin', '🪙', { size: 'xs' })}${cost})</button>
             <button class="secondary" onclick="leaveWell()">Irme</button>
         </div>`);
+}
+
+function renderKeyFound() {
+    return panel(art('node_key', '🗝️', { size: 'xl' }), '¡Llave Dorada!', `
+        <p>Encuentras una llave brillante. Parece saber a dónde ir… más adelante en este nivel debe haber algo que abrir.</p>
+        <button onclick="closeEventResult()">Continuar</button>`, 'celebrate');
+}
+
+function renderVault() {
+    return panel(art('node_vault', '🔒', { size: 'xl' }), GAME.vaultOpened ? '¡Cofre Sellado abierto!' : 'Cofre Sellado', `
+        <p>${GAME.lastEventMsg}</p>
+        <button onclick="closeEventResult()">Continuar</button>`, GAME.vaultOpened ? 'celebrate' : '');
 }
 
 // ---------- PANELES ----------

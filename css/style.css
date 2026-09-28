@@ -1012,6 +1012,17 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .node.elite .art { animation: menace 1.6s ease-in-out infinite; }
 .node.boss .art { width: 104px; height: 104px; }
 
+/* obstáculo que tapa la casilla entera: nunca se puede tocar */
+.node.blocked { background: #E8DCC4; box-shadow: 0 0 0 2px #C9B896; filter: saturate(.75); }
+
+/* río: una franja de agua que solo se cruza por el puente */
+.wall-river { --tape: repeating-linear-gradient(45deg, rgba(111,168,214,.85) 0 7px, rgba(160,205,232,.85) 7px 14px); }
+.bridge {
+    position: absolute; z-index: 4; cursor: help; border-radius: 4px;
+    background: repeating-linear-gradient(180deg, #B0703F 0 6px, #8C6A3F 6px 8px);
+    box-shadow: 1px 2px 0 rgba(74,52,40,.15), 0 0 0 2px var(--ink);
+}
+
 .combat-stage.act-3 .versus { color: #7D7894; }
 .combat-stage.act-2 .versus { color: #C8584A; }
 
