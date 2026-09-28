@@ -1798,3 +1798,76 @@ button.btn-banana:hover { background: #FFDB70; }
 /* menú: separa los botones del título para que no lo tapen */
 .menu-screen .logo.big { margin-bottom: 34px; }
 .menu-screen .menu-buttons { margin-top: 10px; gap: 18px; }
+
+/* ============================================================
+   CASTILLOS Y PISOS (v48): temas de mapa, caminitos, adornos
+   ============================================================ */
+.map-banner {
+    position: absolute; left: 16px; top: 12px; z-index: 20; padding: 5px 18px; border-radius: 99px;
+    background: rgba(255, 255, 255, .88); box-shadow: 0 0 0 2px var(--ink), 0 3px 0 2px rgba(74,52,40,.18);
+    font-size: 1.2em; pointer-events: none; white-space: nowrap;
+}
+.map-banner b { font-weight: normal; color: #C9701F; }
+.map-deco { position: absolute; opacity: .22; transform: translate(-50%, -50%) rotate(var(--r, 0deg)); pointer-events: none; user-select: none; z-index: 0; line-height: 1; }
+.link { position: absolute; z-index: 1; pointer-events: none; display: block; opacity: .9; }
+.link-h { height: 6px; background: repeating-linear-gradient(90deg, #BBA987 0 6px, transparent 6px 12px); }
+.link-v { width: 6px; background: repeating-linear-gradient(180deg, #BBA987 0 6px, transparent 6px 12px); }
+.node, .wall, .bridge, .boss-lair { z-index: 2; }
+.player-token { z-index: 6; }
+.legend-variant { font-size: 1.05em; color: var(--ink-soft); margin: -4px 0 6px; cursor: help; }
+
+/* --- Castillo 1 --- */
+.map-viewport.theme-huerto { background: #E1EFC8; }
+.map-viewport.theme-huerto .map-board { background-color: #F3F9E4; }
+.map-viewport.theme-gallinero { background: #F2E4B8; }
+.map-viewport.theme-gallinero .map-board { background-color: #FFF6D8; }
+.map-viewport.theme-estanque { background: #CDE6EE; }
+.map-viewport.theme-estanque .map-board { background-color: #E6F4F8; background-image: radial-gradient(circle at 20% 30%, rgba(120,190,215,.25) 0 22px, transparent 23px), radial-gradient(circle at 70% 70%, rgba(120,190,215,.22) 0 30px, transparent 31px); background-size: 210px 210px; }
+.map-viewport.theme-invernadero { background: #CDEBDD; }
+.map-viewport.theme-invernadero .map-board { background-color: #E9F8F0; background-image: linear-gradient(rgba(120,190,160,.35) 2px, transparent 2px), linear-gradient(90deg, rgba(120,190,160,.35) 2px, transparent 2px); background-size: 74px 74px; }
+.map-viewport.theme-bodega { background: #4A3A3F; }
+.map-viewport.theme-bodega .map-board { background-color: #75606B; background-image: repeating-linear-gradient(90deg, rgba(0,0,0,.12) 0 3px, transparent 3px 60px); }
+.map-viewport.theme-bodega .map-deco { opacity: .3; }
+.map-viewport.theme-bodega .link-h { background: repeating-linear-gradient(90deg, #D9C7A6 0 6px, transparent 6px 12px); }
+.map-viewport.theme-bodega .link-v { background: repeating-linear-gradient(180deg, #D9C7A6 0 6px, transparent 6px 12px); }
+
+/* --- Castillo 2 (casino) --- */
+.map-viewport.theme-dados { background: #E9B7B7; }
+.map-viewport.theme-dados .map-board { background-color: #F8DCDC; background-image: radial-gradient(rgba(200,55,79,.18) 3px, transparent 4px); background-size: 34px 34px; }
+.map-viewport.theme-poker { background: #B4D9BE; }
+.map-viewport.theme-poker .map-board { background-color: #D3EDDA; background-image: radial-gradient(rgba(60,130,90,.2) 2px, transparent 3px); background-size: 26px 26px; }
+.map-viewport.theme-ajedrez { background: #CFC4AE; }
+.map-viewport.theme-ajedrez .map-board { background-color: #EFE8D8; background-image: conic-gradient(#F3EDE0 25%, #D5C9B0 0 50%, #F3EDE0 0 75%, #D5C9B0 0); background-size: 296px 296px; }
+.map-viewport.theme-ajedrez .link-h, .map-viewport.theme-ajedrez .link-v { opacity: .55; }
+
+/* --- Castillo 3 --- */
+.map-viewport.theme-mercado { background: #F5DCCB; }
+.map-viewport.theme-mercado .map-board { background-color: #FFF6EE; }
+.map-viewport.theme-cocina { background: #F2D2CC; }
+.map-viewport.theme-cocina .map-board { background-color: #FFF4F1; background-image: linear-gradient(90deg, rgba(200,90,80,.16) 50%, transparent 50%), linear-gradient(rgba(200,90,80,.16) 50%, transparent 50%); background-size: 74px 74px; }
+.map-viewport.theme-fabrica { background: #D5D9E6; }
+.map-viewport.theme-fabrica .map-board { background-color: #F1F3FA; }
+.map-viewport.theme-torre_rey { background: #C9BCE4; }
+.map-viewport.theme-torre_rey .map-board { background-color: #EAE2F7; background-image: linear-gradient(rgba(214,175,70,.32) 2px, transparent 2px), linear-gradient(90deg, rgba(214,175,70,.32) 2px, transparent 2px); background-size: 74px 74px; }
+.map-viewport.theme-torre_rey .boss-lair { background: repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 14px, transparent 14px 28px), radial-gradient(circle at 50% 45%, #FFE27A, #9C6ED6 70%); }
+
+/* --- portada de piso --- */
+.castle-row { display: flex; align-items: flex-end; justify-content: center; gap: 30px; margin: 4px 0 2px; }
+.castle-mini { position: relative; display: inline-flex; opacity: .5; filter: grayscale(.7); transition: transform .3s var(--ease-out); cursor: help; }
+.castle-mini.done { opacity: .9; filter: none; }
+.castle-mini.done::after { content: '✔'; position: absolute; right: -6px; top: -8px; background: var(--mint); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: .9em; box-shadow: 0 0 0 2px var(--ink); }
+.castle-mini.here { opacity: 1; filter: none; transform: translateY(-4px) scale(1.08); }
+.castle-mini.c1 .art { width: 66px; height: 66px; }
+.castle-mini.c2 .art { width: 84px; height: 84px; }
+.castle-mini.c3 .art { width: 104px; height: 104px; }
+.act-story { max-width: 720px; font-size: 1.25em; color: var(--ink-soft); margin: 2px 0 4px; }
+.act-intro .art-xxl { width: 170px; height: 170px; }
+.rescue-row { display: flex; justify-content: center; align-items: flex-end; gap: 6px; font-size: 2.3em; margin: -6px 0 4px; }
+.rescue-row span { display: inline-block; animation: rescueHop .9s ease-in-out infinite; animation-delay: calc(var(--i) * .09s); }
+.rescue-row .king { font-size: 1.5em; }
+@keyframes rescueHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px) rotate(6deg); } }
+
+/* la leyenda del mapa cabe aunque haya más tipos de casilla: se desplaza si hace falta */
+.panel.map-legend { overflow-y: auto; scrollbar-width: thin; }
+.legend-list.swatches { flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
+.legend-list li { padding: 0 6px; }

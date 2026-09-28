@@ -177,7 +177,7 @@ function render() {
     hideTip();
     const before = captureFlip();
     const screen = document.getElementById('screen');
-    screen.className = `screen-${GAME.screen}${GAME.player ? ` act-${GAME.player.act}` : ''}`;
+    screen.className = `screen-${GAME.screen}${GAME.player ? ` act-${GAME.player.act} floor-${currentFloorNo()} theme-${currentThemeId()}` : ''}`;
     // las animaciones de reposo usan esta fase como retraso negativo, así
     // siguen justo donde iban aunque se redibuje la pantalla
     screen.style.setProperty('--now', `${(-performance.now() / 1000).toFixed(3)}s`);
@@ -280,8 +280,8 @@ function renderHud() {
             ${fruitArt(char.id, { size: 'sm' })}
             ${logoHtml('Fruit Spire', 'small')}
         </div>
-        <div class="hud-chip act" ${explain(`Nivel ${act.n}: ${act.name}`, `${act.subtitle}. Grado de putrefacción: ${diff.name} — ${diff.desc}`)}>
-            ${art(diff.sprite, '🍎', { size: 'xs' })}<b>Nivel ${act.n}</b><span class="hand">${act.name}</span>
+        <div class="hud-chip act" ${explain(`${act.castleName} · piso ${act.floor} de ${window.FLOORS_PER_CASTLE}`, `${act.name}: ${act.subtitle}. Dificultad: ${diff.name} — ${diff.desc}`)}>
+            ${art(diff.sprite, '🍎', { size: 'xs' })}<b>Castillo ${act.n}</b><span class="hand">Piso ${act.floor} · ${act.name}</span>
         </div>
         <div class="hud-chip hp" ${tip(['Vida', `Tienes ${p.hp} de ${p.maxHp} ❤️. Si llega a 0, pierdes la partida.`])}>
             ${art('ui_heart', '❤️', { size: 'xs' })}
@@ -507,19 +507,30 @@ function renderCollection() {
 }
 
 // ---------- PORTADA DE NIVEL ----------
+// Los 3 castillos dibujados en fila (cada uno más grande); el actual se resalta
+function castleRowHtml(current) {
+    return `<div class="castle-row">${window.CASTLES.map((c) => `
+        <span class="castle-mini c${c.n} ${c.n === current ? 'here' : c.n < current ? 'done' : ''}" ${tip([c.name, c.n < current ? 'Ya lo conquistaste.' : c.n === current ? 'Estás aquí.' : c.subtitle])}>
+            ${art(c.sprite, c.icon, { size: 'lg' })}
+        </span>`).join('')}</div>`;
+}
 function renderActIntro() {
     const act = currentAct();
     const boss = actBossDef();
+    const last = act.n === window.CASTLES.length && act.floor === window.FLOORS_PER_CASTLE;
+    const guardian = act.floor < window.FLOORS_PER_CASTLE;
     return `
-    <div class="act-intro act-${act.n}">
-        <div class="act-number hand">Nivel ${act.n} de ${window.ACTS.length}</div>
-        <div class="act-scene">${art(`act_${act.id}`, '🌳', { size: 'xxl' })}</div>
+    <div class="act-intro act-${act.n} theme-${act.id}">
+        <div class="act-number hand">${act.castleName} · Piso ${act.floor} de ${window.FLOORS_PER_CASTLE}</div>
+        ${castleRowHtml(act.n)}
+        <div class="act-scene">${art(`act_${act.id}`, act.icon, { size: 'xxl' })}</div>
         ${logoHtml(act.name, 'act-logo')}
         <div class="act-subtitle hand">${act.subtitle}</div>
-        ${GAME.actHealed > 0 && act.n > 1 ? `<div class="act-heal">${art('ui_heal', '❤️', { size: 'xs' })} Recuperaste ${GAME.actHealed} ❤️ en el camino.</div>` : ''}
-        <div class="act-boss" ${tip([boss.name, boss.final ? 'El jefe final del juego.' : 'El jefe de este nivel. Vencerlo te lleva al siguiente.'])}>
+        ${act.floor === 1 ? `<div class="act-story hand">${act.castle.story}</div>` : ''}
+        ${GAME.actHealed > 0 && (act.n > 1 || act.floor > 1) ? `<div class="act-heal">${art('ui_heal', '❤️', { size: 'xs' })} Recuperaste ${GAME.actHealed} ❤️ en el camino.</div>` : ''}
+        <div class="act-boss" ${tip([boss.name, last ? 'El guardián del Rey Fruta. Vencerlo lo libera.' : guardian ? 'El guardián de este piso. Vencerlo te deja subir al siguiente.' : 'El jefe de este castillo. Vencerlo te lleva al siguiente.'])}>
             ${art(boss.sprite || boss.id, boss.icon, { size: 'md' })}
-            <span class="hand">Al final te espera: <b>${boss.name}</b>${boss.final ? ' (jefe final)' : ''}</span>
+            <span class="hand">Al final te espera: <b>${boss.name}</b>${last ? ' (¡el último jefe!)' : guardian ? ' (guardián)' : ' (jefe del castillo)'}</span>
         </div>
         <button class="btn-mint" onclick="beginAct()">¡Adelante!</button>
     </div>`;
@@ -531,9 +542,10 @@ const MAP_GAP = 24;   // espacio entre casillas, donde se dibujan los muros
 
 const LAIR_EXTRA = 90; // la guarida del jefe es más ancha que una casilla
 function mapBoardSize() {
+    const { cols, rows } = window.mapDims(GAME.walls, GAME.map);
     return {
-        w: window.MAP_COLS * MAP_CELL + (window.MAP_COLS + 1) * MAP_GAP + LAIR_EXTRA,
-        h: window.MAP_ROWS * MAP_CELL + (window.MAP_ROWS + 1) * MAP_GAP
+        w: cols * MAP_CELL + (cols + 1) * MAP_GAP + LAIR_EXTRA,
+        h: rows * MAP_CELL + (rows + 1) * MAP_GAP
     };
 }
 const cellPos = (i) => MAP_GAP + i * (MAP_CELL + MAP_GAP);
@@ -542,24 +554,52 @@ function nodeInfo(type) {
     if (type === 'blocked') return BLOCKED_BY_ACT[currentAct().n - 1] || BLOCKED_BY_ACT[0];
     if (type !== 'boss') return NODE_INFO[type];
     const boss = actBossDef();
+    const act = currentAct();
+    const finalFloor = act.floor >= window.FLOORS_PER_CASTLE;
     return {
-        sprite: boss.sprite || boss.id, icon: boss.icon, label: `Jefe: ${boss.name}`,
-        desc: boss.final ? 'El jefe final. Véncelo para salvar el puesto de jugos.' : 'Véncelo para pasar al siguiente nivel.'
+        sprite: boss.sprite || boss.id, icon: boss.icon, label: `${finalFloor ? 'Jefe' : 'Guardián'}: ${boss.name}`,
+        desc: boss.final ? 'El último jefe. Véncelo para rescatar al Rey Fruta.'
+            : finalFloor ? 'El jefe del castillo. Véncelo para pasar al siguiente.' : 'El guardián del piso. Véncelo para subir al siguiente.'
     };
 }
 
 function renderMap() {
     const T = window.NODE_TYPES;
-    const cols = window.MAP_COLS, rows = window.MAP_ROWS;
+    const { cols, rows } = window.mapDims(GAME.walls, GAME.map);
     const { w, h } = mapBoardSize();
     const { wallsV, wallsH } = GAME.walls;
     const char = window.CHARACTER_DB[GAME.player.characterId] || {};
     const visited = new Set(GAME.visited);
     const act = currentAct();
+    const rivers = GAME.walls.rivers || [];
+    const variant = (window.MAP_VARIANTS[GAME.walls.variant] || window.MAP_VARIANTS.classic).label;
 
     let html = `<div class="map-layout">
-        <div class="map-viewport act-${act.n}" id="map-viewport">
+        <div class="map-viewport act-${act.n} theme-${act.id}" id="map-viewport">
+        <div class="map-banner hand"><b>${act.castleName}</b> · Piso ${act.floor}/${window.FLOORS_PER_CASTLE} · ${act.name}</div>
         <div class="map-board" id="map-board" style="width:${w}px;height:${h}px">`;
+
+    // adornos del tema (siempre los mismos para un mismo piso: salen de su semilla)
+    let seed = (GAME.walls.seed || 1234567) >>> 0;
+    const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+    const decoSet = act.theme.deco && act.theme.deco.length ? act.theme.deco : ['✨'];
+    const decoCount = Math.round(cols * rows * 0.45);
+    for (let i = 0; i < decoCount; i++) {
+        html += `<span class="map-deco" style="left:${(rnd() * w).toFixed(0)}px;top:${(rnd() * h).toFixed(0)}px;font-size:${(34 + rnd() * 46).toFixed(0)}px;--r:${(rnd() * 60 - 30).toFixed(0)}deg">${decoSet[Math.floor(rnd() * decoSet.length)]}</span>`;
+    }
+    // caminitos: un puntejado entre casillas vecinas que no tienen muro ni obstáculo
+    const walkable = (x, y) => GAME.map[y] && GAME.map[y][x] && GAME.map[y][x] !== T.BLOCKED;
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols - 1; x++) {
+            if (!walkable(x, y)) continue;
+            if (x < cols - 2 && !wallsV[y][x] && walkable(x + 1, y)) {
+                html += `<i class="link link-h" style="left:${cellPos(x) + MAP_CELL}px;top:${cellPos(y) + MAP_CELL / 2 - 3}px;width:${MAP_GAP}px"></i>`;
+            }
+            if (y < rows - 1 && !wallsH[y][x] && walkable(x, y + 1)) {
+                html += `<i class="link link-v" style="left:${cellPos(x) + MAP_CELL / 2 - 3}px;top:${cellPos(y) + MAP_CELL}px;height:${MAP_GAP}px"></i>`;
+            }
+        }
+    }
 
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols - 1; x++) {
@@ -586,10 +626,11 @@ function renderMap() {
 
     // muros verticales: entre (x,y) y (x+1,y). Los del río se ven distinto,
     // y el único cruce (el puente) lleva su propia decoración encima.
-    const riverCol = GAME.walls.riverCol, bridgeRow = GAME.walls.bridgeRow;
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols - 1; x++) {
-            const isRiver = x === riverCol;
+            const river = rivers.find((r) => r.col === x);
+            const isRiver = !!river;
+            const bridgeRow = river ? river.bridge : null;
             // el puente "oficial" siempre cruza; a veces la orilla también
             // deja pasar justo por el borde de arriba o abajo del mapa —
             // ambos casos se dibujan igual, como un cruce de verdad, para
@@ -634,11 +675,12 @@ function renderMap() {
     const boss = nodeInfo('boss');
     html += `</div></div>
         <aside class="map-legend panel">
-            <h2 class="hand-title">Nivel ${act.n}</h2>
-            <div class="legend-act hand">${act.name}</div>
+            <h2 class="hand-title">Castillo ${act.n}</h2>
+            <div class="legend-act hand">Piso ${act.floor}: ${act.name}</div>
+            <div class="legend-variant hand" ${tip(['Forma del mapa', 'Cada piso tiene una forma distinta: más o menos muros y ríos.'])}>Mapa ${variant.toLowerCase()} · ${cols - 1}×${rows}</div>
             <ul class="legend-list">
                 ${legendRow(charSprite(char), char.icon, 'Tú', 'Tu fruta. Muévete con clic.')}
-                ${['enemy', 'elite', 'rest', 'treasure', 'shop', 'mystery', 'gift', 'key', 'vault'].map((t) => legendRow(NODE_INFO[t].sprite, NODE_INFO[t].icon, NODE_INFO[t].label, NODE_INFO[t].desc)).join('')}
+                ${['enemy', 'elite', 'rest', 'treasure', 'shop', 'mystery', 'game', 'key', 'vault'].map((t) => legendRow(NODE_INFO[t].sprite, NODE_INFO[t].icon, NODE_INFO[t].label, NODE_INFO[t].desc)).join('')}
                 ${(() => { const b = nodeInfo('blocked'); return legendRow(b.sprite, b.icon, b.label, b.desc); })()}
                 ${legendRow(boss.sprite, boss.icon, 'Jefe', boss.label)}
             </ul>
@@ -1189,8 +1231,9 @@ function renderBossRelic() {
 function renderVictory() {
     const p = GAME.player;
     const boss = window.ENEMY_DB[GAME.lastBossId] || actBossDef();
-    return panel(playerArt('happy'), `¡Derrotaste a la ${boss.name}!`, `
-        <p>Tu fruta cruzó el huerto, el mercado y la fábrica. ¡El puesto de jugos está a salvo!</p>
+    return panel(playerArt('happy'), `¡Derrotaste a ${boss.name}!`, `
+        <div class="rescue-row">${['🍎', '🍌', '🥝', '🍇', '🍓', '🍍', '🍑', '🍒'].map((f, i) => `<span style="--i:${i}">${f}</span>`).join('')}<span class="king" style="--i:9">🤴</span></div>
+        <p>Subiste los 3 castillos y liberaste al <b>Rey Fruta</b> y a todas las frutas cautivas. ¡El reino de las frutas vuelve a ser libre!</p>
         ${GAME.unlockMsg ? `<p class="unlock-msg hand">🔓 ${GAME.unlockMsg}</p>` : ''}
         ${petUnlockBox()}
         <p class="hand victory-stats">Grado: <b>${difficulty().name}</b> · ${p.deck.length} cartas · ${p.relics.length} objetos · ${p.hp}/${p.maxHp} ❤️</p>
@@ -1200,7 +1243,7 @@ function renderVictory() {
 function renderGameOver() {
     const p = GAME.player;
     return panel(playerArt('hurt'), 'Game over…', `
-        <p>Tu fruta cayó en el nivel ${p.act} (${currentAct().name}) con ${p.relics.length} objetos y ${p.gold} de oro.</p>
+        <p>Tu fruta cayó en el castillo ${p.act}, piso ${currentFloorNo()} (${currentAct().name}) con ${p.relics.length} objetos y ${p.gold} de oro.</p>
         <button onclick="showMainMenu()">Volver al menú</button>`, 'sad');
 }
 

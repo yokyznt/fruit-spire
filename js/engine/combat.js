@@ -44,6 +44,7 @@ class Combat {
         this.relicState = {};
         this.turnState = { cardsPlayed: 0, attacksPlayed: 0 };
         this.damageMult = 1;
+        this.xpGained = 0; // experiencia del pase de batalla por los enemigos derrotados
         this.start();
     }
 
@@ -304,6 +305,8 @@ class Combat {
             return;
         }
         enemy._deathHandled = true;
+        const tier = enemy.def.tier;
+        this.xpGained += tier === 'boss' ? 60 : tier === 'elite' ? 25 : enemy.getStatus('minion') ? 3 : 8;
         const spores = enemy.getStatus('spores');
         if (spores && !enemy._fled) this.applyStatus(this.player, 'vulnerable', spores);
         // si muere un líder, sus esbirros huyen

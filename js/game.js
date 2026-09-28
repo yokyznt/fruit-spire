@@ -29,7 +29,8 @@ const NODE_INFO = {
     treasure: { sprite: 'node_treasure', icon: '💎', label: 'Tesoro', desc: 'Un objeto gratis.' },
     shop: { sprite: 'node_shop', icon: '🏪', label: 'Tiendita', desc: 'Cartas, objetos y quitar cartas, a cambio de oro.' },
     mystery: { sprite: 'node_mystery', icon: '❓', label: 'Misterio', desc: 'Un evento al azar… ¿bueno o malo?' },
-    gift: { sprite: 'node_gift', icon: '🎁', label: 'Regalo', desc: 'Algo nuevo para tu vestidor: un color o un accesorio.' },
+    gift: { sprite: 'node_gift', icon: '🎁', label: 'Regalo', desc: 'Un regalo misterioso.' },
+    game: { sprite: 'node_game', icon: '🎲', label: 'Mesa de Juegos', desc: 'Dados, póker o ajedrez. Apuesta o gana con maña: puedes salir con oro y hasta un objeto.' },
     key: { sprite: 'node_key', icon: '🗝️', label: 'Llave Dorada', desc: 'Una llave brillante. Te servirá más adelante en este nivel.' },
     vault: { sprite: 'node_vault', icon: '🔒', label: 'Cofre Sellado', desc: 'Con la Llave Dorada da un premio mucho mejor.' },
     boss: { sprite: 'node_boss', icon: '🌀', label: 'Jefe', desc: '' }
@@ -39,8 +40,8 @@ const NODE_INFO = {
 // el nivel, igual que los jefes (ver actBossDef).
 const BLOCKED_BY_ACT = [
     { sprite: 'obstaculo_arbol', icon: '🌳', label: 'Árbol Caído', desc: 'Un árbol caído bloquea el camino. Hay que rodearlo.' },
-    { sprite: 'obstaculo_cajas', icon: '📦', label: 'Cajas Apiladas', desc: 'Un montón de cajas bloquea el pasillo del mercado.' },
-    { sprite: 'obstaculo_maquina', icon: '⚙️', label: 'Máquina Averiada', desc: 'Una máquina rota bloquea el paso en la fábrica.' }
+    { sprite: 'obstaculo_mesa', icon: '🎰', label: 'Mesa Volcada', desc: 'Una mesa de juego volcada bloquea el paso. Hay que rodearla.' },
+    { sprite: 'obstaculo_maquina', icon: '⚙️', label: 'Máquina Averiada', desc: 'Una máquina rota bloquea el paso en la torre.' }
 ];
 
 // ---------------------------------------------------------
@@ -125,7 +126,20 @@ window.GAME = GAME;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const pickOne = (list) => list[Math.floor(Math.random() * list.length)];
 const difficulty = () => window.getDifficulty(GAME.player ? GAME.player.difficulty : GAME.selectedDifficulty);
-const currentAct = () => window.ACTS[(GAME.player ? GAME.player.act : 1) - 1] || window.ACTS[0];
+// Castillo (1-3) y piso (1-3) en los que estás, y el tema del piso
+const currentCastle = () => window.CASTLES[(GAME.player ? GAME.player.act : 1) - 1] || window.CASTLES[0];
+const currentFloorNo = () => (GAME.player && GAME.player.floor) || 1;
+function currentThemeId() {
+    if (GAME.walls && GAME.walls.themeId && window.FLOOR_THEMES[GAME.walls.themeId]) return GAME.walls.themeId;
+    return window.floorThemeId(GAME.player && GAME.player.plan, GAME.player ? GAME.player.act : 1, currentFloorNo());
+}
+const currentTheme = () => window.FLOOR_THEMES[currentThemeId()] || window.FLOOR_THEMES.huerto;
+// Vista combinada que usa la interfaz: n = castillo, floor = piso, name/subtitle = los del piso
+function currentAct() {
+    const castle = currentCastle(), theme = currentTheme();
+    return { n: castle.n, floor: currentFloorNo(), id: theme.id, name: theme.name, subtitle: theme.subtitle, icon: theme.icon,
+        castle, theme, castleName: castle.name, boss: castle.bosses[0] };
+}
 
 // ---------------------------------------------------------
 // GUARDADO (localStorage)
@@ -139,7 +153,7 @@ function saveGame() {
             player: {
                 hp: p.hp, maxHp: p.maxHp, gold: p.gold, maxEnergy: p.maxEnergy,
                 relics: p.relics, relicCounters: p.relicCounters, deck: p.deck,
-                permanentStrength: p.permanentStrength, act: p.act, difficulty: p.difficulty, removals: p.removals,
+                permanentStrength: p.permanentStrength, act: p.act, floor: p.floor, plan: p.plan, difficulty: p.difficulty, removals: p.removals,
                 seeds: p.seeds, hasGoldenKey: p.hasGoldenKey
             },
             map: GAME.map,
@@ -174,18 +188,29 @@ function loadGame() {
         p.deck = (p.deck || []).filter((id) => window.getCard(id));
         p.relicCounters = p.relicCounters || {};
         p.seeds = Array.from({ length: window.SEED_SLOTS }, (_, i) => ((p.seeds || [])[i] && window.SEED_DB[p.seeds[i]] ? p.seeds[i] : null));
+        // partidas viejas: sin pisos ni plan de temas
+        p.floor = Math.min(window.FLOORS_PER_CASTLE, Math.max(1, p.floor || 1));
+        p.act = Math.min(window.CASTLES.length, Math.max(1, p.act || 1));
+        if (!window.planIsValid(p.plan)) p.plan = window.planRun();
+        p.difficulty = window.getDifficulty(p.difficulty).id;
         GAME.player = p;
         GAME.map = data.map;
         GAME.walls = data.walls;
+        const { cols } = window.mapDims(GAME.walls, GAME.map);
         // partidas viejas: se ubica al jefe y se quitan las trampas del mapa
         if (GAME.walls.bossY == null) {
-            GAME.walls.bossY = GAME.map.findIndex((row) => row[window.MAP_COLS - 1] === 'boss');
+            GAME.walls.bossY = GAME.map.findIndex((row) => row[cols - 1] === 'boss');
         }
+        // los regalos (ya no existen) pasan a ser misterios; un río viejo pasa a la lista de ríos
+        GAME.map.forEach((row) => row.forEach((cell, x) => { if (cell === 'gift') row[x] = 'mystery'; }));
+        if (!GAME.walls.rivers) GAME.walls.rivers = GAME.walls.riverCol != null ? [{ col: GAME.walls.riverCol, bridge: GAME.walls.bridgeRow }] : [];
+        if (!GAME.walls.themeId || !window.FLOOR_THEMES[GAME.walls.themeId]) GAME.walls.themeId = window.floorThemeId(p.plan, p.act, p.floor);
+        if (!window.ENEMY_DB[GAME.walls.bossId]) GAME.walls.bossId = window.pickBoss(p.act, p.floor, GAME.walls.themeId);
         window.ensureNoTraps(GAME.walls, GAME.map);
-        GAME.map.forEach((row) => { row[window.MAP_COLS - 1] = 'boss'; });
+        GAME.map.forEach((row) => { row[cols - 1] = 'boss'; });
         GAME.visited = data.visited || [];
         GAME.playerPos = data.playerPos;
-        if (GAME.playerPos.x === window.MAP_COLS - 1) GAME.playerPos.x -= 1;
+        if (GAME.playerPos.x === cols - 1) GAME.playerPos.x -= 1;
         GAME.mapPan = null;
         GAME.dungeon = data.dungeon || null;
         GAME.wellSpins = data.wellSpins || 0;
@@ -289,20 +314,13 @@ function openWardrobe() {
 }
 function wardrobeSelect(charId) { GAME.wardrobeChar = charId; render(); }
 function wardrobeEquip(id) {
-    if (!window.isCosmeticOwned(id)) { showToast('Aún no lo tienes: búscalo en los regalos del mapa y en los botines'); return; }
+    if (!window.isCosmeticOwned(id)) { showToast('Aún no lo tienes: se gana en el Pase de Batalla'); return; }
     if (window.Sfx) Sfx.equip();
     window.equipCosmetic(GAME.wardrobeChar, id);
     render();
     restartClass(document.querySelector('.wardrobe-preview .art'), 'dress-pop');
 }
 function wardrobeClear(slot) { window.unequipSlot(GAME.wardrobeChar, slot); render(); }
-// Premio para el vestidor (si ya tienes todo, se da oro)
-function rewardCosmetic() {
-    const c = window.rollCosmetic(GAME.player.characterId);
-    if (!c) { GAME.player.gold += 40; return null; }
-    window.grantCosmetic(c.id);
-    return c;
-}
 function wearNewPet(id) {
     const c = window.getCosmetic(id);
     if (!c) return;
@@ -379,34 +397,54 @@ function startNewGameWithCharacter(id) {
     p.difficulty = diff.id;
     p.gold = diff.gold;
     p.act = 1;
+    p.floor = 1;
+    p.plan = window.planRun(); // los temas de los 9 pisos de esta partida
     p.deck = window.starterDeckFor(id);
     if (diff.curse) p.deck.push(diff.curse);
     GAME.player = p;
     GAME.combat = null;
     GAME.anim = false;
     GAME.actHealed = 0;
+    GAME.dungeon = null;
     newActMap();
     markDiscovered(p.deck);
+    saveGame();
+    // primero la historia animada (ver js/story.js); al terminar se muestra la portada del piso
+    if (window.startStory) window.startStory();
+    else showActIntro();
+}
+function showActIntro() {
     GAME.screen = 'act-intro';
     if (window.Sfx) Sfx.actFanfare();
     saveGame();
     render();
 }
 
-// Mapa nuevo para el nivel actual
+// Mapa nuevo para el piso actual (castillo GAME.player.act, piso GAME.player.floor)
 function newActMap() {
-    if (GAME.player) GAME.player.hasGoldenKey = false; // la llave es de este nivel nada más
-    GAME.playerPos = { x: 0, y: Math.floor(window.MAP_ROWS / 2) };
-    const generated = window.generateMap(GAME.playerPos.y, { elites: difficulty().elites });
-    GAME.map = generated.grid;
+    const p = GAME.player;
+    p.hasGoldenKey = false; // la llave es de este piso nada más
+    if (!window.planIsValid(p.plan)) p.plan = window.planRun();
+    p.floor = p.floor || 1;
+    const themeId = window.floorThemeId(p.plan, p.act, p.floor);
+    const theme = window.FLOOR_THEMES[themeId];
+    const { cols, rows } = window.floorSize(p.act, p.floor);
+    const variant = window.pickMapVariant(theme.variant);
+    GAME.playerPos = { x: 0, y: Math.floor(rows / 2) };
+    const g = window.generateMap(GAME.playerPos.y, { elites: difficulty().elites, cols, rows, variant, games: theme.games });
+    GAME.map = g.grid;
     GAME.walls = {
-        wallsV: generated.wallsV, wallsH: generated.wallsH, bossY: generated.bossY, bossId: window.pickBoss(GAME.player.act),
-        riverCol: generated.riverCol, bridgeRow: generated.bridgeRow
+        wallsV: g.wallsV, wallsH: g.wallsH, bossY: g.bossY, bossId: window.pickBoss(p.act, p.floor, themeId),
+        rivers: g.rivers, riverCol: g.riverCol, bridgeRow: g.bridgeRow, cols, rows, themeId, variant: g.variant, seed: g.seed
     };
     GAME.visited = [`${GAME.playerPos.x},${GAME.playerPos.y}`];
     GAME.mapPan = null;
 }
 function beginAct() { GAME.screen = 'map'; saveGame(); render(); }
+// Encuentro para una casilla del piso actual. progress: 0 (inicio) a 1 (junto al jefe)
+function encounterFor(kind, progress) {
+    return window.pickEncounter(GAME.player.act, progress, kind, GAME.walls && GAME.walls.bossId, currentThemeId());
+}
 
 // ---------------------------------------------------------
 // VISOR DE CARTAS (mazo, pilas)
@@ -472,9 +510,10 @@ function movePlayer(x, y) {
 function enterNode(type) {
     const T = window.NODE_TYPES;
     const act = GAME.player.act;
+    const { cols } = window.mapDims(GAME.walls, GAME.map);
     if (type === T.ENEMY || type === T.ELITE || type === T.BOSS) {
         const kind = type === T.ELITE ? 'elite' : type === T.BOSS ? 'boss' : 'enemy';
-        playCombatIntro(window.pickEncounter(act, GAME.playerPos.x, kind, GAME.walls.bossId), kind);
+        playCombatIntro(encounterFor(kind, GAME.playerPos.x / (cols - 1)), kind);
         return;
     }
     if (type === T.REST) {
@@ -484,14 +523,12 @@ function enterNode(type) {
         if (window.Sfx) Sfx.chestOpen();
         GAME.lastRelic = null;
         GAME.lastEventMsg = grantRandomRelic(GAME.player);
-        GAME.newCosmetic = Math.random() < 0.5 ? rewardCosmetic() : null;
+        GAME.newCosmetic = null;
         GAME.screen = 'treasure';
         saveGame();
-    } else if (type === T.GIFT) {
-        if (window.Sfx) Sfx.giftOpen();
-        GAME.newCosmetic = rewardCosmetic();
-        GAME.screen = 'gift';
-        saveGame();
+    } else if (type === T.GAME) {
+        openGameTable();
+        return;
     } else if (type === T.KEY) {
         if (window.Sfx) Sfx.sparkle();
         GAME.player.hasGoldenKey = true;
@@ -519,8 +556,10 @@ function enterNode(type) {
         openShop();
     } else if (type === T.MYSTERY) {
         if (window.Sfx) Sfx.eventOpen();
-        const pool = window.EVENT_DB.filter((ev) => (!ev.acts || ev.acts.includes(act)) && ev.id !== GAME.lastEventId);
-        GAME.currentEvent = pickOne(pool.length ? pool : window.EVENT_DB);
+        const themeId = currentThemeId();
+        const pool = window.EVENT_DB.filter((ev) => (!ev.acts || ev.acts.includes(act)) && (!ev.themes || ev.themes.includes(themeId)) && ev.id !== GAME.lastEventId);
+        // en el tutorial siempre sale un evento tranquilo (sin peleas ni minijuegos)
+        GAME.currentEvent = GAME.tutorial ? window.EVENT_DB.find((ev) => ev.id === 'fuente_magica') : pickOne(pool.length ? pool : window.EVENT_DB);
         GAME.lastEventId = GAME.currentEvent.id;
         GAME.lastEventMsg = '';
         GAME.screen = 'event';
@@ -554,10 +593,14 @@ function playCombatIntro(enemyIds, kind) {
             <div class="intro-name hand">${names.length > 1 ? `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}` : names[0]}</div>
         </div>`;
     overlay.appendChild(intro);
-    setTimeout(() => startCombat(enemyIds, kind), 1050);
+    // si mientras tanto se salió al menú (o empezó otra partida), la transición no arranca un combate fantasma
+    const token = (GAME.introToken = {});
+    const alive = () => GAME.introToken === token && GAME.player;
+    setTimeout(() => { if (alive()) startCombat(enemyIds, kind); }, 1050);
     setTimeout(() => intro.classList.add('out'), 1150);
     setTimeout(() => {
         intro.remove();
+        if (!alive()) return;
         GAME.anim = false;
         showTurnBanner('¡Tu turno!', 'player');
     }, 1650);
@@ -599,7 +642,7 @@ function startCombat(enemyIds, kind) {
             }, 350);
         }
         setTimeout(() => onCombatEnd(result, kind), 1500);
-    }, { mods: window.scaledMods(difficulty().mods, GAME.player.act) });
+    }, { mods: window.scaledMods(difficulty().mods, GAME.player.act, currentFloorNo()) });
     if (GAME.tutorial && GAME.tutorial.firstFight) {
         GAME.tutorial.firstFight = false;
         const hand = GAME.combat.player.hand;
@@ -608,6 +651,8 @@ function startCombat(enemyIds, kind) {
         const fixed = ['golpe_cascara', 'jugo_defensivo', 'golpe_cascara', 'jugo_defensivo', 'golpe_cascara'].map(take).filter(Boolean);
         GAME.combat.player.hand = fixed;
         GAME.combat.player.drawPile = all;
+        // el primer enemigo aguanta lo suficiente para que se puedan ver todos los pasos
+        GAME.combat.enemies.forEach((e) => { e.maxHp = Math.max(e.maxHp, 44); e.hp = e.maxHp; });
     }
     render();
 }
@@ -616,6 +661,7 @@ function onCombatEnd(result, kind) {
     GAME.anim = false;
     GAME.modal = null;
     const p = GAME.player;
+    awardCombatXp(GAME.combat); // gane o pierda, cada enemigo derrotado suma al pase
     // tutorial: no se puede perder (se repite el combate) y el jefe lo termina
     if (GAME.tutorial) {
         if (result !== 'win') {
@@ -669,25 +715,32 @@ function onCombatEnd(result, kind) {
     p.block = 0;
 
     if (kind === 'boss') GAME.lastBossId = GAME.combat && GAME.combat.enemies[0] ? GAME.combat.enemies[0].defId : null;
-    GAME.newPets = kind === 'boss'
-        ? window.checkPetUnlocks(p.characterId, { bossAct: p.act, win: p.act >= window.ACTS.length ? p.difficulty : null }) : [];
-    if (kind === 'boss' && p.act >= window.ACTS.length) {
+    // El jefe del último piso de cada castillo es el "jefe del castillo"; los de los pisos 1 y 2
+    // son guardianes: reparten un botín parecido al de una élite y suben al siguiente piso.
+    const isCastleBoss = kind === 'boss' && (GAME.tutorial || p.floor >= window.FLOORS_PER_CASTLE);
+    const isFinalBoss = isCastleBoss && !GAME.tutorial && p.act >= window.CASTLES.length;
+    GAME.newPets = isCastleBoss
+        ? window.checkPetUnlocks(p.characterId, { bossAct: p.act, win: isFinalBoss ? p.difficulty : null }) : [];
+    if (isFinalBoss) {
+        // el Rey Fruta queda libre: se acabó la partida
         GAME.unlockMsg = unlockNextDifficulty(p.characterId, p.difficulty);
         clearSave();
         GAME.screen = 'victory';
         render();
         return;
     }
-    const gold = kind === 'boss' ? 70 + Math.floor(Math.random() * 20)
-        : kind === 'elite' ? 28 + Math.floor(Math.random() * 14)
-            : 12 + Math.floor(Math.random() * 12);
+    const rewardKind = kind === 'boss' && !isCastleBoss ? 'elite' : kind;
+    const gold = isCastleBoss ? 70 + Math.floor(Math.random() * 20)
+        : kind === 'boss' ? 45 + Math.floor(Math.random() * 20)
+            : kind === 'elite' ? 28 + Math.floor(Math.random() * 14)
+                : 12 + Math.floor(Math.random() * 12);
     const pet = window.petFor(p.characterId);
     const petGold = pet && pet.onWin ? pet.onWin(p) || 0 : 0;
     p.gold += gold + petGold;
     GAME.rewardGold = gold + petGold;
-    GAME.rewardCards = rollRewardCards(3, kind);
+    GAME.rewardCards = rollRewardCards(3, rewardKind);
     GAME.rewardRelic = null;
-    if (kind === 'elite') {
+    if (rewardKind === 'elite') {
         const relic = randomRelic(['common', 'uncommon', 'rare']);
         if (relic) { giveRelic(p, relic); GAME.rewardRelic = relic; }
     }
@@ -695,11 +748,18 @@ function onCombatEnd(result, kind) {
     GAME.rewardSeed = Math.random() < seedChance ? window.rollSeed().id : null;
     if (GAME.rewardSeed && addSeed(GAME.rewardSeed)) GAME.rewardSeedTaken = true;
     else GAME.rewardSeedTaken = false;
-    const cosChance = kind === 'boss' ? 1 : kind === 'elite' ? 0.4 : 0.08;
-    GAME.newCosmetic = Math.random() < cosChance ? rewardCosmetic() : null;
-    GAME.afterReward = kind === 'boss' ? 'boss-relic' : 'map';
+    GAME.newCosmetic = null; // los accesorios ahora se ganan en el Pase de Batalla
+    GAME.afterReward = isCastleBoss ? 'boss-relic' : kind === 'boss' ? 'next-floor' : 'map';
     GAME.screen = 'reward';
     render();
+}
+
+// Experiencia del pase de batalla por los enemigos derrotados en un combate
+function awardCombatXp(combat) {
+    GAME.passGain = null;
+    if (!combat || GAME.tutorial || !window.PASS) return;
+    const xp = Math.min(160, Math.floor(combat.xpGained || 0));
+    if (xp > 0) GAME.passGain = window.PASS.addXp(xp);
 }
 
 // ---------- semillas ----------
@@ -777,6 +837,7 @@ async function useSeed(i, targetIdx) {
 function finishReward() {
     GAME.combat = null;
     if (GAME.afterReward === 'boss-relic') { openBossRelics(); return; }
+    if (GAME.afterReward === 'next-floor') { startNextAct(); return; }
     GAME.screen = 'map';
     saveGame();
     render();
@@ -821,17 +882,18 @@ function pickBossRelic(id, el) {
 }
 function skipBossRelic() { if (!GAME.anim) startNextAct(); }
 
+// Sube al piso siguiente; tras el último piso de un castillo, pasa al castillo siguiente
 function startNextAct() {
     const p = GAME.player;
-    p.act = Math.min(window.ACTS.length, p.act + 1);
+    const newCastle = p.floor >= window.FLOORS_PER_CASTLE;
+    if (newCastle) { p.act = Math.min(window.CASTLES.length, p.act + 1); p.floor = 1; } else p.floor += 1;
     const before = p.hp;
-    p.heal(Math.ceil((p.maxHp - p.hp) * difficulty().actHeal));
+    const frac = newCastle ? difficulty().actHeal : (difficulty().floorHeal != null ? difficulty().floorHeal : difficulty().actHeal / 2);
+    p.heal(Math.ceil((p.maxHp - p.hp) * frac));
     GAME.actHealed = p.hp - before;
+    GAME.dungeon = null;
     newActMap();
-    GAME.screen = 'act-intro';
-    if (window.Sfx) Sfx.actFanfare();
-    saveGame();
-    render();
+    showActIntro();
 }
 
 // ---------------------------------------------------------
@@ -918,6 +980,7 @@ function shopPurchase(el, targetSelector, apply) {
     hideTip();
     if (window.Sfx) Sfx.coin();
     apply();
+    if (window.tutorialNotify) tutorialNotify('shop-buy');
     const item = el.closest('.shop-item');
     if (item) item.classList.add('sold');
     restartClass(document.querySelector('.hud-chip.gold'), 'spend');
@@ -1020,7 +1083,7 @@ function resolveEventOption(idx) {
     if (option.fight) {
         // algunas casillas de misterio no eran tan tranquilas: te salta un enemigo
         GAME.currentEvent = null;
-        const enemies = window.pickEncounter(GAME.player.act, GAME.playerPos.x, 'enemy', null);
+        const enemies = encounterFor('enemy', GAME.playerPos.x / (window.mapDims(GAME.walls, GAME.map).cols - 1));
         playCombatIntro(enemies, 'enemy');
         return;
     }
@@ -1074,7 +1137,7 @@ function enterDungeonCell(x, y) {
     if (d.cleared[y][x]) { d.pos = { x, y }; render(); return; }
     d.pending = { x, y };
     const isExit = x === d.exit.x && y === d.exit.y;
-    const enemies = window.pickEncounter(GAME.player.act, isExit ? 6 : 1, 'enemy', null);
+    const enemies = encounterFor('enemy', isExit ? 0.9 : 0.1);
     playCombatIntro(enemies, 'dungeon');
 }
 function leaveDungeon() { GAME.dungeon = null; GAME.screen = 'map'; saveGame(); render(); }
