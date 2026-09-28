@@ -208,9 +208,9 @@ window.registerTheme = function (def) {
             }
         },
         torre_rey: {
-            icon: '👑', name: 'Guardia Real', desc: 'Los enemigos empiezan cada combate con 6 de cáscara; tú empiezas con 1 de Firmeza.',
+            icon: '👑', name: 'Guardia Real', desc: 'Los enemigos empiezan cada combate con 4 de cáscara; tú empiezas con 1 de Firmeza.',
             onCombatStart: (ctx) => {
-                ctx.combat.aliveEnemies().forEach((e) => ctx.combat.gainBlock(e, 6, false));
+                ctx.combat.aliveEnemies().forEach((e) => ctx.combat.gainBlock(e, 4, false));
                 ctx.buff('dexterity', 1);
             }
         }

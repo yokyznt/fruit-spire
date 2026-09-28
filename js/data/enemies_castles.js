@@ -322,7 +322,7 @@
         ]
     });
     registerEnemy({
-        id: 'gran_dado', name: 'Gran Dado Doble', icon: '🎲', hpMin: 84, hpMax: 92, tier: 'elite', idle: 'rumble', start: { plated: 4 },
+        id: 'gran_dado', name: 'Gran Dado Doble', icon: '🎲', hpMin: 72, hpMax: 80, tier: 'elite', idle: 'rumble', start: { plated: 3 },
         ai: (e, c) => {
             const roll = rand(['doble_seis', 'ojos_serpiente', 'lluvia_dados', 'doble_cinco']);
             return roll === 'lluvia_dados' && !room(c, 2) ? 'doble_seis' : roll;
@@ -335,7 +335,7 @@
         ]
     });
     registerEnemy({
-        id: 'cubilete_maldito', name: 'Cubilete Maldito', icon: '🏺', hpMin: 110, hpMax: 120, tier: 'boss', idle: 'rumble', start: { curl: 10 },
+        id: 'cubilete_maldito', name: 'Cubilete Maldito', icon: '🏺', hpMin: 92, hpMax: 100, tier: 'boss', idle: 'rumble', start: { curl: 6 },
         ai: (e, c) => {
             const order = ['agitar', 'tirada_triple', 'tapa_cubilete', 'lluvia_dados_boss'];
             let id = order[e.turns % order.length];
@@ -459,7 +459,7 @@
         ]
     });
     registerEnemy({
-        id: 'rey_ajedrez', name: 'Rey Negro', icon: '♚', hpMin: 116, hpMax: 126, tier: 'boss', idle: 'sway', leader: true,
+        id: 'rey_ajedrez', name: 'Rey Negro', icon: '♚', hpMin: 100, hpMax: 108, tier: 'boss', idle: 'sway', leader: true,
         ai: (e, c) => {
             if (e.phase === 0 && e.hp < e.maxHp / 2) { e.phase = 1; return 'jaque_mate'; }
             const order = ['llamar_peones', 'enroque_rey', 'decreto_rey', 'enroque_rey'];
@@ -477,7 +477,7 @@
 
     // ---------- jefes del Castillo del Azar (último piso) ----------
     registerEnemy({
-        id: 'rey_azar', name: 'Rey del Azar', icon: '🎰', hpMin: 170, hpMax: 180, tier: 'boss', idle: 'menace',
+        id: 'rey_azar', name: 'Rey del Azar', icon: '🎰', hpMin: 150, hpMax: 160, tier: 'boss', idle: 'menace',
         ai: (e, c) => {
             if (e.phase === 0 && e.hp < e.maxHp / 2) { e.phase = 1; return 'jackpot'; }
             const order = ['ruleta', 'tres_siete', 'tirada_real', 'llamar_fichas'];
@@ -504,7 +504,7 @@
         ]
     });
     registerEnemy({
-        id: 'dama_suerte', name: 'Dama de la Suerte', icon: '🍀', hpMin: 165, hpMax: 175, tier: 'boss', idle: 'sway', start: { reflect: 1 },
+        id: 'dama_suerte', name: 'Dama de la Suerte', icon: '🍀', hpMin: 145, hpMax: 155, tier: 'boss', idle: 'sway', start: { reflect: 1 },
         ai: (e) => {
             if (e.phase === 0 && e.hp < e.maxHp / 2) { e.phase = 1; return 'mala_racha'; }
             return ['trebol_cuatro_hojas', 'reparto_suerte', 'golpe_de_suerte', 'espejo_suerte'][e.turns % 4];
@@ -518,7 +518,7 @@
         ]
     });
     registerEnemy({
-        id: 'gran_maestro', name: 'Gran Maestro', icon: '♟️', hpMin: 175, hpMax: 185, tier: 'boss', idle: 'menace', leader: true,
+        id: 'gran_maestro', name: 'Gran Maestro', icon: '♟️', hpMin: 155, hpMax: 165, tier: 'boss', idle: 'menace', leader: true,
         ai: (e, c) => {
             if (e.phase === 0 && e.hp < e.maxHp / 2) { e.phase = 1; return 'gambito_final'; }
             const order = ['gambito', 'torre_alfil', 'sacrificio', 'gambito'];
@@ -538,14 +538,14 @@
     // CASTILLO 3 — TORRE DEL REY (guardia real)
     // =========================================================
     registerEnemy({
-        id: 'caballero_cuchillas', name: 'Caballero de Cuchillas', icon: '🛡️', hpMin: 56, hpMax: 62, idle: 'sway', start: { plated: 5 },
+        id: 'caballero_cuchillas', name: 'Caballero de Cuchillas', icon: '🛡️', hpMin: 46, hpMax: 52, idle: 'sway', start: { plated: 4 },
         moves: [
             { id: 'mandoble', name: 'Mandoble', damage: 14, weight: 2, anim: 'slash', fx: 'slash' },
             { id: 'guardia_alta', name: 'Guardia Alta', block: 14, self: { strength: 1 }, weight: 1, noRepeat: true, anim: 'guard' }
         ]
     });
     registerEnemy({
-        id: 'mayordomo_batidor', name: 'Mayordomo Batidor', icon: '🫖', hpMin: 50, hpMax: 56, idle: 'wobble',
+        id: 'mayordomo_batidor', name: 'Mayordomo Batidor', icon: '🫖', hpMin: 40, hpMax: 46, idle: 'wobble',
         moves: [
             { id: 'servir_veneno', name: 'Servir el Té', damage: 6, apply: { poison: 5 }, weight: 2, anim: 'spit', fx: 'splat' },
             { id: 'aviso_real', name: 'Aviso Real', allies: { strength: 2 }, block: 8, weight: 1, noRepeat: true, anim: 'cast' }
@@ -559,14 +559,14 @@
         ]
     });
     registerEnemy({
-        id: 'guardia_hielo', name: 'Guardia de Hielo', icon: '🥶', hpMin: 60, hpMax: 66, idle: 'rumble',
+        id: 'guardia_hielo', name: 'Guardia de Hielo', icon: '🥶', hpMin: 48, hpMax: 54, idle: 'rumble',
         moves: [
             { id: 'lanza_helada', name: 'Lanza Helada', damage: 12, apply: { frail: 2 }, weight: 2, anim: 'lunge', fx: 'ice' },
             { id: 'escarcha_real', name: 'Escarcha Real', block: 12, apply: { sticky: 1 }, weight: 1, noRepeat: true, anim: 'guard', fx: 'ice' }
         ]
     });
     registerEnemy({
-        id: 'capitan_guardia', name: 'Capitán de la Guardia', icon: '⚔️', hpMin: 130, hpMax: 140, tier: 'elite', idle: 'sway', start: { plated: 6 },
+        id: 'capitan_guardia', name: 'Capitán de la Guardia', icon: '⚔️', hpMin: 112, hpMax: 122, tier: 'elite', idle: 'sway', start: { plated: 5 },
         ai: cycle(['orden_capitan', 'estocada_real', 'carga_capitan', 'estocada_real']),
         moves: [
             { id: 'orden_capitan', name: '¡A la carga!', self: { strength: 3 }, allies: { strength: 1 }, block: 14, anim: 'cast' },
@@ -575,7 +575,7 @@
         ]
     });
     registerEnemy({
-        id: 'verdugo_jugo', name: 'Verdugo del Jugo', icon: '🪓', hpMin: 125, hpMax: 135, tier: 'elite', idle: 'rumble', start: { enrage: 1 },
+        id: 'verdugo_jugo', name: 'Verdugo del Jugo', icon: '🪓', hpMin: 108, hpMax: 118, tier: 'elite', idle: 'rumble', start: { enrage: 1 },
         ai: cycle(['afilar_hacha', 'hachazo', 'decapitar']),
         moves: [
             { id: 'afilar_hacha', name: 'Afilar el Hacha', self: { strength: 3 }, block: 14, anim: 'cast' },
