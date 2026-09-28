@@ -1,0 +1,128 @@
+/* ============================================================
+   RULES.CSS — Fondos animados de las reglas de cada piso.
+   La capa .rule-fx va detrás de la pelea (ver ruleFxFor en render.js).
+   Las animaciones en bucle usan --now como retraso negativo para no
+   reiniciarse al redibujar; .rs-in marca que el estado acaba de cambiar.
+   ============================================================ */
+.rule-fx { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.combat-stage > .arena { position: relative; z-index: 1; }
+.rule-fx i { position: absolute; display: block; font-style: normal; }
+.rule-fx::before, .rule-fx::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .6s ease; }
+.rule-fx * { animation-delay: calc(var(--now, 0s) - var(--i, 0) * 1.37s); }
+
+/* ---------- Oscuridad: se apagan las luces en los turnos impares ---------- */
+.rule-bodega .rule-fx::before { background: radial-gradient(ellipse 60% 55% at 50% 0%, rgba(255,214,120,.35), transparent 70%); opacity: 1; }
+.rule-bodega .rule-fx::after { background: radial-gradient(ellipse 70% 60% at 50% 70%, rgba(20,10,30,.6), rgba(8,4,16,.93)); }
+.rule-bodega.rs-dark .rule-fx::before { opacity: 0; }
+.rule-bodega.rs-dark .rule-fx::after { opacity: 1; }
+.rule-bodega.rs-dark.rs-in .rule-fx::after { animation: lightsOff 1s steps(1) both; }
+.rule-bodega.rs-lit.rs-in .rule-fx::before { animation: lightsOn .9s steps(1) both; }
+@keyframes lightsOff { 0% { opacity: 0; } 15% { opacity: 1; } 25% { opacity: .2; } 40% { opacity: 1; } 50% { opacity: .5; } 60%, 100% { opacity: 1; } }
+@keyframes lightsOn { 0% { opacity: 0; } 20% { opacity: 1; } 30% { opacity: .1; } 45%, 100% { opacity: 1; } }
+.rf-bulb { position: absolute; left: 50%; top: 0; width: 60px; height: 150px; margin-left: -30px; transform-origin: 50% 0; animation: bulbSwing 4s ease-in-out infinite; z-index: 2; }
+.rf-bulb .cord { position: absolute; left: 29px; top: 0; width: 3px; height: 92px; background: #3A2A30; }
+.rf-bulb .glass { position: absolute; left: 14px; top: 88px; width: 33px; height: 40px; border-radius: 50% 50% 45% 45%; background: #FFE9A8; box-shadow: 0 0 0 3px #4A3428, 0 -6px 0 -1px #8C7A70; transition: background .3s; }
+.rf-bulb .glow { position: absolute; left: -70px; top: 30px; width: 200px; height: 160px; border-radius: 50%; background: radial-gradient(circle, rgba(255,226,140,.65), transparent 65%); transition: opacity .3s; }
+.rule-bodega.rs-dark .rf-bulb .glass { background: #6B6070; }
+.rule-bodega.rs-dark .rf-bulb .glow { opacity: 0; }
+@keyframes bulbSwing { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.rf-eyes i { width: 34px; height: 12px; top: calc(14% + var(--i) * 13%); left: calc(6% + var(--i) * 21%); opacity: 0; z-index: 1;
+    background: radial-gradient(circle at 25% 50%, #FFE14D 0 4px, transparent 5px), radial-gradient(circle at 75% 50%, #FFE14D 0 4px, transparent 5px);
+    transition: opacity .8s; animation: eyesBlink 3.4s infinite; }
+.rule-bodega.rs-dark .rf-eyes i { opacity: 1; }
+@keyframes eyesBlink { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(.1); } }
+.rf-motes i { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,230,160,.8); left: calc(35% + var(--i) * 3%); top: 20%; animation: moteFloat 7s linear infinite; }
+.rule-bodega.rs-dark .rf-motes { opacity: 0; }
+@keyframes moteFloat { 0% { transform: translate(0, 0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(calc((var(--i) - 5) * 14px), 260px); opacity: 0; } }
+
+/* ---------- Sol radiante: el sol crece y en el 3.er turno brilla ---------- */
+.rf-sun { position: absolute; right: 7%; top: 4%; width: 120px; height: 120px; scale: .7; transition: scale .8s var(--ease-out), filter .8s; animation: sunSpin 30s linear infinite; }
+.rf-sun b { position: absolute; inset: 30px; border-radius: 50%; background: #FFD84D; box-shadow: 0 0 0 4px #F2A93B, 0 0 30px 10px rgba(255,216,77,.5); }
+.rf-sun .ray { left: 56px; top: 0; width: 8px; height: 24px; border-radius: 4px; background: #FFC93B; transform-origin: 4px 60px; transform: rotate(calc(var(--i) * 30deg)); }
+.rule-huerto.rs-sun2 .rf-sun { scale: .85; }
+.rule-huerto.rs-sun3 .rf-sun { scale: 1.15; filter: drop-shadow(0 0 22px #FFE680); }
+@keyframes sunSpin { to { rotate: 360deg; } }
+.rf-sunbeam { position: absolute; inset: 0; background: linear-gradient(200deg, rgba(255,236,150,.55), transparent 55%); opacity: 0; transition: opacity 1s; }
+.rule-huerto.rs-sun3 .rf-sunbeam { opacity: 1; }
+
+/* ---------- Nidos: plumas cayendo y paja ---------- */
+.rf-feathers i { top: -40px; left: calc(4% + var(--i) * 11%); width: 14px; height: 30px; border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%; background: #FFFDF6; box-shadow: 0 0 0 2px rgba(74,52,40,.35); animation: featherFall 11s linear infinite; }
+@keyframes featherFall { 0% { transform: translate(0, 0) rotate(-30deg); } 25% { transform: translate(24px, 200px) rotate(30deg); } 50% { transform: translate(-10px, 400px) rotate(-25deg); } 75% { transform: translate(20px, 600px) rotate(25deg); } 100% { transform: translate(0, 820px) rotate(-30deg); } }
+.rf-straw { position: absolute; left: 0; right: 0; bottom: 250px; height: 90px; opacity: .5; background: repeating-linear-gradient(75deg, #E8C66A 0 3px, transparent 3px 11px), repeating-linear-gradient(105deg, #D9B055 0 2px, transparent 2px 13px); -webkit-mask: linear-gradient(transparent, #000 60%); mask: linear-gradient(transparent, #000 60%); }
+
+/* ---------- Aguas turbias: agua ondulando y burbujas ---------- */
+.rf-water span { position: absolute; left: -130px; right: -130px; bottom: 250px; height: 110px; background: radial-gradient(ellipse 60px 16px at 50% 0, transparent 60%, rgba(95,160,190,.45) 62%) 0 0 / 120px 40px repeat-x, linear-gradient(transparent 20px, rgba(95,160,190,.45) 20px, rgba(60,120,150,.55)); animation: waveSlide 6s linear infinite; }
+.rf-water span + span { bottom: -20px; opacity: .6; animation-duration: 9s; animation-direction: reverse; }
+@keyframes waveSlide { to { transform: translateX(120px); } }
+.rf-bubbles i { bottom: 280px; left: calc(5% + var(--i) * 9.5%); width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.8); animation: bubbleUp 6s ease-in infinite; }
+@keyframes bubbleUp { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-340px) scale(1.2); opacity: 0; } }
+
+/* ---------- Aire vivificante: invernadero con hojas flotando ---------- */
+.rf-glass { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(255,255,255,.35) 0 4px, transparent 4px 180px), linear-gradient(115deg, transparent 30%, rgba(255,255,255,.25) 40%, transparent 50%); }
+.rf-leaves i { bottom: -30px; left: calc(6% + var(--i) * 10.5%); width: 20px; height: 12px; border-radius: 0 100% 0 100%; background: #7BBF5A; box-shadow: 0 0 0 2px rgba(74,52,40,.35); animation: leafRise 12s ease-in-out infinite; }
+@keyframes leafRise { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 10% { opacity: .9; } 50% { transform: translate(40px, -380px) rotate(180deg); } 100% { transform: translate(-20px, -800px) rotate(360deg); opacity: 0; } }
+
+/* ---------- Dado del turno / Combo de Póker: mesa de fieltro ---------- */
+.rf-felt { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, rgba(46,140,90,.4), rgba(20,90,60,.48)); }
+.rf-felt::after { content: ''; position: absolute; inset: 18px; border-radius: 40px; box-shadow: inset 0 0 0 4px rgba(255,220,120,.4); }
+.rf-felt i { width: 42px; height: 42px; left: calc(4% + var(--i) * 12.4%); top: calc(10% + var(--i) * 6%); opacity: .45; animation: feltBob 5s ease-in-out infinite; }
+.rf-felt.dice i { border-radius: 9px; background: radial-gradient(circle, #4A3428 0 4px, transparent 5px), radial-gradient(circle at 25% 25%, #4A3428 0 4px, transparent 5px), radial-gradient(circle at 75% 75%, #4A3428 0 4px, transparent 5px), #FFF8EC; box-shadow: 0 0 0 3px #4A3428; }
+.rf-felt.suits i { width: 36px; height: 50px; border-radius: 6px; background: #FFF8EC; box-shadow: 0 0 0 3px #4A3428; }
+.rf-felt.suits i::after { content: '♥'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 24px; color: #E0455E; }
+.rf-felt.suits i:nth-child(2n)::after { content: '♠'; color: #2A1C16; }
+.rf-felt.suits i:nth-child(3n)::after { content: '♦'; color: #E0455E; }
+.rf-felt.suits i:nth-child(4n)::after { content: '♣'; color: #2A1C16; }
+@keyframes feltBob { 0%, 100% { transform: rotate(-12deg) translateY(0); } 50% { transform: rotate(10deg) translateY(-10px); } }
+
+/* ---------- Blancas y negras: el tablero se voltea cada turno ---------- */
+.rf-board { position: absolute; inset: 0; transition: background-color .7s; background-color: rgba(255,255,255,.35);
+    background-image: linear-gradient(45deg, rgba(74,52,40,.2) 25%, transparent 25%, transparent 75%, rgba(74,52,40,.2) 75%), linear-gradient(45deg, rgba(74,52,40,.2) 25%, transparent 25%, transparent 75%, rgba(74,52,40,.2) 75%);
+    background-size: 120px 120px; background-position: 0 0, 60px 60px; }
+.rule-ajedrez.rs-black .rf-board { background-color: rgba(30,24,40,.55); }
+.rule-ajedrez.rs-in .rf-board { animation: boardFlip .7s var(--ease-out) both; }
+@keyframes boardFlip { 0% { transform: scaleY(1); } 50% { transform: scaleY(.02); } 100% { transform: scaleY(1); } }
+
+/* ---------- Carteristas: faroles; en turnos pares, manos en la sombra ---------- */
+.rf-lanterns i { top: 26px; left: calc(8% + var(--i) * 16%); width: 26px; height: 34px; border-radius: 10px; background: #FFB347; box-shadow: 0 0 0 3px #4A3428, 0 0 24px 8px rgba(255,179,71,.45); transform-origin: 50% -26px; animation: lanternSwing 3s ease-in-out infinite; }
+.rf-lanterns i::before { content: ''; position: absolute; left: 11px; top: -26px; width: 3px; height: 26px; background: #4A3428; }
+@keyframes lanternSwing { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+.rule-mercado .rule-fx::after { background: radial-gradient(ellipse at 50% 100%, rgba(40,20,50,.5), transparent 70%); }
+.rule-mercado.rs-thief .rule-fx::after { opacity: 1; }
+.rf-shadow-hands i { bottom: 220px; left: calc(18% + var(--i) * 28%); width: 70px; height: 110px; border-radius: 40px 40px 10px 10px; background: rgba(40,20,50,.55); transition: transform .8s var(--ease-out); }
+.rf-shadow-hands i::before { content: ''; position: absolute; top: -26px; left: 4px; width: 62px; height: 40px;
+    background: radial-gradient(ellipse 7px 18px at 10% 70%, rgba(40,20,50,.55) 90%, transparent), radial-gradient(ellipse 7px 22px at 35% 50%, rgba(40,20,50,.55) 90%, transparent), radial-gradient(ellipse 7px 22px at 62% 50%, rgba(40,20,50,.55) 90%, transparent), radial-gradient(ellipse 7px 18px at 88% 70%, rgba(40,20,50,.55) 90%, transparent); }
+.rule-mercado.rs-thief .rf-shadow-hands i { transform: translateY(-80px); animation: handGrab 2s ease-in-out infinite; }
+@keyframes handGrab { 0%, 100% { translate: 0 0; } 50% { translate: 0 -14px; } }
+
+/* ---------- Fuego alto: más calor cuantas más cartas guardas ---------- */
+.rf-heat { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(255,120,60,.5) 35%, transparent 75%); opacity: .3; transition: opacity .6s; }
+.rule-cocina.rs-hot1 .rf-heat { opacity: .65; }
+.rule-cocina.rs-hot2 .rf-heat { opacity: 1; animation: heatPulse 1.2s ease-in-out infinite; }
+@keyframes heatPulse { 50% { filter: brightness(1.25); } }
+.rf-flames i { bottom: 270px; left: calc(var(--i) * 7.2%); width: 60px; height: 70px; border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%; background: radial-gradient(ellipse at 50% 80%, #FFE14D, #FF8A3B 55%, #E0455E); opacity: .55; transform-origin: 50% 100%; transform: scaleY(.5); transition: transform .6s; animation: flameLick .9s ease-in-out infinite alternate; }
+.rule-cocina.rs-hot1 .rf-flames i { transform: scaleY(.9); }
+.rule-cocina.rs-hot2 .rf-flames i { transform: scaleY(1.5); opacity: .75; }
+@keyframes flameLick { from { rotate: -6deg; } to { rotate: 6deg; } }
+
+/* ---------- Sobrecarga: la fábrica se carga y descarga cada 3 turnos ---------- */
+.rf-pipes { position: absolute; inset: 0; opacity: .45; background: linear-gradient(transparent 38px, #9AA3BE 38px 52px, transparent 52px), repeating-linear-gradient(90deg, transparent 0 220px, #9AA3BE 220px 234px, transparent 234px 460px); }
+.rf-sparks i { top: 44px; left: calc(6% + var(--i) * 12%); width: 6px; height: 6px; border-radius: 50%; background: #FFE14D; box-shadow: 0 0 10px 3px #FFE14D; opacity: 0; }
+.rule-fabrica.rs-charging .rf-sparks i { animation: sparkPop .7s steps(2) infinite; }
+.rule-fabrica.rs-charging .rule-fx::after { background: rgba(80,120,255,.14); animation: chargeFlicker 1.4s steps(2) infinite; }
+@keyframes sparkPop { 0% { opacity: 1; transform: translate(0, 0); } 100% { opacity: 0; transform: translate(10px, 26px); } }
+@keyframes chargeFlicker { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+.rf-bolt { position: absolute; left: 44%; top: 0; width: 120px; height: 70%; opacity: 0;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 200'%3E%3Cpath d='M34 0 L10 90 L30 90 L14 200 L52 70 L30 70 L46 0 Z' fill='%23FFE14D' stroke='%234A3428' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+.rule-fabrica.rs-zap.rs-in .rf-bolt { animation: boltStrike 1s ease-out both; }
+.rule-fabrica.rs-zap.rs-in .rule-fx::after { background: #fff; animation: zapFlash .8s ease-out both; }
+@keyframes boltStrike { 0% { opacity: 0; } 10%, 30% { opacity: 1; } 20% { opacity: .2; } 100% { opacity: 0; } }
+@keyframes zapFlash { 0% { opacity: 0; } 12% { opacity: .85; } 24% { opacity: .1; } 34% { opacity: .6; } 100% { opacity: 0; } }
+
+/* ---------- Guardia Real: estandartes y destellos dorados ---------- */
+.rf-banners i { top: 0; left: calc(10% + var(--i) * 25%); width: 56px; height: 130px; background: linear-gradient(90deg, #9B7FD4 0 40%, #7A5FB8 40% 60%, #9B7FD4 60%); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%); opacity: .6; transform-origin: 50% 0; animation: bannerWave 5s ease-in-out infinite; }
+.rf-banners i::after { content: ''; position: absolute; left: 16px; top: 40px; width: 24px; height: 20px; background: #FFCF4D; clip-path: polygon(0 100%, 0 20%, 25% 60%, 50% 0, 75% 60%, 100% 20%, 100% 100%); }
+@keyframes bannerWave { 0%, 100% { transform: skewX(-3deg); } 50% { transform: skewX(3deg); } }
+.rf-glitter i { width: 8px; height: 8px; left: calc(3% + var(--i) * 8.1%); top: calc(10% + var(--i) * 5%); background: #FFE14D; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: glitter 2.6s ease-in-out infinite; }
+@keyframes glitter { 0%, 100% { transform: scale(.2); opacity: 0; } 50% { transform: scale(1.4); opacity: 1; } }
+/* las transiciones de cambio de estado arrancan desde cero */
+.rs-in .rule-fx .rf-board, .rs-in .rule-fx .rf-bolt { animation-delay: 0s; }

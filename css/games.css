@@ -115,3 +115,9 @@
 .drop-preview .dp.blk { background: #D8F4E8; color: #22694F; }
 .drop-preview small { font-size: .5em; color: var(--ink-soft); margin-left: 4px; }
 .drop-preview i { font-style: normal; font-size: .55em; background: #C8374F; color: #fff; padding: 0 8px; border-radius: 99px; margin-left: 6px; }
+/* ajedrez: arrastrar piezas */
+.chess-board .piece.mine { cursor: grab; touch-action: none; }
+.chess-board .piece.lifted { opacity: .25; }
+.chess-ghost { position: fixed; z-index: 9999; pointer-events: none; cursor: grabbing; transform: scale(1.15) rotate(-6deg); filter: drop-shadow(0 10px 6px rgba(74,52,40,.35)); }
+.chess-ghost .art, .chess-ghost svg { width: 100%; height: 100%; display: block; }
+.chess-board .sq.hover { box-shadow: inset 0 0 0 5px #FFCF4D; }

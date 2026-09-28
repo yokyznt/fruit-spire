@@ -215,9 +215,39 @@ function logoHtml(text, cls) {
 // ============================================================
 // RENDER
 // ============================================================
+// ---------- sin animaciones de entrada repetidas ----------
+// render() rehace toda la pantalla, así que cada clic volvía a lanzar las
+// animaciones de "aparecer" (panel, tablero, mochila…). Si la pantalla es la
+// misma, las animaciones de entrada de lo que YA estaba se adelantan al
+// final; solo aparece con animación lo que es nuevo de verdad.
+const ENTRY_ANIMS = new Set(['panelIn', 'pop', 'fadeIn', 'invIn', 'slideUp', 'glowIn', 'popBubble', 'seedMenuIn', 'panelPop', 'mgIn', 'boardIn']);
+function viewSnapshot(root) {
+    const classes = new Map();
+    root.querySelectorAll('[class]').forEach((el) => {
+        const k = el.getAttribute('class');
+        classes.set(k, (classes.get(k) || 0) + 1);
+    });
+    return { screen: GAME.screen, classes };
+}
+function settleEntryAnims(prev, root) {
+    if (!prev || prev.screen !== GAME.screen || !document.getAnimations) return;
+    const left = new Map(prev.classes);
+    document.getAnimations().forEach((a) => {
+        if (!a.animationName || !ENTRY_ANIMS.has(a.animationName)) return;
+        const el = a.effect && a.effect.target;
+        if (!el || !root.contains(el) || el.closest('.fresh')) return;
+        const k = el.getAttribute('class');
+        const n = left.get(k) || 0;
+        if (n <= 0) return; // es algo nuevo: que aparezca
+        left.set(k, n - 1);
+        try { a.finish(); } catch (e) { /* animación infinita: se deja */ }
+    });
+}
+
 function render() {
     hideTip();
     const before = captureFlip();
+    const prevView = viewSnapshot(document.getElementById('screen'));
     const screen = document.getElementById('screen');
     screen.className = `screen-${GAME.screen}${GAME.player ? ` act-${GAME.player.act} floor-${currentFloorNo()} theme-${currentThemeId()}` : ''}`;
     // las animaciones de reposo usan esta fase como retraso negativo, así
@@ -225,6 +255,7 @@ function render() {
     screen.style.setProperty('--now', `${(-performance.now() / 1000).toFixed(3)}s`);
     screen.innerHTML = renderHud() + `<main class="stage">${renderScreen()}</main>` + renderModal() + (window.renderInventory ? renderInventory() : '');
     heartifyDom(document.getElementById('screen'));
+    settleEntryAnims(prevView, screen);
     if (window.setAmbientMood) {
         const strong = GAME.combatKind === 'boss' || GAME.combatKind === 'elite';
         setAmbientMood(GAME.screen !== 'combat' ? 0 : strong ? 2 : 1);
@@ -980,6 +1011,72 @@ function pileHtml(which, count) {
     </div>`;
 }
 
+// ---------- fondo de la regla del piso ----------
+// Cada regla pinta una capa detrás de la pelea que cambia con su ciclo de
+// turnos (p. ej. la Oscuridad apaga la luz en los turnos impares). La clase
+// "rs-in" solo se pone cuando el estado cambia, para que la transición no se
+// repita en cada redibujo.
+function ruleFxFor(c) {
+    const none = { cls: '', html: '' };
+    if (!c || !c.rule || !c.rule.sprite) return none;
+    const id = c.rule.sprite.replace(/^rule_/, '');
+    const t = c.turnNumber;
+    const n = (k, cls) => Array.from({ length: k }, (_, i) => `<i class="${cls || ''}" style="--i:${i}"></i>`).join('');
+    let state = 'on', html = '';
+    switch (id) {
+        case 'bodega':
+            state = t % 2 === 1 ? 'dark' : 'lit';
+            html = `<div class="rf-bulb"><span class="cord"></span><span class="glass"></span><span class="glow"></span></div><div class="rf-eyes">${n(5)}</div><div class="rf-motes">${n(10)}</div>`;
+            break;
+        case 'huerto':
+            state = `sun${((t - 1) % 3) + 1}`;
+            html = `<div class="rf-sun"><b></b>${n(12, 'ray')}</div><div class="rf-sunbeam"></div>`;
+            break;
+        case 'gallinero':
+            html = `<div class="rf-feathers">${n(9)}</div><div class="rf-straw"></div>`;
+            break;
+        case 'estanque':
+            html = `<div class="rf-water"><span></span><span></span></div><div class="rf-bubbles">${n(10)}</div>`;
+            break;
+        case 'invernadero':
+            html = `<div class="rf-glass"></div><div class="rf-leaves">${n(9)}</div>`;
+            break;
+        case 'dados':
+            html = `<div class="rf-felt dice">${n(8)}</div>`;
+            break;
+        case 'poker':
+            html = `<div class="rf-felt suits">${n(8)}</div>`;
+            break;
+        case 'ajedrez':
+            state = t % 2 === 1 ? 'white' : 'black';
+            html = '<div class="rf-board"></div>';
+            break;
+        case 'mercado':
+            state = t % 2 === 0 ? 'thief' : 'calm';
+            html = `<div class="rf-lanterns">${n(6)}</div><div class="rf-shadow-hands">${n(3)}</div>`;
+            break;
+        case 'cocina': {
+            const h = c.player.hand.length;
+            state = h >= 6 ? 'hot2' : h >= 3 ? 'hot1' : 'calm';
+            html = `<div class="rf-heat"></div><div class="rf-flames">${n(14)}</div>`;
+            break;
+        }
+        case 'fabrica':
+            state = t % 3 === 0 ? 'zap' : t % 3 === 2 ? 'charging' : 'idle';
+            html = `<div class="rf-pipes"></div><div class="rf-sparks">${n(8)}</div><div class="rf-bolt"></div>`;
+            break;
+        case 'torre_rey':
+            html = `<div class="rf-banners">${n(4)}</div><div class="rf-glitter">${n(12)}</div>`;
+            break;
+        default:
+            return none;
+    }
+    const key = id + ':' + state;
+    const changed = GAME.ruleFxKey !== key;
+    GAME.ruleFxKey = key;
+    return { cls: `rule-${id} rs-${state}${changed ? ' rs-in' : ''}`, html: `<div class="rule-fx">${html}</div>` };
+}
+
 function renderCombat() {
     const c = GAME.combat;
     if (!c) return '';
@@ -987,6 +1084,7 @@ function renderCombat() {
     const char = window.CHARACTER_DB[p.characterId] || {};
     const pSprite = charSprite(char);
     const playerTurn = c.turn === 'player' && !c.ended;
+    const ruleFx = ruleFxFor(c);
     const multi = c.enemies.length > 1;
 
     const n = p.hand.length;
@@ -1058,7 +1156,8 @@ function renderCombat() {
 
     const act = currentAct();
     return `
-    <div class="combat-stage act-${act.n} bg-${GAME.combatBg || 'kitchen'} ${GAME.combatEnter ? 'entering' : ''} ${playerTurn ? 'is-player-turn' : 'is-enemy-turn'}">
+    <div class="combat-stage act-${act.n} bg-${GAME.combatBg || 'kitchen'} ${GAME.combatEnter ? 'entering' : ''} ${playerTurn ? 'is-player-turn' : 'is-enemy-turn'} ${ruleFx.cls}">
+        ${ruleFx.html}
         ${GAME.seedTargeting != null && window.SEED_DB[p.seeds[GAME.seedTargeting]] ? `<div class="seed-aim-banner">${seedArt(window.SEED_DB[p.seeds[GAME.seedTargeting]], 'sm')}<span class="hand">Toca al enemigo para usar <b>${window.SEED_DB[p.seeds[GAME.seedTargeting]].name}</b></span><button class="secondary" onclick="event.stopPropagation(); cancelSeedAim()">Cancelar</button></div>` : ''}
         ${c.rule ? `<div class="rule-chip" ${tip([`Regla del piso: ${c.rule.name}`, c.rule.desc])}>${art(c.rule.sprite, c.rule.icon, { size: 'sm' })} ${c.rule.name}</div>` : ''}
         <div class="arena ${multi ? 'multi' : ''}">

@@ -408,12 +408,54 @@
     };
 
     // ---------- AJEDREZ ----------
-    // piezas dibujadas: las tuyas verdes y felices, las rivales moradas y enojadas
+    // piezas: frutitas chiquitas. Las tuyas frescas y felices sobre base verde,
+    // las rivales moradas (pasadas) y enojadas sobre base morada.
+    //   peón = uva · torre = piña · caballo = plátano · alfil = pera · reina = fresa · rey = naranja
+    const PIECE_COLORS = {
+        0: { P: '#9BD66A', R: '#FFCF4D', N: '#FFE27A', B: '#C8E07A', Q: '#F2667A', K: '#FFA64D', base: '#7BBF5A' },
+        1: { P: '#8E6AC8', R: '#B79AE0', N: '#C9B2EC', B: '#9C84CC', Q: '#A0558E', K: '#7F5FB0', base: '#5E4A94' }
+    };
+    function fruitPiece(t, team, mood, withFace) {
+        const { INK, st, shine, face } = window.SPRITE_KIT;
+        const col = PIECE_COLORS[team][t];
+        const f = (x, y, s) => (withFace ? face(x, y, mood, s) : '');
+        const leafy = (x, y, r) => `<path d="M${x} ${y} Q${x - 10} ${y - 10} ${x - 16} ${y - 4} Q${x - 8} ${y + 2} ${x} ${y} Z" fill="#6FBF4A" ${st(2.5)} transform="rotate(${r || 0} ${x} ${y})"/>`;
+        const base = `<ellipse cx="50" cy="88" rx="30" ry="8" fill="${PIECE_COLORS[team].base}" ${st(3)}/>`;
+        let body = '';
+        if (t === 'P') { // uva
+            body = `<path d="M50 42 Q50 32 56 28" ${st(3)} fill="none"/>${leafy(54, 32, 20)}
+                <circle cx="50" cy="62" r="21" fill="${col}" ${st()}/>${shine(42, 53, 3, 6)}${f(50, 64, 0.5)}`;
+        } else if (t === 'R') { // piña con hojas en forma de almenas
+            body = `<path d="M30 26 L30 12 L38 18 L44 8 L50 16 L56 8 L62 18 L70 12 L70 26 Z" fill="#6FBF4A" ${st(3)}/>
+                <rect x="28" y="24" width="44" height="58" rx="18" fill="${col}" ${st()}/>
+                <path d="M32 40 L68 70 M32 58 L54 78 M46 26 L70 48 M68 40 L32 70 M68 58 L46 78 M54 26 L30 48" stroke="${INK}" stroke-width="2" opacity=".2"/>
+                ${shine(36, 38, 3, 7)}${f(50, 56, 0.55)}`;
+        } else if (t === 'N') { // plátano con orejita de caballo
+            body = `<path d="M34 84 Q24 56 34 36 Q42 20 58 16 L62 8 L66 18 Q78 26 72 34 Q66 30 60 34 Q52 44 54 60 Q56 74 66 84 Z" fill="${col}" ${st()}/>
+                <path d="M40 76 Q34 56 40 42" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".55"/>
+                ${withFace ? window.SPRITE_KIT2.eyesOnly(56, 27, mood, 0.42) : ''}<circle cx="70" cy="30" r="1.8" fill="${INK}"/>`;
+        } else if (t === 'B') { // pera con la ranura del alfil
+            body = `<path d="M50 12 Q42 12 40 24 Q38 36 34 44 Q24 58 30 72 Q36 84 50 84 Q64 84 70 72 Q76 58 66 44 Q62 36 60 24 Q58 12 50 12 Z" fill="${col}" ${st()}/>
+                <path d="M50 12 L52 4" ${st(3)} fill="none"/>${leafy(52, 8, 30)}
+                <path d="M56 22 L46 34" ${st(3)} fill="none"/>${shine(38, 52, 3, 7)}${f(50, 62, 0.55)}`;
+        } else if (t === 'Q') { // fresa con corona
+            body = `<path d="M50 84 Q26 70 28 46 Q30 32 50 34 Q70 32 72 46 Q74 70 50 84 Z" fill="${col}" ${st()}/>
+                ${[[38, 48], [62, 48], [50, 76], [36, 66], [64, 66]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="1.8" ry="2.6" fill="#FFE9A8"/>`).join('')}
+                <path d="M32 36 L30 14 L40 24 L50 8 L60 24 L70 14 L68 36 Z" fill="#FFCF4D" ${st(3)}/>
+                <circle cx="50" cy="8" r="3.5" fill="#F2667A" ${st(2)}/>${f(50, 58, 0.55)}`;
+        } else { // rey: naranja con coronita y cruz
+            body = `<circle cx="50" cy="60" r="25" fill="${col}" ${st()}/>
+                ${[[40, 50], [62, 50], [42, 74], [60, 74]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4" fill="${INK}" opacity=".2"/>`).join('')}
+                <path d="M34 38 L34 26 L42 32 L50 22 L58 32 L66 26 L66 38 Z" fill="#FFCF4D" ${st(3)}/>
+                <path d="M50 20 L50 6 M44 11 L56 11" stroke="${INK}" stroke-width="7" stroke-linecap="round"/>
+                <path d="M50 20 L50 6 M44 11 L56 11" stroke="#FFCF4D" stroke-width="3" stroke-linecap="round"/>
+                ${shine(40, 50, 3, 6)}${f(50, 62, 0.55)}`;
+        }
+        return base + body;
+    }
     function pieceArt(p, small) {
-        const K = window.SPRITE_KIT2;
-        if (!K) return GLYPH[p.t];
-        const inner = K.chessPiece(p.t, p.c === 0 ? '#9BD66A' : '#7A68AE', p.c === 0 ? 'happy' : 'angry', !small);
-        return `<span class="art"><svg class="sprite" viewBox="0 0 100 100">${inner}</svg></span>`;
+        if (!window.SPRITE_KIT) return GLYPH[p.t];
+        return `<span class="art"><svg class="sprite" viewBox="0 0 100 100">${fruitPiece(p.t, p.c, p.c === 0 ? 'happy' : 'angry', !small)}</svg></span>`;
     }
     function chessDepth() { const c = GAME.player ? GAME.player.act : 1; return c >= 3 ? 3 : c === 2 ? 2 : 1; }
     function chessSloppy() { const c = GAME.player ? GAME.player.act : 1; return c >= 3 ? 0 : c === 2 ? 0.08 : 0.3; }
@@ -439,7 +481,7 @@
                 const target = m.targets.find((t) => t.r === r && t.c === c);
                 const last = m.last && ((m.last.fr === r && m.last.fc === c) || (m.last.tr === r && m.last.tc === c));
                 const clickable = m.phase === 'play' && m.turn === 'player' && !m.busy;
-                cells.push(`<div class="sq ${(r + c) % 2 ? 'dark' : 'light'} ${isSel ? 'sel' : ''} ${target ? (p ? 'cap' : 'dot') : ''} ${last ? 'last' : ''}" ${clickable ? `onclick="mgChessClick(${r},${c})"` : ''}>
+                cells.push(`<div class="sq ${(r + c) % 2 ? 'dark' : 'light'} ${isSel ? 'sel' : ''} ${target ? (p ? 'cap' : 'dot') : ''} ${last ? 'last' : ''}" data-r="${r}" data-c="${c}" ${clickable ? `onclick="mgChessClick(${r},${c})"` : ''}>
                     ${p ? `<span class="piece ${p.c === 0 ? 'mine' : 'theirs'}">${pieceArt(p)}</span>` : ''}</div>`);
             }
         }
@@ -462,6 +504,7 @@
             </div>`, 'wide mg-panel mg-chess');
     }
     window.mgChessClick = function (r, c) {
+        if (chessSuppressClick) return;
         const m = mg();
         if (!m || m.kind !== 'chess' || m.phase !== 'play' || m.turn !== 'player' || m.busy) return;
         const target = m.targets.find((t) => t.r === r && t.c === c);
@@ -474,6 +517,63 @@
         } else { m.sel = null; m.targets = []; }
         render();
     };
+    // Arrastrar piezas: al agarrar una de tus frutas se marcan sus jugadas y
+    // una copia sigue al mouse; al soltarla en una casilla válida, se mueve.
+    // (Tocar y tocar sigue funcionando igual.)
+    let chessDrag = null;
+    document.addEventListener('pointerdown', (e) => {
+        const piece = e.target.closest && e.target.closest('.chess-board .piece.mine');
+        const m = mg();
+        if (!piece || e.button > 0 || !m || m.kind !== 'chess' || m.phase !== 'play' || m.turn !== 'player' || m.busy) return;
+        const sq = piece.closest('.sq');
+        const r = +sq.dataset.r, c = +sq.dataset.c;
+        const rect = piece.getBoundingClientRect();
+        const ghost = piece.cloneNode(true);
+        ghost.classList.add('chess-ghost');
+        Object.assign(ghost.style, { width: rect.width + 'px', height: rect.height + 'px', left: rect.left + 'px', top: rect.top + 'px' });
+        chessDrag = { r, c, ghost, dx: e.clientX - rect.left, dy: e.clientY - rect.top, x0: e.clientX, y0: e.clientY, moved: false };
+        if (!(m.sel && m.sel.r === r && m.sel.c === c)) mgChessClick(r, c);
+        e.preventDefault();
+    });
+    function chessSquareAt(x, y) {
+        const el = document.elementFromPoint(x, y);
+        return el && el.closest ? el.closest('.chess-board .sq') : null;
+    }
+    document.addEventListener('pointermove', (e) => {
+        const d = chessDrag;
+        if (!d) return;
+        if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
+        if (!d.moved) {
+            d.moved = true;
+            document.body.appendChild(d.ghost);
+            const from = document.querySelector(`.chess-board .sq[data-r="${d.r}"][data-c="${d.c}"] .piece`);
+            if (from) from.classList.add('lifted');
+        }
+        d.ghost.style.left = (e.clientX - d.dx) + 'px';
+        d.ghost.style.top = (e.clientY - d.dy) + 'px';
+        document.querySelectorAll('.chess-board .sq.hover').forEach((s) => s.classList.remove('hover'));
+        const sq = chessSquareAt(e.clientX, e.clientY);
+        if (sq && (sq.classList.contains('dot') || sq.classList.contains('cap'))) sq.classList.add('hover');
+    });
+    document.addEventListener('pointerup', (e) => {
+        const d = chessDrag;
+        if (!d) return;
+        chessDrag = null;
+        d.ghost.remove();
+        if (!d.moved) return; // fue un toque: ya quedó seleccionada
+        document.querySelectorAll('.chess-board .piece.lifted').forEach((p) => p.classList.remove('lifted'));
+        const m = mg();
+        const sq = chessSquareAt(e.clientX, e.clientY);
+        if (!m || !sq || m.phase !== 'play' || m.turn !== 'player' || m.busy) { render(); return; }
+        const tr = +sq.dataset.r, tc = +sq.dataset.c;
+        if (m.sel && m.targets.find((t) => t.r === tr && t.c === tc)) {
+            chessSuppressClick = true;
+            setTimeout(() => { chessSuppressClick = false; }, 0);
+            chessMove(m, { fr: m.sel.r, fc: m.sel.c, tr, tc });
+        } else render();
+    });
+    let chessSuppressClick = false;
+
     function chessMove(m, mv) {
         const res = MG.applyMove(m.board, mv);
         const mover = m.board[mv.fr][mv.fc];
