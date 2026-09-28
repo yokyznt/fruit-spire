@@ -138,3 +138,4 @@ button.btn-strawberry:hover { background: #FFB4C1; }
 .menu-screen .logo.big { margin-bottom: 8px; font-size: 5.2em; }
 .menu-screen > .menu-fruits .art-xl { width: 116px; height: 116px; }
 .menu-screen .menu-fruits { gap: 20px; margin-bottom: -4px; }
+.relic-ref { font-size: .8em; color: #B0824A; margin-top: 2px; font-style: italic; }

@@ -45,6 +45,7 @@ class Combat {
         this.turnState = { cardsPlayed: 0, attacksPlayed: 0 };
         this.damageMult = 1;
         this.xpGained = 0; // experiencia del pase de batalla por los enemigos derrotados
+        this.lastPlayed = null; // id de la última carta jugada (la copia la Semilla Espejo)
         this.start();
     }
 
@@ -165,6 +166,8 @@ class Combat {
         if (source.getStatus('weak')) amount = Math.floor(amount * 0.75);
         if (target.getStatus('vulnerable')) amount = Math.floor(amount * 1.5);
         if (target === this.player && this.hasRelic('nuez_dura') && amount > 0) amount -= 1;
+        // Intangible: el golpe no hace daño (dealDamage gasta 1 punto por golpe)
+        if (target.getStatus('ghost') && amount > 0) amount = 0;
         // Gelatina: cada golpe hace solo 1 de daño
         if (target.getStatus('jelly') && amount > 1) amount = 1;
         return Math.max(0, amount);
@@ -172,7 +175,9 @@ class Combat {
 
     dealDamage(source, target, base) {
         if (!target || !target.isAlive() || !source.isAlive()) return { damage: 0, hpLoss: 0, killed: false };
+        const ghost = base > 0 && target.getStatus('ghost') > 0;
         const amount = this.previewDamage(source, target, base);
+        if (ghost) target.addStatus('ghost', -1);
         let hpLoss = target.takeDamage(amount);
         // Coraza Dura: los golpes no le quitan más de N PV por turno
         const cap = target.getStatus('cap');
@@ -455,6 +460,7 @@ class Combat {
         }
         this.turnState.cardsPlayed++;
         if (card.type === 'attack') this.turnState.attacksPlayed++;
+        if (card.type !== 'curse' && card.type !== 'status') this.lastPlayed = cardId;
 
         if (card.type === 'power') { /* queda activo: no va a ninguna pila */ }
         else if (card.exhaust) this.exhaustCard(cardId);

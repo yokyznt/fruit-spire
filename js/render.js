@@ -104,6 +104,11 @@ function statusTipsFull(entries) {
     return [...entries.map(([id, n]) => statusTip(id, n)), ...keywordTips(helps, names)];
 }
 // Tooltip con un título, su texto y la explicación de sus términos
+function explainRelic(r, note) {
+    const sections = [[r.name + (note || ''), r.description], ...keywordTips(r.description, r.name)];
+    if (r.ref) sections.push(['Guiño', r.ref]);
+    return tip(sections);
+}
 function explain(title, text) {
     return tip([[title, text], ...keywordTips(text, title)]);
 }
@@ -272,7 +277,7 @@ function renderHud() {
     const relics = p.relics.map((rid) => {
         const r = window.RELIC_DB[rid];
         const tierNote = r.tier === 'boss' ? ' (de jefe)' : '';
-        return `<span class="relic-sticker ${r.tier === 'boss' ? 'boss' : ''}" data-relic="${r.id}" ${explain(r.name + tierNote, r.description)}>${art(r.sprite || r.id, r.icon, { size: 'sm' })}</span>`;
+        return `<span class="relic-sticker ${r.tier === 'boss' ? 'boss' : ''}" data-relic="${r.id}" ${explainRelic(r, tierNote)}>${art(r.sprite || r.id, r.icon, { size: 'sm' })}</span>`;
     }).join('');
     return `
     <header class="hud">
@@ -311,7 +316,14 @@ const SEED_MARKS = {
     burst: '<path d="M50 22l6 16 16-6-8 15 14 9-17 3 2 17-13-11-13 11 2-17-17-3 14-9-8-15 16 6z"/>',
     snow: '<path d="M47 22h6v56h-6zM23 47h54v6H23zM30 30l4-4 36 40-4 4zM66 26l4 4-36 40-4-4z"/>',
     up: '<path d="M50 22l20 22H58v30H42V44H30z"/>',
-    star: '<path d="M50 20l9 19 21 3-15 15 4 21-19-10-19 10 4-21-15-15 21-3z"/>'
+    star: '<path d="M50 20l9 19 21 3-15 15 4 21-19-10-19 10 4-21-15-15 21-3z"/>',
+    clock: '<circle cx="50" cy="50" r="22"/><path d="M50 36v15l10 6" fill="none" stroke-width="6" stroke-linecap="round"/>',
+    skull: '<path d="M30 52a20 18 0 0 1 40 0v9H60v9H40v-9H30z"/><circle cx="42" cy="52" r="4.5" fill="#3a2a1e"/><circle cx="58" cy="52" r="4.5" fill="#3a2a1e"/>',
+    spikes: '<path d="M28 74l8-32 8 22 6-34 6 34 8-22 8 32z"/>',
+    mirror: '<ellipse cx="50" cy="46" rx="17" ry="23"/><path d="M42 40l7-8" fill="none" stroke-width="5" stroke-linecap="round"/><rect x="45" y="68" width="10" height="14" rx="2"/>',
+    ghost: '<path d="M32 76V48a18 22 0 0 1 36 0v28l-9-7-9 7-9-7z"/><circle cx="43" cy="48" r="3.4" fill="#3a2a1e"/><circle cx="57" cy="48" r="3.4" fill="#3a2a1e"/>',
+    dice: '<rect x="30" y="30" width="40" height="40" rx="9"/><circle cx="41" cy="41" r="4" fill="#3a2a1e"/><circle cx="59" cy="59" r="4" fill="#3a2a1e"/><circle cx="50" cy="50" r="4" fill="#3a2a1e"/><circle cx="59" cy="41" r="4" fill="#3a2a1e"/><circle cx="41" cy="59" r="4" fill="#3a2a1e"/>',
+    flower: '<circle cx="50" cy="34" r="10"/><circle cx="66" cy="50" r="10"/><circle cx="50" cy="66" r="10"/><circle cx="34" cy="50" r="10"/><circle cx="50" cy="50" r="9" fill="#FFCF4D"/>'
 };
 function seedArt(seed, size) {
     const mark = SEED_MARKS[seed.mark] || SEED_MARKS.star;
@@ -1212,10 +1224,11 @@ function playerArt(mood) {
     return fruitArt(char.id, { size: 'xl', mood, hurtStage: hurtStageFor(p.hp, p.maxHp) });
 }
 function relicCardHtml(relic, onclick, extra) {
-    return `<div class="relic-card ${relic.tier === 'boss' ? 'boss' : ''}" ${onclick ? `onclick="${onclick}"` : ''} ${explain(relic.name, relic.description)}>
+    return `<div class="relic-card ${relic.tier === 'boss' ? 'boss' : ''}" ${onclick ? `onclick="${onclick}"` : ''} ${explainRelic(relic)}>
         ${art(relic.sprite || relic.id, relic.icon, { size: 'lg' })}
         <div class="card-name">${relic.name}</div>
         <div class="relic-desc">${relic.description}</div>
+        ${relic.ref ? `<div class="relic-ref">${relic.ref}</div>` : ''}
         ${extra || ''}
     </div>`;
 }
@@ -1232,7 +1245,7 @@ function renderReward() {
             ${window.passGainBox ? passGainBox() : ''}
             ${seedRewardBox()}
             ${cosmeticBox(GAME.newCosmetic)}
-            ${relic ? `<div class="reward-relic" ${explain(relic.name, relic.description)}>${art(relic.sprite || relic.id, relic.icon, { size: 'md' })}<div><b>${relic.name}</b><span>${relic.description}</span></div></div>` : ''}
+            ${relic ? `<div class="reward-relic" ${explainRelic(relic)}>${art(relic.sprite || relic.id, relic.icon, { size: 'md' })}<div><b>${relic.name}</b><span>${relic.description}</span></div></div>` : ''}
             <div class="reward-row">${cardsHtml}</div>
         </div>
         ${GAME.rewardCards.length ? '' : '<button class="secondary" onclick="skipReward()">Continuar</button>'}`, 'celebrate wide');
@@ -1370,6 +1383,7 @@ function renderShop() {
 function renderEvent() {
     const ev = GAME.currentEvent;
     const p = GAME.player;
+    if (!ev) return ''; // durante la transición a una pelea que salió de un evento
     return panel(art(ev.sprite || ev.id, ev.icon, { size: 'xl' }), ev.title, `
         <p>${ev.desc}</p>
         <div class="event-options">
@@ -1383,6 +1397,7 @@ function renderEvent() {
 
 function renderEventResult() {
     const ev = GAME.currentEvent;
+    if (!ev) return '';
     return panel(art(ev.sprite || ev.id, ev.icon, { size: 'xl' }), ev.title, `
         <p>${GAME.lastEventMsg}</p>
         <button onclick="closeEventResult()">Continuar</button>`);

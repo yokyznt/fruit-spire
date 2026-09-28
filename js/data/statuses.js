@@ -106,6 +106,10 @@ registerStatus({
 });
 
 registerStatus({
+    id: 'ghost', name: 'Intangible', word: 'intangible', icon: '👻', sprite: 'st_ghost', kind: 'buff', cls: 'block',
+    help: 'El próximo golpe que reciba no le hace daño. Baja 1 por cada golpe.'
+});
+registerStatus({
     id: 'fertile', name: 'Tierra Fértil', word: 'tierra fértil', icon: '🪴', sprite: 'tierra_fertil', kind: 'buff', cls: 'heal',
     help: 'Cada brote que cosecha le da 1 de cáscara por cada punto.'
 });
