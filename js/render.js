@@ -106,7 +106,7 @@ function statusTipsFull(entries) {
 // Tooltip con un título, su texto y la explicación de sus términos
 function explainRelic(r, note) {
     const sections = [[r.name + (note || ''), r.description], ...keywordTips(r.description, r.name)];
-    if (r.ref) sections.push(['Guiño', r.ref]);
+    if (r.ref) sections.push(['Guiño', '@ref:' + r.id]);
     return tip(sections);
 }
 function explain(title, text) {
@@ -172,12 +172,26 @@ function renderCardHtml(card, opts) {
 }
 
 // Barra de vida animada. key identifica a quién pertenece.
+// Golpes contra cáscara: primero baja la cáscara y, si sobra daño, después
+// la vida. Aquí se juntan los golpes recién hechos que tocaron cáscara.
+const BLOCK_FIRST_MS = 520;
+const blockFxSeen = new WeakSet();
+function pendingBlockHits() {
+    const c = GAME.combat, out = {};
+    if (!c || GAME.screen !== 'combat') return out;
+    (c.lastEvents || []).forEach((ev) => {
+        if (ev.type !== 'damage' || ev.poison || !(ev.blocked > 0) || blockFxSeen.has(ev)) return;
+        const o = out[ev.target] || (out[ev.target] = { blocked: 0 });
+        o.blocked += ev.blocked;
+    });
+    return out;
+}
 function hpBar(entity, key, cls) {
     const pct = Math.max(0, (entity.hp / entity.maxHp) * 100);
     const prev = GAME.lastBars[key] == null ? pct : GAME.lastBars[key];
     GAME.lastBars[key] = pct;
     return `
-    <div class="${cls || 'combat-hp-bar'}">
+    <div class="${cls || 'combat-hp-bar'}" data-side="${key === 'hud' ? 'player' : key}">
         <div class="hp-ghost" style="width:${prev}%" data-to="${pct}%"></div>
         <div class="hp-fill" style="width:${prev}%" data-to="${pct}%"></div>
         <div class="hp-text">${entity.hp}/${entity.maxHp}</div>
@@ -217,6 +231,7 @@ function render() {
     }
     playFlip(before);
     afterRender();
+    if (GAME.goldGain) animateGoldGain();
     if (window.tutorialAfterRender) tutorialAfterRender();
 }
 
@@ -276,15 +291,41 @@ function fitCardText(root) {
 }
 window.fitCardText = fitCardText;
 
+// La cáscara golpeada cuenta hacia abajo y, si se acaba, se rompe
+function drainBlockBadge(badge) {
+    const num = badge.querySelector('b');
+    const from = +badge.dataset.from, to = +badge.dataset.blockTo;
+    badge.classList.add('draining');
+    const t0 = performance.now(), dur = BLOCK_FIRST_MS - 120;
+    const step = (t) => {
+        if (!badge.isConnected) return;
+        const k = Math.min(1, (t - t0) / dur);
+        num.textContent = Math.round(from + (to - from) * k);
+        if (k < 1) { requestAnimationFrame(step); return; }
+        badge.classList.remove('draining');
+        if (to <= 0) badge.classList.add('broken');
+    };
+    requestAnimationFrame(step);
+}
+
 function afterRender() {
     fitCardText(document.getElementById('screen'));
     if (GAME.screen === 'map') setupMapDrag();
     if (GAME.screen === 'combat') Object.keys(GAME.pAnims).forEach(applyPortraitAnim);
     // barras de vida: arrancan en el valor anterior y se deslizan al nuevo
+    // si el golpe pegó en cáscara, la vida espera a que la cáscara baje
+    const hits = pendingBlockHits();
+    if (GAME.combat) (GAME.combat.lastEvents || []).forEach((ev) => blockFxSeen.add(ev));
+    document.querySelectorAll('.combat-block-badge[data-from]').forEach(drainBlockBadge);
     const bars = document.querySelectorAll('[data-to]');
     if (bars.length) {
         requestAnimationFrame(() => requestAnimationFrame(() => {
-            bars.forEach((b) => { b.style.width = b.dataset.to; });
+            bars.forEach((b) => {
+                const wrap = b.closest('[data-side]');
+                const late = wrap && hits[wrap.dataset.side];
+                if (late) setTimeout(() => { b.style.width = b.dataset.to; }, BLOCK_FIRST_MS);
+                else b.style.width = b.dataset.to;
+            });
         }));
     }
     GAME.dealIn = false;
@@ -303,7 +344,7 @@ function renderHud() {
             ${fruitArt(char.id, { size: 'sm' })}
             ${logoHtml('Fruit Spire', 'small')}
         </div>
-        <div class="hud-chip act" ${explain(`${act.castleName} · piso ${act.floor} de ${window.FLOORS_PER_CASTLE}`, `${act.name}: ${act.subtitle}. Dificultad: ${diff.name} — ${diff.desc}`)}>
+        <div class="hud-chip act" ${tip([[`${act.castleName} · piso ${act.floor} de ${window.FLOORS_PER_CASTLE}`, '']])}>
             ${art(diff.sprite, '🍎', { size: 'xs' })}<b>Castillo ${act.n}</b><span class="hand">Piso ${act.floor} · ${act.name}</span>
         </div>
         <div class="hud-chip hp" ${tip(['Vida', `Tienes ${p.hp} de ${p.maxHp} ❤️. Si llega a 0, pierdes la partida.`])}>
@@ -519,7 +560,7 @@ function renderCollection() {
                 ${g.cards.map((c) => discovered.has(c.id) ? renderCardHtml(c, {}) : '<div class="card-slot"><span>?</span></div>').join('')}`).join('')}
             </div>
         </div>
-        <button class="secondary" onclick="backToMenu()">Volver</button>
+        <button class="secondary" onclick="backToMenu()">${backLabel()}</button>
     </div>`;
 }
 
@@ -960,8 +1001,14 @@ function renderCombat() {
         </div>`;
     }).join('');
 
-    const blockBadge = (ent) => ent.block > 0
-        ? `<div class="combat-block-badge" ${tip([`Cáscara ${ent.block}`, KW_TEXT.block])}>${art('ui_shield', '🛡️', { size: 'sm' })}<b>${ent.block}</b></div>` : '';
+    const blockHits = pendingBlockHits();
+    const blockBadge = (ent, side) => {
+        const hit = blockHits[side];
+        const shown = ent.block + (hit ? hit.blocked : 0);
+        if (shown <= 0) return '';
+        const drain = hit ? `data-from="${shown}" data-block-to="${ent.block}"` : '';
+        return `<div class="combat-block-badge" ${drain} ${tip([`Cáscara ${ent.block}`, KW_TEXT.block])}>${art('ui_shield', '🛡️', { size: 'sm' })}<b>${shown}</b></div>`;
+    };
 
     const now = performance.now();
     const enemiesHtml = c.enemies.map((e, i) => {
@@ -1003,7 +1050,7 @@ function renderCombat() {
                 <div class="portrait" id="portrait-enemy-${i}" data-sprite="${eSprite}" data-fallback="${e.def.icon}"><div class="hit-layer"><div class="idle">${art(eSprite, e.def.icon, { size: 'xl' })}</div></div></div>
                 <div class="plate">
                     <div class="name-tag">${enemyName(e)}${e.def.tier === 'boss' ? ' ♛' : e.def.tier === 'elite' ? ' 🔥' : ''}</div>
-                    <div class="bar-wrap">${blockBadge(e)}${hpBar(e, `enemy-${i}`)}</div>
+                    <div class="bar-wrap">${blockBadge(e, `enemy-${i}`)}${hpBar(e, `enemy-${i}`)}</div>
                     ${statusRow(e)}
                 </div>
             </div>`;
@@ -1020,7 +1067,7 @@ function renderCombat() {
                 <div class="portrait" id="portrait-player" data-sprite="${pSprite}" data-char="${char.id}" data-fallback="${char.icon || '🍎'}"><div class="hit-layer"><div class="idle">${fruitArt(char.id, { size: 'xl', hurtStage: hurtStageFor(p.hp, p.maxHp) })}</div></div></div>
                 <div class="plate">
                     <div class="name-tag">${p.name || char.name || 'Fruta'}</div>
-                    <div class="bar-wrap">${blockBadge(p)}${hpBar(p, 'player')}</div>
+                    <div class="bar-wrap">${blockBadge(p, 'player')}${hpBar(p, 'player')}</div>
                     ${statusRow(p)}
                 </div>
             </div>
@@ -1142,7 +1189,7 @@ function renderWardrobe() {
             <div class="hand ward-name">${ch.name}</div>
             <div class="ward-count">${window.ownedCosmeticCount()} de ${window.COSMETICS.length} conseguidos</div>
             <p class="ward-hint">Cada mascotita da una pequeña ayuda en los combates y se desbloquea con un reto difícil (pasa el mouse encima para verlo). Los colores y accesorios se ganan en el 🏆 Pase de Batalla: cada enemigo que derrotas te da experiencia.</p>
-            <button class="secondary" onclick="backToMenu()">Volver</button>
+            <button class="secondary" onclick="backToMenu()">${backLabel()}</button>
         </div>
         <div class="wardrobe-right panel">
             <div class="ward-section"><h3 class="hand">Colores</h3><div class="ward-grid">${skins.map(item).join('')}</div></div>
@@ -1238,9 +1285,34 @@ function relicCardHtml(relic, onclick, extra) {
         ${art(relic.sprite || relic.id, relic.icon, { size: 'lg' })}
         <div class="card-name">${relic.name}</div>
         <div class="relic-desc">${relic.description}</div>
-        ${relic.ref ? `<div class="relic-ref">${relic.ref}</div>` : ''}
+        ${relic.ref && window.refBoxHtml ? refBoxHtml(relic, 'sm') : ''}
         ${extra || ''}
     </div>`;
+}
+
+// El oro ganado sube en la barra de arriba: "+N" flotando y el número contando
+function animateGoldGain() {
+    const gain = GAME.goldGain;
+    GAME.goldGain = null;
+    const chip = document.querySelector('.hud-chip.gold');
+    const num = chip && chip.querySelector('b');
+    if (!num || !GAME.player) return;
+    const to = GAME.player.gold, from = Math.max(0, to - gain);
+    num.textContent = from;
+    const pop = document.createElement('span');
+    pop.className = 'gold-gain';
+    pop.textContent = '+' + gain;
+    chip.appendChild(pop);
+    const t0 = performance.now() + 350, dur = 700;
+    const step = (t) => {
+        if (!num.isConnected) return;
+        const k = Math.min(1, Math.max(0, (t - t0) / dur));
+        num.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+        if (k < 1) requestAnimationFrame(step);
+        else { restartClass(chip, 'earn'); if (window.Sfx && Sfx.coin) Sfx.coin(); }
+    };
+    requestAnimationFrame(step);
+    setTimeout(() => pop.remove(), 1600);
 }
 
 function renderReward() {
@@ -1250,7 +1322,6 @@ function renderReward() {
     const relic = GAME.rewardRelic;
     return panel(playerArt('happy'), title, `
         <div class="reward-scroll">
-            <p>Ganaste ${art('ui_coin', '🪙', { size: 'xs' })} <b>${GAME.rewardGold}</b> de oro.${relic ? ' ¡Y un objeto!' : ''} <b>Tienes que elegir</b> un sticker nuevo para tu mazo:</p>
             ${petUnlockBox()}
             ${window.passGainBox ? passGainBox() : ''}
             ${seedRewardBox()}

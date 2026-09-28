@@ -99,7 +99,7 @@
     window.PASS = PASS;
 
     // ---------- pantalla ----------
-    window.openPass = function () { GAME.screen = 'pass'; render(); };
+    window.openPass = function () { rememberReturn(); GAME.screen = 'pass'; render(); };
     window.claimPassLevel = function (level) {
         const c = PASS.claim(level);
         if (!c) return;
@@ -160,7 +160,7 @@
             </div>
             <div class="controls-row">
                 <button class="btn-grape" onclick="openWardrobe()">Ir al Vestidor</button>
-                <button class="secondary" onclick="backToMenu()">Volver</button>
+                <button class="secondary" onclick="backToMenu()">${backLabel()}</button>
             </div>
         </div>`;
     };

@@ -71,8 +71,8 @@
 @keyframes kingSway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg) translateY(-6px); } }
 .cine.scene-0 .dancer .ca, .cine.scene-0 .hero-small .ca { animation: dance .6s ease-in-out infinite alternate; animation-delay: calc(var(--i, 0) * .15s); transform-origin: 50% 100%; }
 @keyframes dance { from { transform: translateY(0) rotate(-7deg); } to { transform: translateY(-26px) rotate(7deg); } }
-.cine.scene-0 .pet .ca { animation: petHop .45s ease-in-out infinite alternate; animation-delay: calc(var(--i) * .11s); }
-@keyframes petHop { from { transform: translateY(0) scale(1.06, .94); } to { transform: translateY(-18px) scale(.96, 1.04); } }
+.cine.scene-0 .pet .ca { animation: cinePetHop .45s ease-in-out infinite alternate; animation-delay: calc(var(--i) * .11s); }
+@keyframes cinePetHop { from { transform: translateY(0) scale(1.06, .94); } to { transform: translateY(-18px) scale(.96, 1.04); } }
 .cine .music { opacity: 0; }
 .cine.scene-0 .music { animation: noteUp 2.4s ease-out infinite; animation-delay: calc(var(--i) * .6s); }
 @keyframes noteUp { 0% { opacity: 0; transform: translate(0, 20px) rotate(-10deg); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(40px, -120px) rotate(14deg); } }
@@ -80,8 +80,8 @@
 .cine .moodswap .m-hurt { display: none; }
 .cine.scene-1 .moodswap .m-happy { display: none; }
 .cine.scene-1 .moodswap .m-hurt { display: flex; }
-.cine.scene-1 .dancer .ca, .cine.scene-1 .king .ca, .cine.scene-1 .pet .ca { animation: shiver .16s linear infinite; }
-@keyframes shiver { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px) rotate(-1deg); } 75% { transform: translateX(3px) rotate(1deg); } }
+.cine.scene-1 .dancer .ca, .cine.scene-1 .king .ca, .cine.scene-1 .pet .ca { animation: cineShiver .16s linear infinite; }
+@keyframes cineShiver { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px) rotate(-1deg); } 75% { transform: translateX(3px) rotate(1deg); } }
 .cine.scene-1 .bunting { animation: buntingFall 1.1s 1.7s ease-in forwards; transform-origin: 20px 20px; }
 @keyframes buntingFall { to { transform: rotate(10deg) translateY(60px); } }
 .cine .alert-wrap { opacity: 0; transform: scale(0); }
@@ -102,8 +102,8 @@
 @keyframes invL { from { opacity: 1; transform: translateX(-700px); } to { opacity: 1; transform: none; } }
 @keyframes invFR { from { opacity: 1; transform: translate(700px, -260px); } to { opacity: 1; transform: none; } }
 @keyframes invFL { from { opacity: 1; transform: translate(-700px, -260px); } to { opacity: 1; transform: none; } }
-.cine.scene-1 .invader .ca { animation: menace .55s ease-in-out 1.4s infinite alternate; }
-@keyframes menace { from { transform: translateY(0) rotate(-4deg); } to { transform: translateY(-12px) rotate(4deg) scale(1.04); } }
+.cine.scene-1 .invader .ca { animation: cineMenace .55s ease-in-out 1.4s infinite alternate; }
+@keyframes cineMenace { from { transform: translateY(0) rotate(-4deg); } to { transform: translateY(-12px) rotate(4deg) scale(1.04); } }
 
 /* globos de diálogo */
 .cine-bubble { position: relative; display: inline-block; padding: 8px 18px; border-radius: 18px; background: #fff; box-shadow: 0 0 0 3px #4A3428, 4px 6px 0 rgba(0, 0, 0, .2); font-family: var(--f-display); font-size: 1.6em; color: #4A3428; white-space: nowrap; }
@@ -222,7 +222,7 @@
 .cine .limon { opacity: 0; transform: translateX(300px); }
 .cine.scene-5 .limon { animation: limonIn .8s 1.4s var(--ease-back) forwards; }
 @keyframes limonIn { to { opacity: 1; transform: none; } }
-.cine.scene-5 .limon .ca { animation: petHop .5s 2.2s ease-in-out infinite alternate; }
+.cine.scene-5 .limon .ca { animation: cinePetHop .5s 2.2s ease-in-out infinite alternate; }
 .cine .limon-bubble { opacity: 0; transform: scale(0); }
 .cine.scene-5 .limon-bubble { animation: popBubble .4s 2.2s var(--ease-back) forwards; }
 .cine .hero-title { position: absolute; left: 0; right: 0; top: 176px; text-align: center; opacity: 0; transform: scale(.5); }

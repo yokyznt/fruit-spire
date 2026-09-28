@@ -130,3 +130,19 @@
 .seed-aim-banner { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 6px; border-radius: 99px; background: #FFF6D2; box-shadow: 0 0 0 2px var(--ink), 0 4px 0 2px rgba(74, 52, 40, .2); animation: pop .35s var(--ease-back); }
 .seed-aim-banner .hand { font-size: 1.2em; }
 .seed-aim-banner button { padding: 4px 14px; font-size: .9em; }
+
+/* guiños a otros juegos: dibujo del juego + explicación */
+.ref-box { display: flex; gap: 10px; align-items: center; text-align: left; margin-top: 8px; padding: 8px 10px; border-radius: 14px; background: #FFF6E4; box-shadow: 0 0 0 2px #E8D4B0; }
+.ref-arts { display: flex; flex-shrink: 0; }
+.ref-art { width: 58px; height: 58px; display: block; border-radius: 12px; background: color-mix(in srgb, var(--gc) 18%, #fff); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gc) 55%, #fff); padding: 3px; }
+.ref-art + .ref-art { margin-left: -12px; transform: rotate(8deg); }
+.ref-art svg { width: 100%; height: 100%; display: block; }
+.ref-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ref-text b { font-family: var(--f-display); color: #B0624A; font-size: 1.05em; }
+.ref-text span { font-size: .88em; line-height: 1.3; color: var(--ink); }
+.ref-box.sm { margin-top: 4px; padding: 6px 8px; gap: 8px; }
+.ref-box.sm .ref-art { width: 44px; height: 44px; }
+.ref-box.sm .ref-text span { font-size: .82em; }
+.tip-box.tip-ref { padding: 4px; }
+.tip-box.tip-ref .ref-box { margin: 0; box-shadow: none; background: transparent; }
+.tip-box.tip-ref .ref-art { width: 56px; height: 56px; }

@@ -124,7 +124,7 @@
             <h3 class="hand">${r.name}</h3>
             <p class="inv-desc">${highlightDesc(r.description)}</p>
             ${status ? `<p class="inv-status">${status}</p>` : ''}
-            ${r.ref ? `<p class="inv-ref">${r.ref}</p>` : ''}
+            ${r.ref ? refBoxHtml(r) : ''}
         </div>`;
     }
     function relicsSection(p, inv) {

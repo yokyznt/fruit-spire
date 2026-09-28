@@ -75,7 +75,7 @@ function tossWellCoin() {
 }
 function leaveWell() { GAME.screen = 'map'; saveGame(); render(); }
 
-const RESUMABLE_SCREENS = ['act-intro', 'dungeon', 'well'];
+const RESUMABLE_SCREENS = ['act-intro', 'dungeon', 'well', 'reward'];
 const SAVE_KEY = 'fruitSpireSave_v3';      // v3: niveles, dificultad, cartas maduradas
 const OLD_SAVE_KEY = 'fruitSpireSave_v2';
 const DISCOVERED_KEY = 'fruitSpireDiscovered_v1';
@@ -161,7 +161,11 @@ function saveGame() {
             visited: GAME.visited,
             playerPos: GAME.playerPos,
             // pantallas a las que se puede volver al continuar (el resto regresa al mapa)
-            screen: RESUMABLE_SCREENS.includes(GAME.screen) ? GAME.screen : 'map',
+            screen: RESUMABLE_SCREENS.includes(GAME.screen) ? GAME.screen
+                : (SIDE_SCREENS.includes(GAME.screen) && RESUMABLE_SCREENS.includes(GAME.returnTo)) ? GAME.returnTo : 'map',
+            // recompensas pendientes (para no perderlas si sales o recargas)
+            reward: { gold: GAME.rewardGold, cards: (GAME.rewardCards || []).map((c) => c.id), relic: GAME.rewardRelic ? GAME.rewardRelic.id : null,
+                seed: GAME.rewardSeed, seedTaken: GAME.rewardSeedTaken, after: GAME.afterReward, kind: GAME.combatKind },
             dungeon: GAME.dungeon ? Object.assign({}, GAME.dungeon, { pending: null }) : null,
             wellSpins: GAME.wellSpins || 0,
             wellLastMsg: GAME.wellLastMsg || ''
@@ -216,6 +220,20 @@ function loadGame() {
         GAME.wellSpins = data.wellSpins || 0;
         GAME.wellLastMsg = data.wellLastMsg || '';
         GAME.screen = RESUMABLE_SCREENS.includes(data.screen) ? data.screen : 'map';
+        if (GAME.screen === 'reward') {
+            const rw = data.reward;
+            if (rw && rw.cards && rw.cards.length) {
+                GAME.rewardGold = rw.gold || 0;
+                GAME.rewardCards = rw.cards.map((id) => window.getCard(id)).filter(Boolean);
+                GAME.rewardRelic = rw.relic ? window.RELIC_DB[rw.relic] || null : null;
+                GAME.rewardSeed = rw.seed || null;
+                GAME.rewardSeedTaken = !!rw.seedTaken;
+                GAME.afterReward = rw.after || 'map';
+                GAME.combatKind = rw.kind || 'enemy';
+                GAME.passGain = null;
+                GAME.newCosmetic = null;
+            } else GAME.screen = 'map';
+        }
         if (GAME.screen === 'dungeon' && !GAME.dungeon) GAME.screen = 'map';
         GAME.combat = null;
         return true;
@@ -304,10 +322,21 @@ function grantRandomRelic(player) {
 // ---------------------------------------------------------
 // MENÚ / SELECCIÓN DE PERSONAJE Y DIFICULTAD
 // ---------------------------------------------------------
-function showMainMenu() { GAME.inventory = null; exitTutorial(); GAME.screen = 'menu'; GAME.modal = null; render(); }
+function showMainMenu() { GAME.returnTo = null; GAME.inventory = null; exitTutorial(); GAME.screen = 'menu'; GAME.modal = null; render(); }
 function goToCharacterSelect() { GAME.screen = 'character-select'; render(); }
-function openCollection() { GAME.screen = 'collection'; render(); }
+// Pantallas "de lado" (pase, vestidor, álbum, notas): si se abren en plena
+// partida (p. ej. desde las recompensas), Volver regresa justo ahí.
+const SIDE_SCREENS = ['pass', 'wardrobe', 'collection', 'notes'];
+function rememberReturn() {
+    if (SIDE_SCREENS.includes(GAME.screen)) return;
+    GAME.returnTo = GAME.screen === 'menu' ? null : GAME.screen;
+    GAME.inventory = null;
+    hideTip();
+}
+function backLabel() { return GAME.returnTo ? 'Volver a la partida' : 'Volver'; }
+function openCollection() { rememberReturn(); GAME.screen = 'collection'; render(); }
 function openWardrobe() {
+    rememberReturn();
     if (GAME.player && window.CHARACTER_DB[GAME.player.characterId]) GAME.wardrobeChar = GAME.player.characterId;
     GAME.screen = 'wardrobe';
     render();
@@ -340,7 +369,12 @@ function wearNewCosmetic() {
     showToast(`¡${c.name} puesto!`);
     render();
 }
-function backToMenu() { GAME.screen = 'menu'; render(); }
+function backToMenu() {
+    const back = GAME.returnTo;
+    GAME.returnTo = null;
+    GAME.screen = back || 'menu';
+    render();
+}
 // Grado de putrefacción más alto desbloqueado para cada fruta (índice en DIFFICULTIES)
 function readUnlocks() {
     try {
@@ -739,6 +773,7 @@ function onCombatEnd(result, kind) {
     const petGold = pet && pet.onWin ? pet.onWin(p) || 0 : 0;
     p.gold += gold + petGold;
     GAME.rewardGold = gold + petGold;
+    GAME.goldGain = gold + petGold;
     GAME.rewardCards = rollRewardCards(3, rewardKind);
     GAME.rewardRelic = null;
     if (rewardKind === 'elite') {
@@ -752,6 +787,7 @@ function onCombatEnd(result, kind) {
     GAME.newCosmetic = null; // los accesorios ahora se ganan en el Pase de Batalla
     GAME.afterReward = isCastleBoss ? 'boss-relic' : kind === 'boss' ? 'next-floor' : 'map';
     GAME.screen = 'reward';
+    saveGame();
     render();
 }
 

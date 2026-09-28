@@ -66,6 +66,7 @@ window.PATCH_NOTES = [
 ];
 
 window.openNotes = function () {
+    rememberReturn();
     GAME.screen = 'notes';
     try { localStorage.setItem('fruitSpireNotesSeen', window.GAME_VERSION); } catch (e) { /* ignore */ }
     render();
@@ -93,6 +94,6 @@ window.renderNotes = function () {
                 </section>`).join('')}
             </div>
         </div>
-        <button class="secondary" onclick="backToMenu()">Volver</button>
+        <button class="secondary" onclick="backToMenu()">${backLabel()}</button>
     </div>`;
 };

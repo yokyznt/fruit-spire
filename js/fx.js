@@ -807,6 +807,18 @@ function spawnSingleFx(ev, opts) {
     const at = canvasPoint(portrait, 0.3);
     at.x += (Math.random() * 60 - 30);
 
+    // golpe contra cáscara: primero "-N cáscara"; lo que sobra le pega a la vida después
+    if (T === 'damage' && !ev.poison && ev.blocked > 0 && !ev.split) {
+        const layer0 = portrait.querySelector('.hit-layer');
+        if (!ev.thorns && ev.from) hitFx(ev.from === 'player' ? (opts.fx || 'punch') : (opts.fx || 'claw'), ev.target, ev.from);
+        if (ev.thorns) hitFx('sting', ev.target);
+        overlayAdd('fx-float fx-block', `${art('ui_shield', '🛡️', { size: 'md' })}<span class="fx-text">-${ev.blocked}<small> cáscara</small></span>`, at, 1100);
+        restartClass(layer0, 'got-block');
+        if (window.Sfx) Sfx.block();
+        const rest = ev.amount - ev.blocked;
+        if (rest > 0) setTimeout(() => spawnSingleFx(Object.assign({}, ev, { amount: rest, blocked: 0, from: null, split: true }), opts), BLOCK_FIRST_MS);
+        return;
+    }
     let sprite = 'ui_up', fallback = '✨', cls = 'fx-status';
     if (T === 'damage') { sprite = ev.poison ? 'st_poison' : 'ui_hit'; fallback = '💥'; cls = ev.poison ? 'fx-poison' : 'fx-damage'; }
     else if (T === 'block') { sprite = 'ui_shield'; fallback = '🛡️'; cls = 'fx-block'; }
@@ -869,6 +881,10 @@ function showTip(el) {
         if (text && text.startsWith('@card:')) {
             const card = window.getCard(text.slice(6));
             return card ? `<div class="tip-box tip-card"><b>${title}</b>${renderCardHtml(card, {})}</div>` : '';
+        }
+        if (text && text.startsWith('@ref:')) {
+            const relic = window.RELIC_DB[text.slice(5)];
+            return relic && window.refBoxHtml ? `<div class="tip-box tip-ref">${refBoxHtml(relic, 'sm')}</div>` : '';
         }
         return `<div class="tip-box"><b>${title}</b>${text ? `<span>${text}</span>` : ''}</div>`;
     }).join('');

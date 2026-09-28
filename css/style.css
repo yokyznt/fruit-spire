@@ -1871,3 +1871,18 @@ button.btn-banana:hover { background: #FFDB70; }
 .panel.map-legend { overflow-y: auto; scrollbar-width: thin; }
 .legend-list.swatches { flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
 .legend-list li { padding: 0 6px; }
+
+/* oro ganado tras un combate */
+.hud-chip.gold { position: relative; }
+.hud-chip.gold .gold-gain { position: absolute; left: 50%; top: 100%; font-weight: 800; color: #C98A00; text-shadow: 0 1px 0 #fff, 0 0 6px #fff; pointer-events: none; white-space: nowrap; animation: goldGain 1.5s var(--ease-out) forwards; }
+.hud-chip.gold.earn { animation: coinEarn .45s var(--ease-out); }
+@keyframes goldGain { 0% { opacity: 0; transform: translate(-50%, 14px) scale(.6); } 20% { opacity: 1; transform: translate(-50%, 2px) scale(1.25); } 70% { opacity: 1; transform: translate(-50%, -4px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -22px) scale(.9); } }
+@keyframes coinEarn { 0%, 100% { transform: rotate(1.5deg) scale(1); } 45% { transform: rotate(-3deg) scale(1.18); } }
+/* la casilla disponible queda encima de sus vecinas para que su borde punteado no se corte */
+.node.reachable, .node.current { z-index: 4; }
+.node.reachable:hover { z-index: 5; }
+/* la cáscara recibe el golpe primero: tiembla mientras baja y se rompe si llega a 0 */
+.combat-block-badge.draining { animation: blockDrain .16s linear infinite; background: #D8F5EA; }
+.combat-block-badge.broken { animation: blockBreak .42s var(--ease-out) forwards; pointer-events: none; }
+@keyframes blockDrain { 0%, 100% { transform: translateY(-50%) rotate(-6deg) scale(1.12); } 50% { transform: translate(-3px, -50%) rotate(-10deg) scale(1.12); } }
+@keyframes blockBreak { 0% { transform: translateY(-50%) rotate(-6deg) scale(1.15); opacity: 1; } 100% { transform: translate(-10px, -20%) rotate(-30deg) scale(.4); opacity: 0; } }
