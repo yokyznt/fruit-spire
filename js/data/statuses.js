@@ -169,3 +169,8 @@ registerStatus({
     id: 'enrage', name: 'Enfado', word: 'enfado', icon: '💢', sprite: 'st_enrage', kind: 'buff', cls: 'str',
     help: 'Cada habilidad que juegas le da 1 de Madurez por cada punto.'
 });
+registerStatus({
+    id: 'reflect', name: 'Espejo', word: 'espejo', icon: '🪞', sprite: 'st_reflect', kind: 'buff', cls: 'block',
+    help: 'El primer perjuicio que le mandes en su turno rebota y te lo aplica a ti en su lugar. Baja 1 cada vez.',
+    desc: (n) => `Los próximos ${n} perjuicio${n === 1 ? '' : 's'} que le mandes rebotan hacia ti.`
+});

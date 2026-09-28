@@ -25,6 +25,7 @@ window.NODE_TYPES = {
     SHOP: 'shop',
     MYSTERY: 'mystery',
     GIFT: 'gift',
+    WELL: 'well',
     BOSS: 'boss'
 };
 
@@ -108,6 +109,7 @@ function fillContent(grid, opts) {
     place(T.MYSTERY, 15, range(1, preBoss - 1), 2);
     place(T.TREASURE, 1, range(3, preBoss - 1), 1);
     place(T.GIFT, 2 + (Math.random() < 0.5 ? 1 : 0), range(2, preBoss - 1), 1);
+    place(T.WELL, 2, range(2, preBoss - 1), 1);
     // 4) relleno: enemigos, ya bastante menos frecuentes que antes, y
     // evitando amontonarse entre ellos para que el mapa se sienta variado
     for (let x = 1; x < preBoss; x++) {

@@ -231,10 +231,17 @@ class Combat {
         this.pushEvent('block', entity, amount);
     }
 
-    applyStatus(entity, id, amount) {
+    applyStatus(entity, id, amount, fromPlayer) {
         if (!entity || !entity.isAlive() || !amount) return;
         if (id === 'frozen' && entity.getStatus('frozen')) return; // no se acumula
         const info = window.STATUS_DB[id];
+        // Espejo: el primer perjuicio que le mandas en el turno te lo devuelve
+        if (fromPlayer && info && info.kind === 'debuff' && amount > 0 && entity.getStatus('reflect')) {
+            entity.addStatus('reflect', -1);
+            this.pushEvent('negate', entity, 0, { statusId: id });
+            this.applyStatus(this.player, id, amount);
+            return;
+        }
         if (info && info.kind === 'debuff' && amount > 0 && entity.getStatus('wax')) {
             entity.addStatus('wax', -1);
             this.pushEvent('negate', entity, 0, { statusId: id });
@@ -362,8 +369,8 @@ class Combat {
                 return self.dealDamage(P, alive[Math.floor(Math.random() * alive.length)], n);
             },
             block(n) { self.gainBlock(P, n, true); },
-            apply(target, id, n) { self.applyStatus(target, id, n); },
-            applyAll(id, n) { self.aliveEnemies().forEach((e) => self.applyStatus(e, id, n)); },
+            apply(target, id, n) { self.applyStatus(target, id, n, true); },
+            applyAll(id, n) { self.aliveEnemies().forEach((e) => self.applyStatus(e, id, n, true)); },
             buff(id, n) { self.applyStatus(P, id, n); },
             draw(n) { self.drawCards(n); },
             gainEnergy(n) { P.energy += n; },
@@ -392,7 +399,7 @@ class Combat {
             // compatibilidad con cartas viejas
             dealDamage(src, target, base) { return self.dealDamage(src, target, base).damage; },
             addBlock(entity, n) { self.gainBlock(entity, n, entity === P); },
-            addStatus(entity, id, n) { self.applyStatus(entity, id, n); }
+            addStatus(entity, id, n) { self.applyStatus(entity, id, n, true); }
         };
         return ctx;
     }
@@ -442,7 +449,7 @@ class Combat {
         this.damageMult = 1;
 
         if (card.type === 'attack' && p.getStatus('noble_rot') && target && target.isAlive() && card.target !== 'none') {
-            this.applyStatus(target, 'poison', p.getStatus('noble_rot'));
+            this.applyStatus(target, 'poison', p.getStatus('noble_rot'), true);
         }
         this.turnState.cardsPlayed++;
         if (card.type === 'attack') this.turnState.attacksPlayed++;
@@ -579,7 +586,11 @@ class Combat {
         if (move.allyBlock) this.aliveEnemies().forEach((e) => { if (e !== enemy) this.gainBlock(e, move.allyBlock, false); });
         if (move.damage) {
             const hits = move.hits || 1;
-            for (let i = 0; i < hits && P.isAlive() && enemy.isAlive(); i++) this.dealDamage(enemy, P, move.damage);
+            for (let i = 0; i < hits && P.isAlive() && enemy.isAlive(); i++) {
+                const r = this.dealDamage(enemy, P, move.damage);
+                // Vampírico: se cura por la vida que te quitó
+                if (move.drain && r.hpLoss > 0) this.healEntity(enemy, r.hpLoss);
+            }
         }
         if (move.apply && P.isAlive()) Object.keys(move.apply).forEach((id) => this.applyStatus(P, id, move.apply[id]));
         if (move.self && enemy.isAlive()) Object.keys(move.self).forEach((id) => this.applyStatus(enemy, id, move.self[id]));

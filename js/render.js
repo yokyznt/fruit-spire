@@ -276,7 +276,7 @@ function renderHud() {
     }).join('');
     return `
     <header class="hud">
-        <div class="hud-title" ${tip(['Volver al menú', 'Tu progreso se guarda al salir del combate.'])} onclick="if(!GAME.anim && confirm('¿Volver al menú? Tu progreso ya está guardado.')) showMainMenu();">
+        <div class="hud-title" ${tip(['Volver al menú', 'Tu progreso se guarda al salir del combate.'])} onclick="if(!GAME.anim) showMainMenu();">
             ${fruitArt(char.id, { size: 'sm' })}
             ${logoHtml('Fruit Spire', 'small')}
         </div>
@@ -361,6 +361,7 @@ function renderScreen() {
         case 'collection': return renderCollection();
         case 'wardrobe': return renderWardrobe();
         case 'gift': return renderGift();
+        case 'well': return renderWell();
         case 'tutorial-end': return renderTutorialEnd();
         case 'act-intro': return renderActIntro();
         case 'map': return renderMap();
@@ -619,7 +620,7 @@ function renderMap() {
             <div class="legend-act hand">${act.name}</div>
             <ul class="legend-list">
                 ${legendRow(charSprite(char), char.icon, 'Tú', 'Tu fruta. Muévete con clic.')}
-                ${['enemy', 'elite', 'rest', 'treasure', 'shop', 'mystery', 'gift'].map((t) => legendRow(NODE_INFO[t].sprite, NODE_INFO[t].icon, NODE_INFO[t].label, NODE_INFO[t].desc)).join('')}
+                ${['enemy', 'elite', 'rest', 'treasure', 'shop', 'mystery', 'gift', 'well'].map((t) => legendRow(NODE_INFO[t].sprite, NODE_INFO[t].icon, NODE_INFO[t].label, NODE_INFO[t].desc)).join('')}
                 ${legendRow(boss.sprite, boss.icon, 'Jefe', boss.label)}
             </ul>
             <ul class="legend-list swatches">
@@ -1066,6 +1067,18 @@ function renderGift() {
     return panel(art('node_gift', '🎁', { size: 'xl' }), '¡Un regalo!', `
         ${c ? `<p>Dentro había algo para tu vestidor.</p>${cosmeticBox(c)}` : '<p>¡Ya tienes todo el vestidor! Dentro había 40 de oro.</p>'}
         <button onclick="closeEventResult()">Continuar</button>`, 'celebrate gift-panel');
+}
+
+function renderWell() {
+    const p = GAME.player;
+    const cost = wellCost();
+    return panel(art('node_well', '🪙', { size: 'xl' }), 'Pozo de los Deseos', `
+        <p>Tira una moneda y pide un deseo. Cada vez cuesta más oro… pero puedes parar cuando quieras.</p>
+        ${GAME.wellLastMsg ? `<p class="hand well-msg">${GAME.wellLastMsg}</p>` : ''}
+        <div class="controls-row">
+            <button class="btn-mint" onclick="tossWellCoin()" ${p.gold < cost ? 'disabled' : ''}>Tirar moneda (${art('ui_coin', '🪙', { size: 'xs' })}${cost})</button>
+            <button class="secondary" onclick="leaveWell()">Irme</button>
+        </div>`);
 }
 
 // ---------- PANELES ----------

@@ -1066,6 +1066,7 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .diff-chip:hover { background: var(--banana-soft); }
 .diff-chip.selected { background: var(--banana); transform: translateY(-5px) rotate(-2deg) scale(1.06); }
 .diff-desc { font-size: 1.2em; color: var(--ink-soft); min-height: 1.5em; margin: 8px 0 -10px; }
+.well-msg { font-size: 1.15em; background: var(--mint-soft); padding: 8px 18px; border-radius: 12px; box-shadow: 0 0 0 2px var(--ink); display: inline-block; animation: pop .4s var(--ease-back); }
 .char-select-row { margin-top: 26px; }
 
 /* ============================================================

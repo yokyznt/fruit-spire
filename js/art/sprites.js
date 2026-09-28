@@ -246,6 +246,16 @@
         <circle cx="50" cy="64" r="1.4" fill="#fff"/>
         ${sparkle(86, 18, 0.9)}${sparkle(16, 16, 0.6, '#FFB8C6')}`);
 
+    S.node_well = () => svg(`
+        <ellipse cx="50" cy="78" rx="34" ry="10" fill="#8FA3C7" ${st(3)}/>
+        <path d="M20 78 Q16 46 26 34 L74 34 Q84 46 80 78 Z" fill="#C9AF8C" ${st()}/>
+        <path d="M28 40 L72 40" ${st(2.5)} fill="none" opacity=".4"/>
+        <ellipse cx="50" cy="52" rx="20" ry="7" fill="#6FA8D6" ${st(2.5)}/>
+        ${sparkle(50, 50, 0.5, '#fff')}
+        <path d="M30 20 L70 20" ${st(4)} fill="none"/>
+        <path d="M30 20 L30 34 M70 20 L70 34" ${st(4)} fill="none"/>
+        <rect x="42" y="16" width="16" height="14" rx="2" fill="#8C6A3F" ${st(2.5)}/>
+        <path d="M50 20 L50 8" ${st(2)} fill="none"/>`);
     S.node_boss = (o) => S.licuadora_suprema(o || {});
 
     // =========================================================

@@ -214,6 +214,38 @@
         <rect x="68" y="14" width="12" height="30" rx="3" fill="#FFF6E9" ${st(2.5)}/>
         <rect x="24" y="76" width="36" height="12" rx="3" fill="#2E2A3A" ${st(2.5)}/>
         ${face(42, 62, hurtOr(o), 0.55)}`);
+
+    // ---------- frutas malvadas (mecánicas de espejo y vampirismo) ----------
+    S.limon_rencoroso = (o) => svg(`
+        <ellipse cx="50" cy="54" rx="34" ry="40" fill="#FFE066" ${st()}/>
+        <path d="M50 14 Q54 8 60 8" ${st(3)} fill="none"/>
+        <path d="M20 40 Q14 54 20 68 M80 40 Q86 54 80 68" ${st(2.5)} fill="none" opacity=".4"/>
+        ${shine(32, 40, 4, 8)}
+        ${face(50, 58, hurtOr(o, 'sour'), 0.85)}`);
+    S.ciruela_podrida = (o) => svg(`
+        <path d="M50 14 Q40 20 40 26" ${st(3)} fill="none"/>${leaf(38, 20, -40, 0.7, '#6E7D57')}
+        <circle cx="50" cy="56" r="36" fill="#7A5C9E" ${st()}/>
+        <circle cx="34" cy="70" r="5" fill="#4A3A63" opacity=".7"/><circle cx="66" cy="46" r="4" fill="#4A3A63" opacity=".6"/><circle cx="60" cy="74" r="3.5" fill="#4A3A63" opacity=".6"/>
+        ${shine(34, 42, 4, 8)}
+        ${face(50, 58, hurtOr(o, 'sour'), 0.85)}`);
+    S.pina_espinosa = (o) => svg(`
+        ${spikes(50, 16, 16, 5, '#5C9E4A')}
+        <ellipse cx="50" cy="60" rx="32" ry="36" fill="#E8B84B" ${st()}/>
+        <path d="M26 34 Q50 44 74 34 M22 54 Q50 64 78 54 M26 74 Q50 84 74 74" ${st(2.2)} fill="none" opacity=".45"/>
+        ${shine(34, 46, 3.5, 7)}
+        ${face(50, 62, hurtOr(o), 0.8)}`);
+    S.mango_vampiro = (o) => svg(`
+        <path d="M50 14 C74 14 88 38 82 62 C76 88 60 96 50 96 C40 96 24 88 18 62 C12 38 26 14 50 14 Z" fill="#F2A33C" ${st()}/>
+        <path d="M50 14 C60 10 66 14 66 20" ${st(2.5)} fill="none"/>
+        ${shine(32, 42, 4, 8)}
+        ${face(50, 60, hurtOr(o, 'angry'), 0.85)}
+        <path d="M42 70 L40 78 L45 74 Z M58 70 L60 78 L55 74 Z" fill="#fff" ${st(1.6)}/>`);
+    S.fresa_vengativa = (o) => svg(`
+        ${leaf(38, 16, -25, 0.9)}${leaf(50, 10, 0, 0.9)}${leaf(62, 16, 25, 0.9)}
+        <path d="M50 24 C78 24 88 54 76 76 C68 92 60 96 50 96 C40 96 32 92 24 76 C12 54 22 24 50 24 Z" fill="#F2667A" ${st()}/>
+        <circle cx="36" cy="50" r="2" fill="#FFE58A"/><circle cx="58" cy="46" r="2" fill="#FFE58A"/><circle cx="46" cy="64" r="2" fill="#FFE58A"/><circle cx="66" cy="66" r="2" fill="#FFE58A"/><circle cx="30" cy="70" r="2" fill="#FFE58A"/>
+        ${shine(34, 42, 3.5, 7)}
+        ${face(50, 64, hurtOr(o, 'angry'), 0.85)}`);
 })();
 
 // ---------- casilla de regalo (vestidor) ----------

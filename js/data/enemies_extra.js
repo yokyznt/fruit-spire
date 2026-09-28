@@ -6,7 +6,10 @@
 //   Blanda), fuse (Mecha, con `explode` = daño), split (Divisible, con
 //   `splitInto`), minion (Esbirro: huye si muere un `leader`), clock
 //   (Temporizador, con `clockEvery`), cap (Coraza Dura), beat (Latido),
-//   regrow (Rebrote), spores (Esporas), enrage (Enfado).
+//   regrow (Rebrote), spores (Esporas), enrage (Enfado), reflect
+//   (Espejo: el perjuicio que le mandas rebota hacia ti).
+// En una jugada, `drain: true` hace que el enemigo se cure por el
+// daño que te quitó ese golpe (vampírico).
 // Cada nivel elige al azar uno de sus jefes (ver `bosses` en ACTS).
 // ============================================================
 
@@ -85,6 +88,21 @@
         ]
     });
 
+    registerEnemy({
+        id: 'limon_rencoroso', name: 'Limón Rencoroso', icon: '🍋', hpMin: 23, hpMax: 27, idle: 'sway',
+        moves: [
+            { id: 'mueca_agria', name: 'Mueca Agria', self: { reflect: 1 }, block: 6, weight: 1, noRepeat: true, anim: 'guard' },
+            { id: 'exprimido', name: 'Exprimido Doloroso', damage: 7, apply: { weak: 1 }, weight: 2, anim: 'spit', fx: 'splat' }
+        ]
+    });
+    registerEnemy({
+        id: 'ciruela_podrida', name: 'Ciruela Podrida', icon: '🟣', hpMin: 25, hpMax: 29, idle: 'wobble',
+        moves: [
+            { id: 'mordisco_podrido', name: 'Mordisco Podrido', damage: 6, apply: { poison: 3 }, weight: 2, anim: 'bite', fx: 'bite' },
+            { id: 'fermentar', name: 'Fermentar', self: { regen: 3 }, block: 4, weight: 1, noRepeat: true, anim: 'cast' }
+        ]
+    });
+
     // =========================================================
     // NIVEL 2 — EL MERCADO
     // =========================================================
@@ -142,6 +160,22 @@
             { id: 'corona_robada', name: 'Corona Robada', damage: 10, stealGold: 20, anim: 'swoop', fx: 'steal' },
             { id: 'mordisco_rey', name: 'Mordisco Real', damage: 18, anim: 'bite', fx: 'bite' },
             { id: 'saqueo', name: 'Saqueo', allies: { strength: 2 }, apply: { vulnerable: 2 }, anim: 'shake', fx: 'shock' }
+        ]
+    });
+
+    registerEnemy({
+        id: 'pina_espinosa', name: 'Piña Espinosa', icon: '🍍', hpMin: 70, hpMax: 76, tier: 'elite', idle: 'rumble',
+        moves: [
+            { id: 'erizarse', name: 'Erizarse', self: { thorns: 4 }, block: 14, weight: 1, noRepeat: true, anim: 'guard' },
+            { id: 'embestida_punzante', name: 'Embestida Punzante', damage: 16, weight: 2, anim: 'charge', fx: 'shock' },
+            { id: 'corona_filosa', name: 'Corona Filosa', damage: 8, hits: 2, apply: { vulnerable: 1 }, weight: 1, anim: 'slash', fx: 'slash' }
+        ]
+    });
+    registerEnemy({
+        id: 'mango_vampiro', name: 'Mango Vampiro', icon: '🥭', hpMin: 40, hpMax: 46, idle: 'sway',
+        moves: [
+            { id: 'mordida_jugosa', name: 'Mordida Jugosa', damage: 9, drain: true, weight: 2, anim: 'bite', fx: 'drain' },
+            { id: 'chupar_jugo', name: 'Chupar Jugo', damage: 5, hits: 2, drain: true, weight: 1, noRepeat: true, anim: 'lunge', fx: 'drain' }
         ]
     });
 
@@ -207,19 +241,28 @@
         ]
     });
 
+    registerEnemy({
+        id: 'fresa_vengativa', name: 'Fresa Vengativa', icon: '🍓', hpMin: 100, hpMax: 108, tier: 'elite', idle: 'sway',
+        moves: [
+            { id: 'espejo_mermelada', name: 'Espejo de Mermelada', self: { reflect: 2 }, block: 14, weight: 1, noRepeat: true, anim: 'guard' },
+            { id: 'semillas_afiladas', name: 'Semillas Afiladas', damage: 14, apply: { vulnerable: 2 }, weight: 2, anim: 'slash', fx: 'slash' },
+            { id: 'pure_vengativo', name: 'Puré Vengativo', damage: 22, weight: 1, anim: 'charge', fx: 'burst' }
+        ]
+    });
+
     // =========================================================
     // Se suman a los grupos de cada nivel, y cada nivel tiene 3 jefes
     // =========================================================
     const add = (n, key, groups) => { window.ACTS[n - 1][key].push(...groups); };
-    add(1, 'weak', [['bicho_bolita'], ['hongo_venenoso']]);
-    add(1, 'normal', [['semilla_bomba', 'bicho_bolita'], ['hongo_venenoso', 'babosa_viscosa'], ['semilla_bomba', 'semilla_bomba', 'pulgon']]);
+    add(1, 'weak', [['bicho_bolita'], ['hongo_venenoso'], ['limon_rencoroso'], ['ciruela_podrida']]);
+    add(1, 'normal', [['semilla_bomba', 'bicho_bolita'], ['hongo_venenoso', 'babosa_viscosa'], ['semilla_bomba', 'semilla_bomba', 'pulgon'], ['limon_rencoroso', 'ciruela_podrida']]);
     add(1, 'elites', [['escarabajo_gordo']]);
-    add(2, 'weak', [['vela_cera'], ['gelatina_temblorosa']]);
-    add(2, 'normal', [['vela_cera', 'rata_mercado'], ['gelatina_temblorosa', 'hormiga_obrera'], ['vela_cera', 'vela_cera']]);
-    add(2, 'elites', [['gato_callejero']]);
+    add(2, 'weak', [['vela_cera'], ['gelatina_temblorosa'], ['mango_vampiro']]);
+    add(2, 'normal', [['vela_cera', 'rata_mercado'], ['gelatina_temblorosa', 'hormiga_obrera'], ['vela_cera', 'vela_cera'], ['mango_vampiro', 'rata_mercado']]);
+    add(2, 'elites', [['gato_callejero'], ['pina_espinosa']]);
     add(3, 'weak', [['robot_limpiador'], ['tostadora_saltarina']]);
     add(3, 'normal', [['botella_explosiva', 'botella_explosiva', 'tapa_saltarina'], ['robot_limpiador', 'botella_explosiva'], ['tostadora_saltarina', 'pajita_vampira']]);
-    add(3, 'elites', [['cafetera_rabiosa']]);
+    add(3, 'elites', [['cafetera_rabiosa'], ['fresa_vengativa']]);
     window.ACTS[0].bosses = ['oruga_reina', 'babosa_madre', 'hongo_rey'];
     window.ACTS[1].bosses = ['chef_cuchilla', 'reloj_cocina', 'rey_raton'];
     window.ACTS[2].bosses = ['licuadora_suprema', 'horno_infernal', 'maquina_expendedora'];

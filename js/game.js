@@ -30,8 +30,40 @@ const NODE_INFO = {
     shop: { sprite: 'node_shop', icon: '🏪', label: 'Tiendita', desc: 'Cartas, reliquias y quitar cartas, a cambio de oro.' },
     mystery: { sprite: 'node_mystery', icon: '❓', label: 'Misterio', desc: 'Un evento al azar… ¿bueno o malo?' },
     gift: { sprite: 'node_gift', icon: '🎁', label: 'Regalo', desc: 'Algo nuevo para tu vestidor: un color o un accesorio.' },
+    well: { sprite: 'node_well', icon: '🪙', label: 'Pozo de los Deseos', desc: 'Tira monedas y pide un deseo. Cuesta más cada vez, pero puedes parar cuando quieras.' },
     boss: { sprite: 'node_boss', icon: '🌀', label: 'Jefe', desc: '' }
 };
+
+// ---------------------------------------------------------
+// POZO DE LOS DESEOS: tira monedas por un premio al azar; cada vez
+// cuesta más oro, pero uno puede parar apenas quiera.
+// ---------------------------------------------------------
+const WELL_OUTCOMES = [
+    { w: 22, run: (p) => { const n = Math.max(4, Math.ceil(p.maxHp * 0.2)); p.heal(n); return `El pozo brilla dorado. Recuperas ${n} ${'❤️'}.`; } },
+    { w: 16, run: (p) => { const gold = 25 + Math.floor(Math.random() * 20); p.gold += gold; return `Sacas ${gold} de oro empapado del fondo.`; } },
+    { w: 9, run: (p, g) => g.grantRandomRelic(p) },
+    { w: 14, run: (p, g) => { const n = g.upgradeRandom(1); return n.length ? `El agua madura tu ${n[0]}.` : 'No tenías nada que madurar.'; } },
+    { w: 12, run: (p) => { p.maxHp += 4; p.hp += 4; return '+4 de vida máxima. Te sientes con más jugo.'; } },
+    { w: 15, run: () => 'El pozo burbujea… y no pasa nada.' },
+    { w: 12, run: (p, g) => { g.addCard('fruta_magullada'); return '¡Splash! Una Fruta Magullada te cae encima y se cuela en tu mazo.'; } }
+];
+function wellCost() { return 15 + (GAME.wellSpins || 0) * 12; }
+function tossWellCoin() {
+    if (GAME.anim) return;
+    const cost = wellCost();
+    if (GAME.player.gold < cost) { if (window.Sfx) Sfx.denied(); showToast('No te alcanza el oro'); return; }
+    GAME.player.gold -= cost;
+    GAME.wellSpins = (GAME.wellSpins || 0) + 1;
+    const total = WELL_OUTCOMES.reduce((s, o) => s + o.w, 0);
+    let r = Math.random() * total, picked = WELL_OUTCOMES[WELL_OUTCOMES.length - 1];
+    for (const o of WELL_OUTCOMES) { r -= o.w; if (r <= 0) { picked = o; break; } }
+    GAME.wellLastMsg = picked.run(GAME.player, eventHelpers());
+    if (window.Sfx) Sfx.sparkle();
+    if (GAME.player.hp <= 0) { clearSave(); GAME.screen = 'gameover'; render(); return; }
+    saveGame();
+    render();
+}
+function leaveWell() { GAME.screen = 'map'; saveGame(); render(); }
 
 const SAVE_KEY = 'fruitSpireSave_v3';      // v3: niveles, dificultad, cartas maduradas
 const OLD_SAVE_KEY = 'fruitSpireSave_v2';
@@ -429,6 +461,11 @@ function enterNode(type) {
         if (window.Sfx) Sfx.giftOpen();
         GAME.newCosmetic = rewardCosmetic();
         GAME.screen = 'gift';
+        saveGame();
+    } else if (type === T.WELL) {
+        GAME.wellSpins = 0;
+        GAME.wellLastMsg = '';
+        GAME.screen = 'well';
         saveGame();
     } else if (type === T.SHOP) {
         openShop();
@@ -930,5 +967,6 @@ Object.assign(window, {
     restHeal, setRestMode, leaveRest, restUpgradeCard, restRemoveCard,
     buyShopCard, buyShopRelic, openShopRemoval, shopRemoveCard, closeShopPicker, leaveShop,
     resolveEventOption, closeEventResult,
-    wearNewPet, clickSeed, discardSeed, useSeedFromMenu, useSeedOn, takeRewardSeed, buyShopSeed
+    wearNewPet, clickSeed, discardSeed, useSeedFromMenu, useSeedOn, takeRewardSeed, buyShopSeed,
+    tossWellCoin, leaveWell
 });
