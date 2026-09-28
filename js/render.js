@@ -1178,10 +1178,10 @@ function renderReward() {
 
 function renderBossRelic() {
     const choices = GAME.bossRelicChoices;
-    return panel(art('semilla_dorada', '✨', { size: 'xl' }), 'Reliquia de jefe', `
-        <p>El jefe dejó caer algo brillante. Elige <b>una</b> reliquia: son poderosas, pero algunas tienen truco.</p>
+    return panel(art('semilla_dorada', '✨', { size: 'xl' }), 'Objeto de jefe', `
+        <p>El jefe dejó caer algo brillante. Elige <b>un</b> objeto: son poderosos, pero algunos tienen truco.</p>
         <div class="boss-relic-row">
-            ${choices.map((r) => relicCardHtml(r, `pickBossRelic('${r.id}', this)`)).join('') || '<p class="hand empty-note">…no quedan reliquias de jefe</p>'}
+            ${choices.map((r) => relicCardHtml(r, `pickBossRelic('${r.id}', this)`)).join('') || '<p class="hand empty-note">…no quedan objetos de jefe</p>'}
         </div>
         <button class="secondary" onclick="skipBossRelic()">Omitir</button>`, 'celebrate wide');
 }
@@ -1193,14 +1193,14 @@ function renderVictory() {
         <p>Tu fruta cruzó el huerto, el mercado y la fábrica. ¡El puesto de jugos está a salvo!</p>
         ${GAME.unlockMsg ? `<p class="unlock-msg hand">🔓 ${GAME.unlockMsg}</p>` : ''}
         ${petUnlockBox()}
-        <p class="hand victory-stats">Grado: <b>${difficulty().name}</b> · ${p.deck.length} cartas · ${p.relics.length} reliquias · ${p.hp}/${p.maxHp} ❤️</p>
+        <p class="hand victory-stats">Grado: <b>${difficulty().name}</b> · ${p.deck.length} cartas · ${p.relics.length} objetos · ${p.hp}/${p.maxHp} ❤️</p>
         <button onclick="showMainMenu()">Volver al menú</button>`, 'celebrate');
 }
 
 function renderGameOver() {
     const p = GAME.player;
     return panel(playerArt('hurt'), 'Game over…', `
-        <p>Tu fruta cayó en el nivel ${p.act} (${currentAct().name}) con ${p.relics.length} reliquias y ${p.gold} de oro.</p>
+        <p>Tu fruta cayó en el nivel ${p.act} (${currentAct().name}) con ${p.relics.length} objetos y ${p.gold} de oro.</p>
         <button onclick="showMainMenu()">Volver al menú</button>`, 'sad');
 }
 

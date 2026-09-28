@@ -839,7 +839,7 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .reward-row, .shop-row { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; margin: 20px 0; padding: 14px 10px; }
 .reward-row.scroll { max-height: 330px; overflow-y: auto; width: 100%; margin-top: 6px; }
 /* recompensas de jefe/élite: pueden traer varias cajas extra (mascota, semilla,
-   vestidor, reliquia) antes de las cartas — si no cabe todo, esto se desplaza
+   vestidor, objeto) antes de las cartas — si no cabe todo, esto se desplaza
    en vez de cortarse contra el borde de la pantalla */
 .reward-scroll { width: 100%; max-height: 470px; overflow-y: auto; padding: 0 4px; }
 .shop-item { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 190px; }
@@ -1400,7 +1400,7 @@ button.btn-grape:hover { background: #D6C8F5; }
 .panel.shop .card, .panel.shop .relic-card { transform: scale(.8); transform-origin: 50% 100%; margin: -50px -18px 0; }
 .panel.shop .card:hover, .panel.shop .relic-card:hover { transform: scale(.86) translateY(-6px); }
 .panel.shop .shop-row { padding-top: 4px; }
-/* reliquias con texto largo: la tarjeta crece */
+/* objetos con texto largo: la tarjeta crece */
 .relic-card { height: auto; min-height: 250px; }
 /* cada nivel tiñe un poquito el papel */
 #screen.act-2 { background: rgba(255, 190, 170, .16); }

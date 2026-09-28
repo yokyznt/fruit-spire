@@ -14,7 +14,7 @@
 //   enemyAct(i)      -> el enemigo i hace su jugada (uno por uno)
 //   endEnemyTurn()   -> estados de los enemigos, nuevo turno del jugador
 //
-// Reliquias: cada una puede definir hooks (ver js/data/relics.js).
+// Objetos: cada una puede definir hooks (ver js/data/relics.js).
 // ============================================================
 
 const HAND_LIMIT = 10;
@@ -61,7 +61,7 @@ class Combat {
         this.lastEvents.push(Object.assign({ type, target: this.targetKey(entity), amount }, extra || {}));
     }
 
-    // ---------- reliquias ----------
+    // ---------- objetos ----------
     relicHook(name, ...args) {
         this.player.relics.forEach((rid) => {
             const relic = window.RELIC_DB[rid];

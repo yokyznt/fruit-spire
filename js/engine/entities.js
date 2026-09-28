@@ -53,7 +53,7 @@ class Player extends Entity {
         this.maxEnergy = 3;
         this.energy = 3;
         this.relics = [];
-        this.relicCounters = {}; // contadores de reliquias que duran toda la partida
+        this.relicCounters = {}; // contadores de objetos que duran toda la partida
         this.deck = [];          // ids de todas las cartas que posee ("id+" = madurada)
         this.drawPile = [];
         this.hand = [];

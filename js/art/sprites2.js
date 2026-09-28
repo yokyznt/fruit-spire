@@ -1,6 +1,6 @@
 // ============================================================
 // SPRITES2.JS — Más arte SVG en el mismo estilo "libro de stickers":
-// estados nuevos, cartas, enemigos de los 3 niveles, jefes, reliquias,
+// estados nuevos, cartas, enemigos de los 3 niveles, jefes, objetos,
 // eventos, casilla de élite, dificultades y portadas de nivel.
 // Usa los ayudantes de js/art/sprites.js (window.SPRITE_KIT).
 // ============================================================

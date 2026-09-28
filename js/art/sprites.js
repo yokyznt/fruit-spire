@@ -3,7 +3,7 @@
 // Cada sprite es una función que devuelve un <svg> (viewBox 100x100).
 // El borde blanco de sticker se lo pone el CSS (.sprite).
 //
-// Se buscan por el id del personaje / enemigo / carta / reliquia /
+// Se buscan por el id del personaje / enemigo / carta / objeto /
 // evento. Si agregas contenido nuevo sin dibujo, se usa su emoji
 // automáticamente — no se rompe nada. Para reutilizar un dibujo
 // existente, ponle a tu dato un campo `sprite: 'id_de_otro_sprite'`.

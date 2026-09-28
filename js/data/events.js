@@ -33,7 +33,7 @@ window.EVENT_DB = [
         desc: 'Una ciruela pasa con capucha te ofrece algo envuelto en hojas.',
         options: [
             {
-                text: 'Pagar 40 de oro por una reliquia al azar',
+                text: 'Pagar 40 de oro por un objeto al azar',
                 locked: (p) => (p.gold < 40 ? 'No te alcanza el oro' : ''),
                 effect: (p, g) => { p.gold -= 40; return g.grantRandomRelic(p); }
             },
@@ -113,7 +113,7 @@ window.EVENT_DB = [
                 effect: (p, g) => { const n = g.removeRandom(true); return n ? `Enterraste ${n}. Las lombrices están felices.` : 'No te quedan cartas básicas.'; }
             },
             {
-                text: 'Hurgar (50%: una reliquia, 50%: un Gusano Interior)',
+                text: 'Hurgar (50%: un objeto, 50%: un Gusano Interior)',
                 effect: (p, g) => {
                     if (Math.random() < 0.5) return g.grantRandomRelic(p);
                     g.addCard('gusano_interior');
@@ -189,7 +189,7 @@ window.EVENT_DB = [
                 text: 'Darte un chapuzón (+10 ❤️ máx. y pierdes 5 ❤️)',
                 effect: (p) => { p.maxHp += 10; p.hp = Math.max(1, p.hp - 5); return 'Sales más jugosa que nunca. +10 ❤️ máx.'; }
             },
-            { text: 'Cerrar la válvula (1 reliquia al azar y pierdes 12 ❤️)', effect: (p, g) => { p.hp = Math.max(1, p.hp - 12); return g.grantRandomRelic(p); } }
+            { text: 'Cerrar la válvula (1 objeto al azar y pierdes 12 ❤️)', effect: (p, g) => { p.hp = Math.max(1, p.hp - 12); return g.grantRandomRelic(p); } }
         ]
     }
 ];

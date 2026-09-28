@@ -24,10 +24,10 @@ function pickCombatBg(kind) {
 
 const NODE_INFO = {
     enemy: { sprite: 'node_enemy', icon: '⚔️', label: 'Enemigo', desc: 'Unos bichos te esperan. ¡A pelear!' },
-    elite: { sprite: 'node_elite', icon: '🔥', label: 'Élite', desc: 'Un enemigo durísimo. Si ganas, te llevas una reliquia.' },
+    elite: { sprite: 'node_elite', icon: '🔥', label: 'Élite', desc: 'Un enemigo durísimo. Si ganas, te llevas un objeto.' },
     rest: { sprite: 'node_rest', icon: '🏕️', label: 'Campamento', desc: 'Descansa, madura una carta o despega una de tu mazo.' },
-    treasure: { sprite: 'node_treasure', icon: '💎', label: 'Tesoro', desc: 'Una reliquia gratis.' },
-    shop: { sprite: 'node_shop', icon: '🏪', label: 'Tiendita', desc: 'Cartas, reliquias y quitar cartas, a cambio de oro.' },
+    treasure: { sprite: 'node_treasure', icon: '💎', label: 'Tesoro', desc: 'Un objeto gratis.' },
+    shop: { sprite: 'node_shop', icon: '🏪', label: 'Tiendita', desc: 'Cartas, objetos y quitar cartas, a cambio de oro.' },
     mystery: { sprite: 'node_mystery', icon: '❓', label: 'Misterio', desc: 'Un evento al azar… ¿bueno o malo?' },
     gift: { sprite: 'node_gift', icon: '🎁', label: 'Regalo', desc: 'Algo nuevo para tu vestidor: un color o un accesorio.' },
     key: { sprite: 'node_key', icon: '🗝️', label: 'Llave Dorada', desc: 'Una llave brillante. Te servirá más adelante en este nivel.' },
@@ -78,7 +78,7 @@ const RESUMABLE_SCREENS = ['act-intro', 'dungeon', 'well'];
 const SAVE_KEY = 'fruitSpireSave_v3';      // v3: niveles, dificultad, cartas maduradas
 const OLD_SAVE_KEY = 'fruitSpireSave_v2';
 const DISCOVERED_KEY = 'fruitSpireDiscovered_v1';
-const UNLOCKS_KEY = 'fruitSpireUnlocks_v1';   // grado de putrefacción desbloqueado por fruta
+const UNLOCKS_KEY = 'fruitSpireUnlocks_v2';   // grado desbloqueado por fruta (v2: solo 3 grados)
 
 const GAME = {
     player: null,
@@ -101,7 +101,7 @@ const GAME = {
     shopStock: null,
     restMode: null,       // null | 'upgrade' | 'remove'
     pickerFor: null,      // 'rest' | 'shop' — visor para quitar/madurar cartas
-    selectedDifficulty: 'verde',
+    selectedDifficulty: 'madura',
     selectedChar: 'manzana',
     unlockMsg: '',
     wardrobeChar: 'manzana', // fruta elegida en el vestidor
@@ -270,10 +270,10 @@ function giveRelic(player, relic) {
 }
 function grantRandomRelic(player) {
     const relic = randomRelic(['common', 'uncommon', 'rare']);
-    if (!relic) return 'Ya tienes todas las reliquias disponibles.';
+    if (!relic) return 'Ya tienes todos los objetos disponibles.';
     giveRelic(player, relic);
     GAME.lastRelic = relic;
-    return `Obtuviste la reliquia ${relic.name}: ${relic.description}`;
+    return `Obtuviste el objeto ${relic.name}: ${relic.description}`;
 }
 
 // ---------------------------------------------------------
@@ -325,7 +325,15 @@ function wearNewCosmetic() {
 function backToMenu() { GAME.screen = 'menu'; render(); }
 // Grado de putrefacción más alto desbloqueado para cada fruta (índice en DIFFICULTIES)
 function readUnlocks() {
-    try { return JSON.parse(localStorage.getItem(UNLOCKS_KEY)) || {}; } catch (e) { return {}; }
+    try {
+        const raw = localStorage.getItem(UNLOCKS_KEY);
+        if (raw) return JSON.parse(raw) || {};
+        // migración: la v1 tenía 4 grados (Verde, Madura, Pasada, Podrida); ahora el 0 es Madura
+        const old = JSON.parse(localStorage.getItem('fruitSpireUnlocks_v1')) || {};
+        const migrated = {};
+        Object.keys(old).forEach((k) => { migrated[k] = Math.max(0, (old[k] || 0) - 1); });
+        return migrated;
+    } catch (e) { return {}; }
 }
 function unlockedLevel(charId) { return Math.min(window.DIFFICULTIES.length - 1, readUnlocks()[charId] || 0); }
 function isDifficultyUnlocked(charId, diffId) {
@@ -788,7 +796,7 @@ function pickRewardCard(cardId, el) {
 // La carta es obligatoria: solo se puede continuar sin elegir si no hubo ninguna que ofrecer
 function skipReward() { if (!GAME.anim && !GAME.rewardCards.length) finishReward(); }
 
-// ---------- reliquias de jefe y paso de nivel ----------
+// ---------- objetos de jefe y paso de nivel ----------
 function openBossRelics() {
     const owned = new Set(GAME.player.relics);
     const pool = Object.values(window.RELIC_DB).filter((r) => r.tier === 'boss' && !owned.has(r.id));
@@ -869,7 +877,7 @@ function removeDeckCard(deckIndex, el, after) {
 function restRemoveCard(deckIndex, el) { removeDeckCard(deckIndex, el, leaveRest); }
 
 // ---------------------------------------------------------
-// TIENDA — se compra tocando la carta o la reliquia
+// TIENDA — se compra tocando la carta o el objeto
 // ---------------------------------------------------------
 const CARD_PRICES = { common: [30, 38], uncommon: [45, 55], rare: [75, 90] };
 const RELIC_PRICES = { common: [70, 80], uncommon: [90, 105], rare: [120, 140] };

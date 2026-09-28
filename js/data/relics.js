@@ -1,5 +1,5 @@
 // ============================================================
-// RELICS.JS — Reliquias (objetos pasivos)
+// RELICS.JS — Objetos (objetos pasivos)
 // Para agregar una: registerRelic({...}). Todos los hooks son opcionales.
 //
 // Campos:
@@ -10,9 +10,9 @@
 //   noRest: true → en los campamentos ya no puedes descansar
 //
 // Hooks (ctx es el mismo de las cartas, más):
-//   ctx.state   objeto propio de la reliquia, se reinicia cada combate
+//   ctx.state   objeto propio de cada objeto, se reinicia cada combate
 //   ctx.persist objeto propio que dura toda la partida
-//   ctx.flash() hace brillar la reliquia en pantalla
+//   ctx.flash() hace brillar el objeto en pantalla
 //   onPickup(player)              al obtenerla
 //   onCombatStart(ctx)            al empezar cada combate
 //   onTurnStart(ctx)              al empezar cada turno tuyo
