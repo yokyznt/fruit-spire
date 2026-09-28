@@ -244,6 +244,19 @@ function settleEntryAnims(prev, root) {
     });
 }
 
+// Qué lista de canciones suena en cada pantalla (ver js/audio.js)
+function musicContextFor() {
+    const s = GAME.screen;
+    const back = ['pass', 'wardrobe', 'collection', 'notes'].includes(s) && GAME.returnTo ? GAME.returnTo : s;
+    if (['menu', 'character-select', 'story', 'collection', 'wardrobe', 'pass', 'notes', 'victory'].includes(back) || !GAME.player) return 'menu';
+    if (back === 'combat') return GAME.combatKind === 'boss' ? 'boss' : GAME.combatKind === 'elite' ? 'elite' : 'combat';
+    if (back === 'shop') return 'shop';
+    if (back === 'rest' || back === 'gameover') return 'rest';
+    if (back === 'dungeon') return 'dungeon';
+    if (back === 'minigame') return 'casino';
+    return 'map' + Math.min(3, Math.max(1, GAME.player.act || 1));
+}
+
 function render() {
     hideTip();
     const before = captureFlip();
@@ -256,10 +269,7 @@ function render() {
     screen.innerHTML = renderHud() + `<main class="stage">${renderScreen()}</main>` + renderModal() + (window.renderInventory ? renderInventory() : '');
     heartifyDom(document.getElementById('screen'));
     settleEntryAnims(prevView, screen);
-    if (window.setAmbientMood) {
-        const strong = GAME.combatKind === 'boss' || GAME.combatKind === 'elite';
-        setAmbientMood(GAME.screen !== 'combat' ? 0 : strong ? 2 : 1);
-    }
+    if (window.setMusicContext) setMusicContext(musicContextFor());
     playFlip(before);
     afterRender();
     if (GAME.goldGain) animateGoldGain();

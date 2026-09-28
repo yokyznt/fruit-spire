@@ -6,9 +6,27 @@
 // ============================================================
 
 window.CREATOR = { handle: '@yokyznt', url: 'https://www.instagram.com/yokyznt/' };
-window.GAME_VERSION = '2.1';
+window.GAME_VERSION = '2.2';
 
 window.PATCH_NOTES = [
+    {
+        version: '2.2', date: '28 sep 2026', title: 'Más música y menos sorpresas',
+        items: [
+            'Banda sonora nueva: 21 canciones en vez de un solo loop. Cada castillo tiene su propia música en el mapa, los combates rotan entre varias canciones, y hay temas para élites, jefes, la tiendita, la fogata, el calabozo y los minijuegos.',
+            'Al arrastrar una carta ves el daño y la cáscara REALES que hará contra ese enemigo (con Madurez, Marchitez, Magulladura, Firmeza, Blandura y objetos). Las intenciones enemigas también muestran el daño real.',
+            'La cáscara recibe el golpe primero: ves cómo baja (y se rompe) y solo después lo que sobra le quita vida.',
+            'Cada regla de piso tiene su fondo animado: en la Oscuridad se apagan las luces en los turnos impares, en la Fábrica se carga la electricidad antes de la descarga, en la Cocina sube el fuego si guardas cartas, el tablero de Blancas y negras se voltea, y más.',
+            'Ajedrez: las piezas ahora son frutitas (uva, piña, plátano, pera, fresa y naranja) y se pueden arrastrar.',
+            'Los guiños a otros juegos ahora explican de dónde vienen y traen un dibujito del juego.',
+            'Tras un combate, el oro ganado sube con una animación en la barra de arriba.'
+        ],
+        fixes: [
+            'El pase de batalla y el vestidor abiertos desde una partida ahora tienen «Volver a la partida» y te regresan justo donde estabas (por ejemplo, a las recompensas).',
+            'Ya no se pierde el avance si sales en la pantalla de recompensas: se guarda al ganar y al continuar vuelves a elegir tu carta.',
+            'Al tocar algo, la pantalla ya no repite su animación de aparecer (tablero, mochila, paneles).',
+            'Las casillas de élite y jefe del mapa ya no cortan su animación, y el borde punteado de la casilla disponible ya no queda tapado.'
+        ]
+    },
     {
         version: '2.1', date: '28 sep 2026', title: 'Todo dibujado a mano',
         items: [
