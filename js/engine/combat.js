@@ -104,7 +104,6 @@ class Combat {
         const p = this.player;
         this.turn = 'player';
         this.turnState = { cardsPlayed: 0, attacksPlayed: 0 };
-        this.forceEndTurn = false;
         this.enemies.forEach((e) => { e._capLost = 0; });
         if (!p.getStatus('barricade')) p.block = 0;
         p.energy = p.maxEnergy;
@@ -425,7 +424,7 @@ class Combat {
 
     // targetIndex: índice en this.enemies del enemigo al que se lanzó la carta
     playCard(handIndex, targetIndex) {
-        if (this.ended || this.turn !== 'player' || this.forceEndTurn) return;
+        if (this.ended || this.turn !== 'player') return;
         const p = this.player;
         const cardId = p.hand[handIndex];
         const card = window.getCard(cardId);
@@ -476,13 +475,14 @@ class Combat {
                 const lost = p.loseHp(beat);
                 if (lost) { this.pushEvent('damage', p, lost, { poison: true }); this.relicHook('onHpLoss', lost); }
             }
-            // Temporizador: cuenta tus cartas y al llegar a 0 te corta el turno
+            // Temporizador: cuenta tus cartas y al llegar a 0 se enfurece
+            // (nunca te quita el turno: siempre decides tú cuándo terminarlo)
             const clock = e.getStatus('clock');
             if (clock) {
                 if (clock <= 1) {
                     e.statuses.clock = e.def.clockEvery || 12;
                     this.applyStatus(e, 'strength', 2);
-                    this.forceEndTurn = true;
+                    this.applyStatus(p, 'weak', 1);
                     this.pushEvent('clock', e, 0);
                 } else e.statuses.clock = clock - 1;
             }
@@ -560,7 +560,6 @@ class Combat {
         p.hand = keep;
         this.endOfTurnStatuses(p);
         this.checkEnd();
-        this.forceEndTurn = false;
         if (!this.ended) this.turn = 'enemy';
         this.onUpdate();
     }

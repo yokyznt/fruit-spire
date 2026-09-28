@@ -74,6 +74,7 @@ function tossWellCoin() {
 }
 function leaveWell() { GAME.screen = 'map'; saveGame(); render(); }
 
+const RESUMABLE_SCREENS = ['act-intro', 'dungeon', 'well'];
 const SAVE_KEY = 'fruitSpireSave_v3';      // v3: niveles, dificultad, cartas maduradas
 const OLD_SAVE_KEY = 'fruitSpireSave_v2';
 const DISCOVERED_KEY = 'fruitSpireDiscovered_v1';
@@ -145,7 +146,11 @@ function saveGame() {
             walls: GAME.walls,
             visited: GAME.visited,
             playerPos: GAME.playerPos,
-            screen: GAME.screen === 'act-intro' ? 'act-intro' : 'map'
+            // pantallas a las que se puede volver al continuar (el resto regresa al mapa)
+            screen: RESUMABLE_SCREENS.includes(GAME.screen) ? GAME.screen : 'map',
+            dungeon: GAME.dungeon ? Object.assign({}, GAME.dungeon, { pending: null }) : null,
+            wellSpins: GAME.wellSpins || 0,
+            wellLastMsg: GAME.wellLastMsg || ''
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch (e) { /* almacenamiento no disponible, se ignora */ }
@@ -182,7 +187,11 @@ function loadGame() {
         GAME.playerPos = data.playerPos;
         if (GAME.playerPos.x === window.MAP_COLS - 1) GAME.playerPos.x -= 1;
         GAME.mapPan = null;
-        GAME.screen = data.screen === 'act-intro' ? 'act-intro' : 'map';
+        GAME.dungeon = data.dungeon || null;
+        GAME.wellSpins = data.wellSpins || 0;
+        GAME.wellLastMsg = data.wellLastMsg || '';
+        GAME.screen = RESUMABLE_SCREENS.includes(data.screen) ? data.screen : 'map';
+        if (GAME.screen === 'dungeon' && !GAME.dungeon) GAME.screen = 'map';
         GAME.combat = null;
         return true;
     } catch (e) { return false; }
@@ -776,7 +785,8 @@ function pickRewardCard(cardId, el) {
     flyGhost(el, '.hud-deck');
     setTimeout(() => { GAME.anim = false; finishReward(); }, 820);
 }
-function skipReward() { if (!GAME.anim) finishReward(); }
+// La carta es obligatoria: solo se puede continuar sin elegir si no hubo ninguna que ofrecer
+function skipReward() { if (!GAME.anim && !GAME.rewardCards.length) finishReward(); }
 
 // ---------- reliquias de jefe y paso de nivel ----------
 function openBossRelics() {
@@ -933,7 +943,6 @@ function buyShopSeed(index, el) {
     const item = GAME.shopStock.seeds[index];
     if (!item) return;
     if (GAME.player.gold < item.price) { cantAfford(el); return; }
-    if (!GAME.shopStock.seeds) return;
     if (GAME.player.seeds.indexOf(null) < 0) { restartClass(el.closest('.shop-item'), 'nope'); showToast('Tu bolsa de semillas está llena'); return; }
     shopPurchase(el, '.hud-seeds', () => {
         GAME.player.gold -= item.price;

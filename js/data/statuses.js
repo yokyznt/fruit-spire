@@ -147,7 +147,7 @@ registerStatus({
 });
 registerStatus({
     id: 'clock', name: 'Temporizador', word: 'temporizador', icon: '⏲️', sprite: 'st_clock', kind: 'buff', cls: 'energy',
-    help: 'Baja 1 con cada carta que juegas. Al llegar a 0, tu turno termina y gana 2 de Madurez.'
+    help: 'Baja 1 con cada carta que juegas. Al llegar a 0, gana 2 de Madurez y te aplica 1 de Marchitez.'
 });
 registerStatus({
     id: 'cap', name: 'Coraza Dura', word: 'coraza dura', icon: '🛡️', sprite: 'st_cap', kind: 'buff', cls: 'block',

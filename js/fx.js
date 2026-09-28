@@ -212,8 +212,7 @@ async function playCard(i, targetIdx, drop) {
     await wait(Math.max(260, info.dur - info.hit - 120));
     if (GAME.combat === c && !c.ended) {
         GAME.anim = false;
-        if (c.forceEndTurn) { GAME.cardQueue = []; await wait(500); endTurn(); }
-        else drainCardQueue();
+        drainCardQueue();
     }
 }
 
@@ -727,7 +726,7 @@ function spawnSingleFx(ev, opts) {
         return;
     }
     if (T === 'clock') {
-        showToast('¡Se acabó el tiempo! Tu turno termina.');
+        showToast('¡Se acabó el tiempo! El enemigo se enfurece.');
         restartClass(hitLayer(ev.target), 'shiver');
         return;
     }

@@ -290,7 +290,7 @@ function renderHud() {
         </div>
         <div class="hud-chip gold" ${tip(['Oro', 'Se gana en los combates. Úsalo en la tiendita.'])}>${art('ui_coin', '🪙', { size: 'xs' })}<b>${p.gold}</b></div>
         ${seedBagHtml(p)}
-        <div class="hud-relics">${relics || '<span class="hand muted">sin reliquias todavía…</span>'}</div>
+        <div class="hud-relics ${p.relics.length > 24 ? 'tiny' : p.relics.length > 9 ? 'many' : ''}">${relics || '<span class="hand muted">sin objetos todavía…</span>'}</div>
         <div class="hud-deck" onclick="openDeckView()" ${tip(['Tu mazo', 'Mira todas las cartas que tienes.'])}>
             <div class="mini-stack"><span class="card-back"></span><span class="card-back"></span></div>
             <b>Mazo</b><span class="count">${p.deck.length}</span>
@@ -819,7 +819,7 @@ function intentInfo(c, e) {
     if (m.block || m.allyBlock) tips.push(...keywordTips('cáscara'));
     tips.push(...statusTipsFull(Object.keys(statusAmts).map((id) => [id, statusAmts[id]])));
     if (addCardShown) tips.push([addCardShown.name, `@card:${addCardShown.id}`]);
-    return { label, cls: cls || 'buff', sprite: sprite || 'ui_up', extras: extras.slice(0, 2), tips };
+    return { label, cls: cls || 'buff', sprite: sprite || 'ui_up', extras: extras.slice(0, 3), tips };
 }
 
 // Naranja partida: un gajo por cada punto de energía. Los gastados
@@ -929,7 +929,7 @@ function renderCombat() {
                 ${e.isAlive() ? `<div class="intent-bubble ${intent.cls} ${acting ? 'acting' : ''}" ${tip(intent.tips)}>
                     ${art(intent.sprite, '❔', { size: 'sm' })}
                     ${intent.label ? `<span>${intent.label}</span>` : ''}
-                    ${intent.extras.map((x) => `<i class="intent-extra">${art(x.sprite, '✨', { size: 'xs' })}${x.value ? `<b>${x.value}</b>` : ''}</i>`).join('')}
+                    ${intent.extras.map((x) => `<i class="intent-extra">${art(x.sprite, '✨', { size: 'sm' })}${x.value ? `<b>${x.value}</b>` : ''}</i>`).join('')}
                 </div>` : ''}
                 <div class="portrait" id="portrait-enemy-${i}" data-sprite="${eSprite}" data-fallback="${e.def.icon}"><div class="hit-layer"><div class="idle">${art(eSprite, e.def.icon, { size: 'xl' })}</div></div></div>
                 <div class="plate">
@@ -1166,14 +1166,14 @@ function renderReward() {
     const relic = GAME.rewardRelic;
     return panel(playerArt('happy'), title, `
         <div class="reward-scroll">
-            <p>Ganaste ${art('ui_coin', '🪙', { size: 'xs' })} <b>${GAME.rewardGold}</b> de oro.${relic ? ' ¡Y una reliquia!' : ''} Elige un sticker nuevo para tu mazo:</p>
+            <p>Ganaste ${art('ui_coin', '🪙', { size: 'xs' })} <b>${GAME.rewardGold}</b> de oro.${relic ? ' ¡Y un objeto!' : ''} <b>Tienes que elegir</b> un sticker nuevo para tu mazo:</p>
             ${petUnlockBox()}
             ${seedRewardBox()}
             ${cosmeticBox(GAME.newCosmetic)}
             ${relic ? `<div class="reward-relic" ${explain(relic.name, relic.description)}>${art(relic.sprite || relic.id, relic.icon, { size: 'md' })}<div><b>${relic.name}</b><span>${relic.description}</span></div></div>` : ''}
             <div class="reward-row">${cardsHtml}</div>
         </div>
-        <button class="secondary" onclick="skipReward()">Omitir carta</button>`, 'celebrate wide');
+        ${GAME.rewardCards.length ? '' : '<button class="secondary" onclick="skipReward()">Continuar</button>'}`, 'celebrate wide');
 }
 
 function renderBossRelic() {

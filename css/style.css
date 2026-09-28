@@ -158,11 +158,23 @@ ul { margin: 0; padding: 0; list-style: none; }
 }
 .hud-chip.hp { transform: rotate(-1.5deg); }
 .hud-chip.gold { transform: rotate(1.5deg); }
-.hud-relics { display: flex; gap: 8px; align-items: center; }
-.relic-sticker { cursor: help; transition: transform .25s var(--ease-out); }
+/* los objetos se acomodan en hasta 2 filas y, si son demasiados, se desplaza
+   dentro de su cajita: nunca empujan ni deforman el resto de la barra */
+.hud > * { flex: none; }
+.hud > .hud-relics { flex: 0 1 auto; min-width: 120px; }
+.hud-relics {
+    display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: center; align-content: center; justify-content: flex-start;
+    min-width: 0; max-width: 40%; max-height: 64px; padding: 1px 4px;
+    overflow-x: hidden; overflow-y: auto; scrollbar-width: thin;
+}
+.hud-relics.many .art-sm { width: 30px; height: 30px; }
+.hud-relics.many { gap: 0 3px; }
+.hud-relics.tiny .art-sm { width: 24px; height: 24px; }
+.hud-relics.tiny { gap: 0 2px; }
+.relic-sticker { cursor: help; transition: transform .25s var(--ease-out); display: inline-flex; }
 .relic-sticker:nth-child(odd) { transform: rotate(-6deg); }
 .relic-sticker:nth-child(even) { transform: rotate(5deg); }
-.relic-sticker:hover { transform: rotate(0) scale(1.25); }
+.relic-sticker:hover { transform: rotate(0) scale(1.15); }
 .hud-deck {
     display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1.1em;
     background: var(--edge); border-radius: 14px; padding: 6px 14px 6px 10px;
@@ -685,11 +697,18 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
     transition: transform .3s var(--ease-out); will-change: transform;
 }
 .fan-slot:first-child { margin-left: 0; }
-.fan-slot:hover { transform: rotate(0) translateY(-34px) scale(1.08); z-index: 20; }
+/* Al pasar el mouse, la que se levanta es la CARTA de adentro; el hueco (.fan-slot)
+   se queda quieto. Así el área que detecta el mouse no se mueve y no hay
+   parpadeo cuando el cursor está entre dos cartas que se traslapan. */
+.fan-slot .card { transform-origin: 50% 130%; }
 .fan-slot .card:hover { transform: none; }
+.is-player-turn .fan-slot:hover { z-index: 20; }
+.is-player-turn .fan-slot:hover .card,
+.fan-slot.selected .card { transform: translateY(calc(var(--y) * -1)) rotate(calc(var(--r) * -1)) translateY(-34px) scale(1.08); }
 /* tocar una carta la selecciona (se levanta), pero no la juega: hay que
    arrastrarla hasta su objetivo para eso */
-.fan-slot.selected { transform: rotate(0) translateY(-34px) scale(1.08); z-index: 15; }
+.fan-slot.selected { z-index: 15; }
+.fan-slot.dragging .card { transform: none; }
 .fan-slot.selected .card { box-shadow: 0 0 0 3px var(--mint-dark), 0 0 0 6px rgba(92,201,167,.5), var(--lift-hi); }
 .fan-slot .card { -webkit-user-drag: none; }
 .is-player-turn .fan-slot { cursor: grab; }
@@ -701,7 +720,6 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .fan-slot.played { animation: flyTo .36s cubic-bezier(.45, 0, .55, 1) forwards; z-index: 30; pointer-events: none; }
 .fan-slot.discarding { animation: discardTo .42s cubic-bezier(.5, 0, .75, .3) forwards; pointer-events: none; }
 .fan-slot.nope { animation: nope .45s var(--ease-out); }
-.is-enemy-turn .fan-slot:hover { transform: rotate(var(--r)) translateY(var(--y)); }
 .empty-hand { font-size: 2em; color: #A57A4E; }
 
 .controls-row { display: flex; justify-content: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
@@ -1147,8 +1165,11 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .intent-bubble.debuff { background: var(--grape-soft); }
 .intent-bubble.summon { background: #F4ECFF; }
 .intent-extra { display: inline-flex; align-items: center; gap: 1px; margin-left: 2px; font-style: normal; }
-.intent-extra .art-xs { width: 26px; height: 26px; }
-.intent-extra b { font-weight: normal; font-size: .75em; }
+/* todos los íconos de la intención miden lo mismo que el del ataque, y sus números también */
+.intent-bubble .art, .intent-extra .art, .intent-extra .art-xs { width: 36px; height: 36px; }
+.intent-extra .art .sprite { filter: none; }
+.intent-extra { gap: 2px; margin-left: 4px; }
+.intent-extra b { font-weight: normal; font-size: 1em; }
 
 /* pilas a la derecha: compost chiquito junto al descarte */
 .piles-right { display: flex; align-items: flex-end; gap: 4px; }
