@@ -239,12 +239,9 @@
         <circle cx="34" cy="60" r="7" fill="#F2667A" ${st(2.5)}/><circle cx="50" cy="59" r="7" fill="#FFCF4D" ${st(2.5)}/><circle cx="66" cy="60" r="7" fill="#8CCB4E" ${st(2.5)}/>`);
 
     S.node_mystery = () => svg(`
-        <rect x="12" y="26" width="76" height="54" rx="6" fill="#fff" ${st()}/>
-        <path d="M12 30 L50 58 L88 30" fill="#F4ECFF" ${st()}/>
-        <circle cx="50" cy="58" r="10" fill="#9B7FD4" ${st(3)}/>
-        <path d="M46 55 Q46 50 50 50 Q54 50 54 54 Q54 57 50 58 L50 60" ${st(2.5)} stroke="#fff" fill="none"/>
-        <circle cx="50" cy="64" r="1.4" fill="#fff"/>
-        ${sparkle(86, 18, 0.9)}${sparkle(16, 16, 0.6, '#FFB8C6')}`);
+        <circle cx="50" cy="50" r="34" fill="#9B7FD4" ${st(3)}/>
+        <path d="M40 40 Q40 28 50 28 Q60 28 60 38 Q60 46 50 50 L50 58" ${st(5)} stroke="#fff" fill="none" stroke-linecap="round"/>
+        <circle cx="50" cy="70" r="4" fill="#fff"/>`);
 
     S.node_well = () => svg(`
         <ellipse cx="50" cy="78" rx="34" ry="10" fill="#8FA3C7" ${st(3)}/>

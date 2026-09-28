@@ -174,6 +174,14 @@ window.EVENT_DB = [
         ]
     },
     {
+        id: 'trampilla', title: 'Trampilla Podrida', icon: '🕳️', sprite: 'node_mystery',
+        desc: 'El suelo suena hueco bajo tus pies. Una trampilla mal cerrada esconde algo debajo.',
+        options: [
+            { text: 'Asomarte a mirar', dungeon: true },
+            { text: 'Pisar con cuidado y seguir de largo', effect: () => 'Decides no arriesgarte a caer.' }
+        ]
+    },
+    {
         id: 'tanque_jugo', title: 'Tanque de Jugo', icon: '🛢️', acts: [3],
         desc: 'Un tanque enorme de jugo concentrado. Una válvula gotea.',
         options: [

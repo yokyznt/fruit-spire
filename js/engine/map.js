@@ -65,9 +65,9 @@ window.canMove = function (walls, grid, visited, x, y, nx, ny) {
 // nunca es el extremo que recibe la salida forzada, porque ahí nunca habrá
 // nadie parado.
 window.ensureNoTraps = function (map, grid) {
-    const COLS = window.MAP_COLS, ROWS = window.MAP_ROWS;
+    const COLS = window.MAP_COLS, ROWS = window.MAP_ROWS, T = window.NODE_TYPES;
     const { wallsV, wallsH } = map;
-    const blocked = (x, y) => !!(grid && grid[y] && grid[y][x] === window.NODE_TYPES.BLOCKED);
+    const blocked = (x, y) => !!(grid && grid[y] && grid[y][x] === T.BLOCKED);
     // última columna: pasillo abierto hasta el jefe
     for (let y = 0; y < ROWS - 1; y++) wallsH[y][COLS - 1] = false;
     // en cada columna, los extremos de cada tramo vertical tienen salida
@@ -78,6 +78,13 @@ window.ensureNoTraps = function (map, grid) {
             if (top === -1) top = y;
             const endOfRun = y === ROWS - 1 || wallsH[y][x] || blocked(x, y + 1);
             if (!endOfRun) continue;
+            // la salida forzada tiene que caer en una casilla pisable: si un
+            // árbol quedó justo enfrente del extremo, se quita ese árbol en
+            // vez de intentar forzar un muro contra una casilla bloqueada
+            // (eso no serviría de nada: quien llegue ahí seguiría sin poder
+            // avanzar ni retroceder)
+            if (grid && grid[top] && grid[top][x + 1] === T.BLOCKED) grid[top][x + 1] = T.EMPTY;
+            if (grid && grid[y] && grid[y][x + 1] === T.BLOCKED) grid[y][x + 1] = T.EMPTY;
             wallsV[top][x] = false;
             wallsV[y][x] = false;
             top = -1;
@@ -146,6 +153,55 @@ function fillContent(grid, opts) {
             if (grid[y][x] !== T.EMPTY || touches(x, y, T.MYSTERY)) continue;
             if (Math.random() < 0.4) grid[y][x] = T.MYSTERY;
         }
+    }
+}
+
+// Simula el recorrido real (adelante/arriba/abajo, nunca atrás, nunca
+// revisitar una casilla) y repara cualquier callejón sin salida que
+// sobreviva a ensureNoTraps. Hace falta porque un río de un solo puente
+// permite deambular libremente arriba/abajo por su columna con una única
+// fila cruzable: quien camine hacia el lado equivocado del puente, al no
+// poder volver sobre sus pasos, puede quedar encerrado — algo que la
+// garantía normal de ensureNoTraps (pensada para columnas sin río) no
+// cubre. Si se encuentra un callejón así, se cierra el último paso que
+// llevó hasta él (en vez de abrir uno hacia adelante, que rompería el
+// único cruce permitido del río).
+function repairDeadEnds(map, grid, startY, riverCol, bridgeRow) {
+    const COLS = window.MAP_COLS, T = window.NODE_TYPES;
+    const { wallsV, wallsH } = map;
+    for (let guard = 0; guard < 300; guard++) {
+        const cameFrom = new Map();
+        const seen = new Set();
+        const stack = [[0, startY, 0, null]];
+        let deadEnd = null;
+        while (stack.length) {
+            const [x, y, dir, parentKey] = stack.pop();
+            const skey = `${x},${y},${dir}`;
+            if (seen.has(skey)) continue;
+            seen.add(skey);
+            if (parentKey) cameFrom.set(skey, parentKey);
+            if (x === COLS - 1) continue; // llegó a la guarida del jefe: recorrido completo
+            const moves = [];
+            if (window.canStep(map, grid, x, y, x + 1, y)) moves.push([x + 1, y, 0]);
+            if (dir <= 0 && window.canStep(map, grid, x, y, x, y - 1)) moves.push([x, y - 1, -1]);
+            if (dir >= 0 && window.canStep(map, grid, x, y, x, y + 1)) moves.push([x, y + 1, 1]);
+            if (!moves.length) { deadEnd = { x, y, skey }; break; }
+            moves.forEach(([nx, ny, ndir]) => stack.push([nx, ny, ndir, skey]));
+        }
+        if (!deadEnd) return; // todo recorrido posible llega a la guarida del jefe
+        const { x, y } = deadEnd;
+        // Única reparación: abrir la salida hacia adelante (nunca cerrar
+        // nada). Cerrar un borde para "desviar" el camino hacia el callejón
+        // es tentador, pero un borde puede ser la única ruta hacia OTRA
+        // casilla por un camino distinto al que se está mirando ahora mismo:
+        // cerrarlo puede arreglar este callejón y crear uno nuevo en otro
+        // lado. Abrir, en cambio, nunca quita una ruta que ya existía.
+        const isLockedRiverRow = riverCol != null && x === riverCol && y !== bridgeRow;
+        if (x < COLS - 1 && !isLockedRiverRow && grid[y][x + 1] !== T.BLOCKED) {
+            wallsV[y][x] = false;
+            continue;
+        }
+        return; // no se puede abrir sin romper el río o topar con un árbol: no hay nada seguro que hacer aquí
     }
 }
 
@@ -252,10 +308,24 @@ window.generateMap = function (startY, opts) {
         openWall(px, py, x, y);
     }
 
-    // Sin trampas con la regla de "no volver a pisar"
+    // Sin trampas con la regla de "no volver a pisar". OJO: a propósito NO
+    // se vuelve a forzar el río después de esto. Como la columna del río
+    // quedó unificada en un solo tramo (ver forceRiver), ensureNoTraps le
+    // garantiza sus dos extremos (arriba y abajo del todo) con salida hacia
+    // adelante, igual que a cualquier otra columna — exactamente lo mismo
+    // que evita que alguien quede atorado en el resto del mapa. Si después
+    // se "reafirmara" el río cerrando esos extremos de nuevo (como se hacía
+    // antes), alguien que camine hacia el lado del río sin puente, al no
+    // poder dar marcha atrás, quedaría encerrado de verdad — ese fue
+    // justamente el bug reportado. Total: el río se cruza por el puente Y
+    // por sus dos orillas extremas (arriba/abajo del mapa), nunca por en
+    // medio — sigue siendo un cuello de botella real, solo que con hasta 3
+    // pasos posibles en vez de uno.
     window.ensureNoTraps(map, grid);
-    // red de seguridad: ensureNoTraps no sabe del río, así que se reafirma
-    forceRiver();
+    // última pasada de seguridad: simula el recorrido real (con la regla de
+    // no poder revisitar ni retroceder) y repara cualquier callejón que, aun
+    // así, se le haya escapado a lo anterior (p. ej. por los obstáculos).
+    repairDeadEnds(map, grid, startY, riverCol, bridgeRow);
     map.riverCol = riverCol;
     map.bridgeRow = bridgeRow;
     return map;

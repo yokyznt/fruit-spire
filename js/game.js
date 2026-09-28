@@ -615,6 +615,36 @@ function onCombatEnd(result, kind) {
         render();
         return;
     }
+    if (kind === 'dungeon') {
+        // el calabozo no reparte cartas ni sube de recompensa cada golpe:
+        // solo un poco de oro por casilla, y el premio bueno al vaciarlo
+        const d = GAME.dungeon;
+        const cell = d.pending;
+        d.cleared[cell.y][cell.x] = true;
+        d.pos = cell;
+        d.pending = null;
+        p.statuses = {};
+        p.block = 0;
+        const isExit = cell.x === d.exit.x && cell.y === d.exit.y;
+        if (isExit) {
+            const gold = 45 + Math.floor(Math.random() * 25);
+            p.gold += gold;
+            GAME.lastRelic = null;
+            GAME.newCosmetic = null;
+            GAME.lastEventMsg = `${grantRandomRelic(p)} Y ${gold} de oro por vaciar el calabozo.`;
+            GAME.dungeon = null;
+            if (window.Sfx) Sfx.chestOpen();
+            GAME.screen = 'treasure';
+        } else {
+            const gold = 8 + Math.floor(Math.random() * 8);
+            p.gold += gold;
+            showToast(`+${gold} de oro`);
+            GAME.screen = 'dungeon';
+        }
+        saveGame();
+        render();
+        return;
+    }
     const char = window.CHARACTER_DB[p.characterId];
     if (char && char.onCombatEnd) char.onCombatEnd(p);
     p.relics.forEach((rid) => { const r = window.RELIC_DB[rid]; if (r && r.onCombatEnd) r.onCombatEnd(p); });
@@ -987,6 +1017,21 @@ function resolveEventOption(idx) {
         render();
         return;
     }
+    if (option.dungeon) {
+        // o una trampilla que te deja caer a un mini calabozo 3x3
+        GAME.currentEvent = null;
+        GAME.dungeon = {
+            cleared: Array.from({ length: 3 }, () => [false, false, false]),
+            pos: { x: 0, y: 0 },
+            exit: { x: 2, y: 2 }
+        };
+        GAME.dungeon.cleared[0][0] = true; // la esquina de entrada ya está "limpia"
+        if (window.Sfx) Sfx.eventOpen();
+        GAME.screen = 'dungeon';
+        saveGame();
+        render();
+        return;
+    }
     const msg = option.effect(GAME.player, eventHelpers());
     GAME.lastEventMsg = typeof msg === 'string' ? msg : 'Algo pasó...';
     if (GAME.player.hp <= 0) {
@@ -1000,6 +1045,23 @@ function resolveEventOption(idx) {
 }
 function closeEventResult() { GAME.currentEvent = null; GAME.screen = 'map'; saveGame(); render(); }
 
+// ---------------------------------------------------------
+// CALABOZO: mini-mazmorra de 3x3 que aparece a veces en Misterio. Entras por
+// una esquina, la salida está en la esquina opuesta, y cada casilla de en
+// medio tiene un enemigo que hay que vencer para poder pisarla.
+// ---------------------------------------------------------
+function enterDungeonCell(x, y) {
+    const d = GAME.dungeon;
+    if (GAME.anim || !d) return;
+    if (Math.abs(x - d.pos.x) + Math.abs(y - d.pos.y) !== 1) return; // solo casillas contiguas
+    if (d.cleared[y][x]) { d.pos = { x, y }; render(); return; }
+    d.pending = { x, y };
+    const isExit = x === d.exit.x && y === d.exit.y;
+    const enemies = window.pickEncounter(GAME.player.act, isExit ? 6 : 1, 'enemy', null);
+    playCombatIntro(enemies, 'dungeon');
+}
+function leaveDungeon() { GAME.dungeon = null; GAME.screen = 'map'; saveGame(); render(); }
+
 // funciones que se llaman desde el HTML
 Object.assign(window, {
     showMainMenu, goToCharacterSelect, openCollection, openWardrobe, wardrobeSelect, wardrobeEquip, wardrobeClear, wearNewCosmetic, backToMenu, selectDifficulty, selectCharacter, continueGame, newGame,
@@ -1009,5 +1071,5 @@ Object.assign(window, {
     buyShopCard, buyShopRelic, openShopRemoval, shopRemoveCard, closeShopPicker, leaveShop,
     resolveEventOption, closeEventResult,
     wearNewPet, clickSeed, discardSeed, useSeedFromMenu, useSeedOn, takeRewardSeed, buyShopSeed,
-    tossWellCoin, leaveWell
+    tossWellCoin, leaveWell, enterDungeonCell, leaveDungeon
 });

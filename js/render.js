@@ -364,6 +364,7 @@ function renderScreen() {
         case 'well': return renderWell();
         case 'key-found': return renderKeyFound();
         case 'vault': return renderVault();
+        case 'dungeon': return renderDungeon();
         case 'tutorial-end': return renderTutorialEnd();
         case 'act-intro': return renderActIntro();
         case 'map': return renderMap();
@@ -589,8 +590,13 @@ function renderMap() {
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols - 1; x++) {
             const isRiver = x === riverCol;
-            if (isRiver && y === bridgeRow) {
-                html += `<div class="bridge" style="left:${cellPos(x + 1) - MAP_GAP}px;top:${cellPos(y) - MAP_GAP / 2}px;width:${MAP_GAP}px;height:${MAP_CELL + MAP_GAP}px" ${tip(['Puente de Cáscara', 'El único cruce del Río de Pulpa en esta columna.'])}></div>`;
+            // el puente "oficial" siempre cruza; a veces la orilla también
+            // deja pasar justo por el borde de arriba o abajo del mapa —
+            // ambos casos se dibujan igual, como un cruce de verdad, para
+            // que nunca parezca un hueco vacío en la cinta del río
+            if (isRiver && !wallsV[y][x]) {
+                const label = y === bridgeRow ? 'Puente de Cáscara' : 'Cruce del Río de Pulpa';
+                html += `<div class="bridge" style="left:${cellPos(x + 1) - MAP_GAP}px;top:${cellPos(y) - MAP_GAP / 2}px;width:${MAP_GAP}px;height:${MAP_CELL + MAP_GAP}px" ${tip([label, 'Aquí sí se puede cruzar el Río de Pulpa.'])}></div>`;
                 continue;
             }
             if (!wallsV[y][x]) continue;
@@ -1104,6 +1110,30 @@ function renderVault() {
     return panel(art('node_vault', '🔒', { size: 'xl' }), GAME.vaultOpened ? '¡Cofre Sellado abierto!' : 'Cofre Sellado', `
         <p>${GAME.lastEventMsg}</p>
         <button onclick="closeEventResult()">Continuar</button>`, GAME.vaultOpened ? 'celebrate' : '');
+}
+
+function renderDungeon() {
+    const d = GAME.dungeon;
+    let cells = '';
+    for (let y = 0; y < 3; y++) {
+        for (let x = 0; x < 3; x++) {
+            const isPlayer = d.pos.x === x && d.pos.y === y;
+            const isExit = d.exit.x === x && d.exit.y === y;
+            const cleared = d.cleared[y][x];
+            const adj = Math.abs(x - d.pos.x) + Math.abs(y - d.pos.y) === 1;
+            const cls = ['dungeon-cell', cleared ? 'cleared' : 'locked', isPlayer ? 'here' : '', isExit ? 'exit' : '', adj ? 'reachable' : '']
+                .filter(Boolean).join(' ');
+            const icon = isPlayer ? art('ui_heart', '🍏', { size: 'md' })
+                : cleared ? art('node_rest', '🌿', { size: 'md' })
+                    : isExit ? art('node_vault', '🏆', { size: 'md' })
+                        : art('node_enemy', '⚔️', { size: 'md' });
+            const label = isPlayer ? 'Estás aquí' : isExit ? 'Salida (con guardián)' : cleared ? 'Ya despejada' : 'Bicho al acecho';
+            cells += `<div class="${cls}" ${adj ? `onclick="enterDungeonCell(${x},${y})"` : ''} ${tip([label, ''])}>${icon}</div>`;
+        }
+    }
+    return panel(art('node_mystery', '🕳️', { size: 'xl' }), 'Calabozo de la Trampilla', `
+        <p>Caíste a un cuartito lleno de bichos. La salida está en la esquina opuesta: hay que abrirse paso peleando.</p>
+        <div class="dungeon-grid">${cells}</div>`, 'wide');
 }
 
 // ---------- PANELES ----------
