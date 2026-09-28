@@ -1562,6 +1562,19 @@ button.btn-grape:hover { background: #D6C8F5; }
 }
 .fullscreen-btn.hud { position: static; width: 42px; height: 42px; font-size: 1.3em; transform: none; }
 .fullscreen-btn.sound-btn { right: 78px; }
+.fullscreen-btn.notes-btn { right: auto; left: 18px; }
+
+.notes-panel { width: 780px; max-width: 92vw; max-height: 62vh; display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 22px 26px; overflow: hidden; }
+.notes-insta { align-self: center; padding: 8px 16px; border-radius: 12px; background: var(--paper-2); box-shadow: 0 0 0 2px var(--ink), 0 3px 0 2px var(--ink); text-decoration: none; color: inherit; }
+.notes-insta:hover { transform: translateY(-2px); }
+.notes-list { overflow-y: auto; text-align: left; display: flex; flex-direction: column; gap: 16px; padding-right: 6px; }
+.notes-entry { border-bottom: 2px dashed var(--edge); padding-bottom: 12px; }
+.notes-entry:last-child { border-bottom: none; }
+.notes-entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.notes-entry-title { font-size: 1.2em; }
+.notes-entry-date { opacity: .6; font-size: .85em; }
+.notes-entry ul { margin: 0; padding-left: 20px; }
+.notes-entry li { margin: 4px 0; }
 
 /* ============================================================
    VESTIDOR
