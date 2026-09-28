@@ -365,6 +365,7 @@ function renderScreen() {
         case 'key-found': return renderKeyFound();
         case 'vault': return renderVault();
         case 'dungeon': return renderDungeon();
+        case 'minigame': return renderMinigame();
         case 'tutorial-end': return renderTutorialEnd();
         case 'act-intro': return renderActIntro();
         case 'map': return renderMap();
@@ -1156,26 +1157,38 @@ function renderVault() {
 
 function renderDungeon() {
     const d = GAME.dungeon;
+    const char = window.CHARACTER_DB[GAME.player.characterId] || {};
     let cells = '';
     for (let y = 0; y < 3; y++) {
         for (let x = 0; x < 3; x++) {
             const isPlayer = d.pos.x === x && d.pos.y === y;
             const isExit = d.exit.x === x && d.exit.y === y;
             const cleared = d.cleared[y][x];
-            const adj = Math.abs(x - d.pos.x) + Math.abs(y - d.pos.y) === 1;
-            const cls = ['dungeon-cell', cleared ? 'cleared' : 'locked', isPlayer ? 'here' : '', isExit ? 'exit' : '', adj ? 'reachable' : '']
+            const adj = !isPlayer && Math.abs(x - d.pos.x) + Math.abs(y - d.pos.y) === 1;
+            const cls = ['dg-cell', cleared ? 'cleared' : 'locked', isPlayer ? 'here' : '', isExit ? 'exit' : '', adj ? 'reachable' : '']
                 .filter(Boolean).join(' ');
-            const icon = isPlayer ? art('ui_heart', '🍏', { size: 'md' })
-                : cleared ? art('node_rest', '🌿', { size: 'md' })
-                    : isExit ? art('node_vault', '🏆', { size: 'md' })
-                        : art('node_enemy', '⚔️', { size: 'md' });
-            const label = isPlayer ? 'Estás aquí' : isExit ? 'Salida (con guardián)' : cleared ? 'Ya despejada' : 'Bicho al acecho';
-            cells += `<div class="${cls}" ${adj ? `onclick="enterDungeonCell(${x},${y})"` : ''} ${tip([label, ''])}>${icon}</div>`;
+            // tu fruta (no un corazón) en la casilla donde estás; la escalera marca la salida
+            let icon;
+            if (isPlayer) icon = fruitArt(char.id, { size: 'md' });
+            else if (isExit) icon = art('node_stairs', '🪜', { size: 'md' });
+            else if (cleared) icon = '<span class="dg-bones">🦴</span>';
+            else icon = art(((d.deco + x * 3 + y) % 3 === 0) ? 'dg_ghost' : 'dg_skull', '💀', { size: 'md' });
+            const guard = isExit && !cleared ? `<i class="dg-guard">${art('dg_skull', '💀', { size: 'xs' })}</i>` : '';
+            const label = isPlayer ? 'Estás aquí' : isExit ? (cleared ? 'La escalera (despejada)' : 'La escalera de salida: la vigila un guardián') : cleared ? 'Ya despejada' : 'Algo se mueve en la oscuridad…';
+            cells += `<div class="${cls}" ${adj ? `onclick="enterDungeonCell(${x},${y})"` : ''} ${tip([label, adj ? 'Toca para entrar (¡habrá pelea!)' : ''])}>${icon}${guard}</div>`;
         }
     }
-    return panel(art('node_mystery', '🕳️', { size: 'xl' }), 'Calabozo de la Trampilla', `
-        <p>Caíste a un cuartito lleno de bichos. La salida está en la esquina opuesta: hay que abrirse paso peleando.</p>
-        <div class="dungeon-grid">${cells}</div>`, 'wide');
+    const corner = (cls, sprite, fb) => `<span class="dg-deco ${cls}">${art(sprite, fb, { size: 'md' })}</span>`;
+    return panel(art('dg_skull', '💀', { size: 'xl' }), 'Calabozo de la Trampilla', `
+        <p>Caíste por la trampilla a un calabozo húmedo y oscuro. Algo se arrastra entre las sombras… Ábrete paso a golpes hasta la <b>escalera</b> de arriba.</p>
+        <div class="dg-room">
+            ${corner('tl', 'dg_torch', '🔥')}${corner('tr', 'dg_torch', '🔥')}
+            ${corner('bl', 'dg_web', '🕸️')}${corner('br', 'dg_web', '🕸️')}
+            ${corner('chain-l', 'dg_chain', '⛓️')}${corner('chain-r', 'dg_chain', '⛓️')}
+            <div class="dg-grid">${cells}</div>
+            <div class="dg-fog"></div>
+        </div>
+        <p class="dg-hint hand">Tú: abajo · Salida: la escalera, arriba</p>`, 'wide dungeon-panel');
 }
 
 // ---------- PANELES ----------

@@ -559,7 +559,7 @@ function enterNode(type) {
         const themeId = currentThemeId();
         const pool = window.EVENT_DB.filter((ev) => (!ev.acts || ev.acts.includes(act)) && (!ev.themes || ev.themes.includes(themeId)) && ev.id !== GAME.lastEventId);
         // en el tutorial siempre sale un evento tranquilo (sin peleas ni minijuegos)
-        GAME.currentEvent = GAME.tutorial ? window.EVENT_DB.find((ev) => ev.id === 'fuente_magica') : pickOne(pool.length ? pool : window.EVENT_DB);
+        GAME.currentEvent = GAME.tutorial ? window.EVENT_DB.find((ev) => ev.id === 'fuente_magica') : pickEvent(pool.length ? pool : window.EVENT_DB);
         GAME.lastEventId = GAME.currentEvent.id;
         GAME.lastEventMsg = '';
         GAME.screen = 'event';
@@ -1074,8 +1074,41 @@ function eventHelpers() {
             const id = pickOne(pool);
             p.deck.push(id);
             return window.getCard(id).name;
+        },
+        // objeto al azar de ciertos niveles de rareza (si ya los tienes todos, de cualquiera)
+        grantRelicTier(tiers) {
+            const relic = randomRelic(tiers) || randomRelic(['common', 'uncommon', 'rare']);
+            if (!relic) return 'Ya tienes todos los objetos disponibles.';
+            giveRelic(p, relic);
+            GAME.lastRelic = relic;
+            return `Obtuviste el objeto ${relic.name}: ${relic.description}`;
+        },
+        // una semilla al azar en la bolsa (null si está llena)
+        grantSeed() {
+            const seed = window.rollSeed();
+            if (!seed || !addSeed(seed.id)) return null;
+            return `Consigues una semilla: ${seed.name}. ${seed.desc}`;
+        },
+        // cambia una carta al azar del mazo por otra de rareza parecida
+        transformRandom() {
+            const idx = p.deck.map((id, i) => i).filter((i) => { const c = window.getCard(p.deck[i]) || {}; return c.type !== 'curse' && c.type !== 'status'; });
+            if (!idx.length) return null;
+            const i = pickOne(idx);
+            const old = window.getCard(p.deck[i]);
+            const rarity = old.rarity === 'basic' ? 'common' : old.rarity;
+            const next = pickOne(cardsOfRarity(rarity)) || pickOne(cardsOfRarity('common'));
+            p.deck[i] = next.id;
+            markDiscovered([next.id]);
+            return `Tu ${old.name} se transforma en ${next.name}.`;
         }
     };
+}
+// Sorteo de un evento respetando su peso (w)
+function pickEvent(pool) {
+    const total = pool.reduce((s, ev) => s + (ev.w || 1), 0);
+    let r = Math.random() * total;
+    for (const ev of pool) { r -= (ev.w || 1); if (r <= 0) return ev; }
+    return pool[pool.length - 1];
 }
 function resolveEventOption(idx) {
     const option = GAME.currentEvent.options[idx];
@@ -1097,15 +1130,24 @@ function resolveEventOption(idx) {
         render();
         return;
     }
-    if (option.dungeon) {
-        // o una trampilla que te deja caer a un mini calabozo 3x3
+    if (option.game) {
+        // una mesa de juego (dados, póker o ajedrez)
         GAME.currentEvent = null;
+        window.openMinigame(option.game);
+        return;
+    }
+    if (option.dungeon) {
+        // o una trampilla que te deja caer a un calabozo 3x3: entras por una esquina de
+        // abajo y la escalera de salida está en una esquina de arriba
+        GAME.currentEvent = null;
+        const exitX = Math.random() < 0.5 ? 0 : 2;
         GAME.dungeon = {
             cleared: Array.from({ length: 3 }, () => [false, false, false]),
-            pos: { x: 0, y: 0 },
-            exit: { x: 2, y: 2 }
+            pos: { x: 2 - exitX, y: 2 },
+            exit: { x: exitX, y: 0 },
+            deco: Math.floor(Math.random() * 1000)
         };
-        GAME.dungeon.cleared[0][0] = true; // la esquina de entrada ya está "limpia"
+        GAME.dungeon.cleared[2][2 - exitX] = true; // la esquina de entrada ya está "limpia"
         if (window.Sfx) Sfx.eventOpen();
         GAME.screen = 'dungeon';
         saveGame();
@@ -1113,6 +1155,13 @@ function resolveEventOption(idx) {
         return;
     }
     const msg = option.effect(GAME.player, eventHelpers());
+    if (msg && typeof msg === 'object' && msg.fight) {
+        // el evento resultó ser una trampa: ¡pelea!
+        GAME.currentEvent = null;
+        showToast(msg.msg || '¡Es una trampa!');
+        playCombatIntro(encounterFor('enemy', GAME.playerPos.x / (window.mapDims(GAME.walls, GAME.map).cols - 1)), 'enemy');
+        return;
+    }
     GAME.lastEventMsg = typeof msg === 'string' ? msg : 'Algo pasó...';
     if (GAME.player.hp <= 0) {
         clearSave();

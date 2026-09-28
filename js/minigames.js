@@ -1,0 +1,546 @@
+// ============================================================
+// MINIGAMES.JS — Las Mesas de Juegos: tres juegos rápidos que salen en
+// casillas del mapa y en eventos.
+//   · Dados   "Veintiuno de Dados": tira dados sin pasarte de 21 y gana a la casa.
+//   · Póker   Póker de 5 cartas: cambia las que quieras (una vez) y gana con la mejor mano.
+//   · Ajedrez Tablero chiquito de 5 columnas: hay que comerse TODAS las piezas rivales.
+// La lógica pura (manos de póker, movimientos y rival de ajedrez) vive en
+// window.MG para poder probarla sin la interfaz; abajo está lo visual.
+// ============================================================
+
+(function () {
+    const rnd = (n) => Math.floor(Math.random() * n);
+    const shuffleArr = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const MG = {};
+
+    // =========================================================
+    // PÓKER — cartas y manos
+    // =========================================================
+    const SUITS = ['♠', '♥', '♦', '♣'];
+    const RANK_LABEL = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
+    const HAND_NAMES = ['Carta alta', 'Par', 'Doble par', 'Trío', 'Escalera', 'Color', 'Full', 'Póker', 'Escalera de color'];
+    MG.HAND_NAMES = HAND_NAMES;
+    MG.newDeck = function () {
+        const d = [];
+        for (let s = 0; s < 4; s++) for (let r = 2; r <= 14; r++) d.push({ r, s });
+        return shuffleArr(d);
+    };
+    // Valora 5 cartas → { rank: 0..8, tb: [desempates] }
+    MG.evalHand = function (cards) {
+        const counts = {};
+        cards.forEach((c) => { counts[c.r] = (counts[c.r] || 0) + 1; });
+        const groups = Object.keys(counts).map((r) => [counts[r], +r]).sort((a, b) => b[0] - a[0] || b[1] - a[1]);
+        const desc = cards.map((c) => c.r).sort((a, b) => b - a);
+        const flush = cards.every((c) => c.s === cards[0].s);
+        let straight = false, high = desc[0];
+        if (new Set(desc).size === 5) {
+            if (desc[0] - desc[4] === 4) straight = true;
+            else if (desc[0] === 14 && desc[1] === 5 && desc[4] === 2) { straight = true; high = 5; } // A-2-3-4-5
+        }
+        const byGroups = groups.map((g) => g[1]);
+        if (straight && flush) return { rank: 8, tb: [high] };
+        if (groups[0][0] === 4) return { rank: 7, tb: byGroups };
+        if (groups[0][0] === 3 && groups[1][0] === 2) return { rank: 6, tb: byGroups };
+        if (flush) return { rank: 5, tb: desc };
+        if (straight) return { rank: 4, tb: [high] };
+        if (groups[0][0] === 3) return { rank: 3, tb: byGroups };
+        if (groups[0][0] === 2 && groups[1][0] === 2) return { rank: 2, tb: byGroups };
+        if (groups[0][0] === 2) return { rank: 1, tb: byGroups };
+        return { rank: 0, tb: desc };
+    };
+    // 1 si gana a, -1 si gana b, 0 empate
+    MG.compareHands = function (a, b) {
+        if (a.rank !== b.rank) return a.rank > b.rank ? 1 : -1;
+        for (let i = 0; i < Math.max(a.tb.length, b.tb.length); i++) {
+            const x = a.tb[i] || 0, y = b.tb[i] || 0;
+            if (x !== y) return x > y ? 1 : -1;
+        }
+        return 0;
+    };
+    // Qué cartas cambia la casa: se queda con lo que forma pares/tríos/póker; si no tiene
+    // nada, con sus 2 cartas más altas (y, con 4 del mismo palo, con esas 4)
+    MG.houseDiscards = function (cards) {
+        const counts = {};
+        cards.forEach((c) => { counts[c.r] = (counts[c.r] || 0) + 1; });
+        const ev = MG.evalHand(cards);
+        if (ev.rank >= 4) return []; // escalera o mejor: se planta
+        const keepMulti = cards.map((c, i) => (counts[c.r] > 1 ? i : -1)).filter((i) => i >= 0);
+        if (keepMulti.length) return cards.map((c, i) => i).filter((i) => !keepMulti.includes(i));
+        const bySuit = [0, 1, 2, 3].map((s) => cards.map((c, i) => (c.s === s ? i : -1)).filter((i) => i >= 0));
+        const four = bySuit.find((l) => l.length === 4);
+        if (four) return cards.map((c, i) => i).filter((i) => !four.includes(i));
+        const order = cards.map((c, i) => [c.r, i]).sort((a, b) => b[0] - a[0]);
+        const keep = order.slice(0, 2).map((x) => x[1]);
+        return cards.map((c, i) => i).filter((i) => !keep.includes(i));
+    };
+
+    // =========================================================
+    // AJEDREZ CHIQUITO — tablero de 5 columnas × 6 filas
+    //   Tú (fruta) abajo, moviendo hacia arriba; el rival arriba.
+    //   No hay jaque: gana quien se coma TODAS las piezas del otro.
+    //   Peón: 1 casilla adelante, come en diagonal, se corona reina al llegar al fondo.
+    // =========================================================
+    const CH = { COLS: 5, ROWS: 6 };
+    MG.CH = CH;
+    const VALUE = { P: 100, N: 300, B: 320, R: 500, Q: 900, K: 400 };
+    const GLYPH = { P: '♟', N: '♞', B: '♝', R: '♜', Q: '♛', K: '♚' };
+    MG.GLYPH = GLYPH;
+    MG.VALUE = VALUE;
+    const KNIGHT = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+    const KING = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+    const DIAG = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+    const ORTHO = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+    MG.newBoard = function () {
+        const b = Array.from({ length: CH.ROWS }, () => Array(CH.COLS).fill(null));
+        ['R', 'N', 'B', 'Q', 'K'].forEach((t, c) => { b[0][c] = { t, c: 1 }; b[CH.ROWS - 1][c] = { t, c: 0 }; });
+        for (let c = 0; c < CH.COLS; c++) { b[1][c] = { t: 'P', c: 1 }; b[CH.ROWS - 2][c] = { t: 'P', c: 0 }; }
+        return b;
+    };
+    const inside = (r, c) => r >= 0 && r < CH.ROWS && c >= 0 && c < CH.COLS;
+    // Destinos posibles de la pieza en (r,c): [{ r, c }]
+    MG.movesFor = function (b, r, c) {
+        const p = b[r][c];
+        if (!p) return [];
+        const out = [];
+        const add = (nr, nc) => { if (inside(nr, nc) && (!b[nr][nc] || b[nr][nc].c !== p.c)) out.push({ r: nr, c: nc }); };
+        const slide = (dirs) => dirs.forEach(([dr, dc]) => {
+            for (let nr = r + dr, nc = c + dc; inside(nr, nc); nr += dr, nc += dc) {
+                if (b[nr][nc]) { if (b[nr][nc].c !== p.c) out.push({ r: nr, c: nc }); break; }
+                out.push({ r: nr, c: nc });
+            }
+        });
+        if (p.t === 'P') {
+            const dr = p.c === 0 ? -1 : 1;
+            if (inside(r + dr, c) && !b[r + dr][c]) out.push({ r: r + dr, c });
+            [-1, 1].forEach((dc) => { if (inside(r + dr, c + dc) && b[r + dr][c + dc] && b[r + dr][c + dc].c !== p.c) out.push({ r: r + dr, c: c + dc }); });
+        } else if (p.t === 'N') KNIGHT.forEach(([dr, dc]) => add(r + dr, c + dc));
+        else if (p.t === 'K') KING.forEach(([dr, dc]) => add(r + dr, c + dc));
+        else if (p.t === 'B') slide(DIAG);
+        else if (p.t === 'R') slide(ORTHO);
+        else if (p.t === 'Q') slide(DIAG.concat(ORTHO));
+        return out;
+    };
+    MG.allMoves = function (b, side) {
+        const out = [];
+        for (let r = 0; r < CH.ROWS; r++) for (let c = 0; c < CH.COLS; c++) {
+            if (b[r][c] && b[r][c].c === side) MG.movesFor(b, r, c).forEach((m) => out.push({ fr: r, fc: c, tr: m.r, tc: m.c }));
+        }
+        return out;
+    };
+    // Devuelve { board, captured } sin tocar el original
+    MG.applyMove = function (b, m) {
+        const nb = b.map((row) => row.slice());
+        const piece = nb[m.fr][m.fc];
+        const captured = nb[m.tr][m.tc];
+        nb[m.fr][m.fc] = null;
+        const promote = piece.t === 'P' && ((piece.c === 0 && m.tr === 0) || (piece.c === 1 && m.tr === CH.ROWS - 1));
+        nb[m.tr][m.tc] = promote ? { t: 'Q', c: piece.c } : piece;
+        return { board: nb, captured, promoted: promote };
+    };
+    MG.countPieces = function (b, side) {
+        let n = 0;
+        b.forEach((row) => row.forEach((p) => { if (p && p.c === side) n++; }));
+        return n;
+    };
+    MG.material = function (b, side) {
+        let v = 0;
+        b.forEach((row) => row.forEach((p) => { if (p && p.c === side) v += VALUE[p.t]; }));
+        return v;
+    };
+    // Evaluación desde el punto de vista del rival (side 1): material + avance de peones
+    function evaluate(b) {
+        let score = 0;
+        for (let r = 0; r < CH.ROWS; r++) for (let c = 0; c < CH.COLS; c++) {
+            const p = b[r][c];
+            if (!p) continue;
+            let v = VALUE[p.t];
+            if (p.t === 'P') v += (p.c === 1 ? r : CH.ROWS - 1 - r) * 8;
+            if (c === 2 && p.t !== 'K') v += 6; // el centro vale un poquito más
+            score += p.c === 1 ? v : -v;
+        }
+        return score;
+    }
+    // negamax con poda: side = quién mueve (1 = rival). Devuelve la evaluación para `side`.
+    function search(b, side, depth, alpha, beta) {
+        const mine = MG.countPieces(b, side), theirs = MG.countPieces(b, 1 - side);
+        if (!theirs) return 100000 + depth; // se comió todo: ganó
+        if (!mine) return -100000 - depth;
+        if (depth === 0) return side === 1 ? evaluate(b) : -evaluate(b);
+        const moves = MG.allMoves(b, side);
+        if (!moves.length) return side === 1 ? evaluate(b) : -evaluate(b); // sin movimientos: pasa
+        // primero las capturas (mejor poda)
+        moves.sort((a, m) => (b[m.tr][m.tc] ? VALUE[b[m.tr][m.tc].t] : 0) - (b[a.tr][a.tc] ? VALUE[b[a.tr][a.tc].t] : 0));
+        let best = -Infinity;
+        for (const m of moves) {
+            const score = -search(MG.applyMove(b, m).board, 1 - side, depth - 1, -beta, -alpha);
+            if (score > best) best = score;
+            if (best > alpha) alpha = best;
+            if (alpha >= beta) break;
+        }
+        return best;
+    }
+    // Movimiento del rival. depth: cuántas jugadas piensa por adelantado; sloppy: probabilidad de jugar al azar.
+    MG.chooseEnemyMove = function (b, depth, sloppy) {
+        const moves = MG.allMoves(b, 1);
+        if (!moves.length) return null;
+        if (Math.random() < (sloppy || 0)) return moves[rnd(moves.length)];
+        let best = -Infinity, bestMoves = [];
+        for (const m of moves) {
+            const score = -search(MG.applyMove(b, m).board, 0, Math.max(0, depth - 1), -Infinity, Infinity) + Math.random() * 4;
+            if (score > best + 1e-9) { best = score; bestMoves = [m]; } else if (Math.abs(score - best) < 1e-9) bestMoves.push(m);
+        }
+        return bestMoves[rnd(bestMoves.length)];
+    };
+
+    window.MG = MG;
+
+    // =========================================================
+    // INTERFAZ
+    // =========================================================
+    const BETS = [10, 25, 50];
+    const KINDS = {
+        dice: {
+            name: 'Veintiuno de Dados', icon: '🎲', sprite: 'node_game',
+            rules: 'Tira dados uno por uno y suma. Quien más se acerque a 21 sin pasarse gana. Si te pasas, pierdes. La casa tira hasta llegar a 17 o más. ¡Un 21 exacto paga triple!'
+        },
+        poker: {
+            name: 'Póker de Cinco Cartas', icon: '🃏', sprite: 'node_game',
+            rules: 'Recibes 5 cartas. Puedes cambiar las que quieras UNA sola vez. Gana la mejor mano: par, doble par, trío, escalera, color, full, póker… Un trío o mejor paga doble.'
+        },
+        chess: {
+            name: 'Torre de Ajedrez', icon: '♟️', sprite: 'node_game',
+            rules: 'Tablero chiquito de 5 columnas. No hay jaque: gana quien se COMA TODAS las piezas del rival (¡incluido el rey!). Los peones avanzan 1 casilla, comen en diagonal y se coronan reinas. Si ganas, te llevas un objeto y oro; si pierdes, sales lastimado.'
+        }
+    };
+    const mg = () => GAME.mg;
+    const isTutorial = () => !!GAME.tutorial;
+
+    window.openMinigame = function (kind) {
+        if (!KINDS[kind]) kind = 'dice';
+        GAME.mg = { kind, phase: 'intro', bet: 0, busy: false };
+        GAME.screen = 'minigame';
+        if (window.Sfx) Sfx.eventOpen();
+        render();
+    };
+    window.openGameTable = function () {
+        const theme = currentTheme();
+        window.openMinigame(theme.gameKind || pickOne(['dice', 'poker', 'chess']));
+    };
+    window.mgLeave = function () {
+        if (GAME.mg && GAME.mg.busy) return;
+        GAME.mg = null;
+        GAME.screen = 'map';
+        saveGame();
+        render();
+    };
+    // Termina una partida: aplica oro / vida / objeto y muestra el resultado
+    function finish(outcome, msg, opts) {
+        const m = mg();
+        const p = GAME.player;
+        opts = opts || {};
+        m.phase = 'result';
+        m.outcome = outcome;
+        let text = msg;
+        if (opts.gold) { p.gold += opts.gold; }
+        if (opts.hp) { p.hp = Math.max(1, p.hp - opts.hp); text += ` Pierdes ${opts.hp} ❤️.`; }
+        if (opts.relic) { GAME.lastRelic = null; text += ` ${grantRandomRelic(p)}`; }
+        if (outcome === 'win' && window.PASS && !isTutorial()) { const g = window.PASS.addXp(15); if (g && g.levels) text += ` ¡Subes de nivel en el Pase de Batalla!`; }
+        m.text = text;
+        if (window.Sfx) (outcome === 'win' ? Sfx.win : outcome === 'lose' ? Sfx.denied : Sfx.pop)();
+        saveGame();
+        render();
+    }
+    const betPayout = (m, mult) => (m.free ? (mult > 0 ? 8 : 0) : m.bet * mult); // en juego libre solo se ganan 8 de oro
+
+    // ---------- pantalla de reglas y apuesta ----------
+    function renderIntro(m, info) {
+        const p = GAME.player;
+        const bets = m.kind === 'chess' ? '' : `
+            <p class="hand mg-bet-title">¿Cuánto apuestas? Tienes ${art('ui_coin', '🪙', { size: 'xs' })} <b>${p.gold}</b></p>
+            <div class="controls-row">
+                ${BETS.map((b) => `<button class="${b === 25 ? 'btn-banana' : ''}" ${p.gold < b ? 'disabled' : ''} onclick="mgStart(${b})">${art('ui_coin', '🪙', { size: 'xs' })} ${b}</button>`).join('')}
+                <button class="secondary" onclick="mgStart(0)" ${tip(['Jugar gratis', 'Sin apostar. Si ganas, la casa te da 8 de oro; si pierdes, no pierdes nada.'])}>Gratis</button>
+            </div>`;
+        const chessStart = m.kind === 'chess' ? `<div class="controls-row"><button class="btn-mint" onclick="mgStart(0)">¡Jugar!</button></div>` : '';
+        return panel(art(info.sprite, info.icon, { size: 'xl' }), info.name, `
+            <p>${info.rules}</p>
+            ${bets}${chessStart}
+            <button class="secondary" onclick="mgLeave()">Irme sin jugar</button>`, 'wide mg-panel');
+    }
+    window.mgStart = function (bet) {
+        const m = mg();
+        if (!m || m.phase !== 'intro') return;
+        const p = GAME.player;
+        if (bet > p.gold) { showToast('No te alcanza el oro'); return; }
+        m.bet = bet;
+        m.free = m.kind !== 'chess' && bet === 0;
+        p.gold -= bet; // la apuesta se paga al empezar (si sales a media partida, la pierdes)
+        saveGame();
+        if (window.Sfx) Sfx.coin();
+        if (m.kind === 'dice') { m.phase = 'play'; m.player = []; m.house = []; m.rolling = null; render(); }
+        else if (m.kind === 'poker') startPoker(m);
+        else startChess(m);
+    };
+
+    // ---------- DADOS ----------
+    const DIE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    const sum = (a) => a.reduce((s, x) => s + x, 0);
+    const dieHtml = (v, cls) => `<span class="die ${cls || ''}" data-v="${v}">${DIE[v] || '?'}</span>`;
+    async function animateRoll(m, who) {
+        m.busy = true;
+        for (let i = 0; i < 7; i++) {
+            m.rolling = { who, face: 1 + rnd(6) };
+            if (window.Sfx) Sfx.tap();
+            render();
+            await wait(70 + i * 12);
+            if (GAME.mg !== m) return null;
+        }
+        const v = 1 + rnd(6);
+        m.rolling = null;
+        m[who].push(v);
+        m.busy = false;
+        if (window.Sfx) Sfx.hit();
+        render();
+        return v;
+    }
+    function renderDice(m, info) {
+        const ps = sum(m.player), hs = sum(m.house);
+        const row = (arr, who, label) => `
+            <div class="mg-row"><b class="hand">${label}</b>
+                <div class="dice-row">${arr.map((v) => dieHtml(v)).join('')}${m.rolling && m.rolling.who === who ? dieHtml(m.rolling.face, 'rolling') : ''}</div>
+                <span class="mg-total">${sum(arr)}</span></div>`;
+        const canAct = m.phase === 'play' && !m.busy;
+        return panel(art(info.sprite, info.icon, { size: 'lg' }), info.name, `
+            <p class="hand mg-stake">${m.free ? 'Partida gratis' : `Apuesta: ${art('ui_coin', '🪙', { size: 'xs' })} ${m.bet}`}</p>
+            ${row(m.house, 'house', 'La casa')}
+            ${row(m.player, 'player', 'Tú')}
+            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p><button class="btn-mint" onclick="mgLeave()">Continuar</button>` : `
+            <div class="controls-row">
+                <button class="btn-mint" ${canAct ? '' : 'disabled'} onclick="mgDiceRoll()">Tirar un dado</button>
+                <button class="btn-banana" ${canAct && m.player.length ? '' : 'disabled'} onclick="mgDiceStand()">Plantarme con ${ps}</button>
+            </div>`}`, 'wide mg-panel');
+    }
+    window.mgDiceRoll = async function () {
+        const m = mg();
+        if (!m || m.kind !== 'dice' || m.phase !== 'play' || m.busy) return;
+        await animateRoll(m, 'player');
+        if (GAME.mg !== m) return;
+        const total = sum(m.player);
+        if (total > 21) finish('lose', `¡Te pasaste con ${total}! La casa se queda tu apuesta.`);
+        else if (total === 21) await diceHouse(m);
+    };
+    window.mgDiceStand = async function () {
+        const m = mg();
+        if (!m || m.kind !== 'dice' || m.phase !== 'play' || m.busy || !m.player.length) return;
+        await diceHouse(m);
+    };
+    async function diceHouse(m) {
+        m.phase = 'house';
+        render();
+        await wait(500);
+        // la casa tira hasta 17 o más (y no se queda por debajo de ti si aún puede ganar)
+        while (GAME.mg === m && sum(m.house) < 17) {
+            await animateRoll(m, 'house');
+            if (GAME.mg !== m) return;
+            await wait(350);
+        }
+        const ps = sum(m.player), hs = sum(m.house);
+        const gain = (mult) => betPayout(m, mult);
+        if (hs > 21) finish('win', `¡La casa se pasó con ${hs}! Ganas.`, { gold: ps === 21 && !m.free ? gain(3) : gain(2) });
+        else if (ps > hs) finish('win', ps === 21 ? '¡VEINTIUNO EXACTO! Paga triple.' : `¡${ps} contra ${hs}! Ganas.`, { gold: ps === 21 && !m.free ? gain(3) : gain(2) });
+        else if (ps === hs) finish('draw', `Empate a ${ps}. Te devuelven tu apuesta.`, { gold: m.bet });
+        else finish('lose', `La casa gana con ${hs} contra tus ${ps}.`);
+    }
+
+    // ---------- PÓKER ----------
+    const cardHtml = (c, opts) => {
+        opts = opts || {};
+        const red = c.s === 1 || c.s === 2;
+        const label = RANK_LABEL[c.r] || c.r;
+        return `<span class="pcard ${red ? 'red' : ''} ${opts.sel ? 'sel' : ''} ${opts.click ? 'clickable' : ''}" ${opts.click ? `onclick="${opts.click}"` : ''}>
+            <i>${label}<br>${SUITS[c.s]}</i><b>${SUITS[c.s]}</b></span>`;
+    };
+    function startPoker(m) {
+        m.deck = MG.newDeck();
+        m.player = m.deck.splice(0, 5).sort((a, b) => a.r - b.r);
+        m.house = m.deck.splice(0, 5);
+        m.selected = [];
+        m.phase = 'play';
+        render();
+    }
+    function renderPoker(m, info) {
+        const reveal = m.phase === 'result';
+        const houseCards = m.house.map((c) => (reveal ? cardHtml(c) : '<span class="pcard back"></span>')).join('');
+        const ph = MG.evalHand(m.player);
+        return panel(art(info.sprite, info.icon, { size: 'lg' }), info.name, `
+            <p class="hand mg-stake">${m.free ? 'Partida gratis' : `Apuesta: ${art('ui_coin', '🪙', { size: 'xs' })} ${m.bet}`}</p>
+            <div class="mg-row"><b class="hand">La casa</b><div class="poker-row">${houseCards}</div>${reveal ? `<span class="mg-hand">${HAND_NAMES[MG.evalHand(m.house).rank]}</span>` : ''}</div>
+            <div class="mg-row"><b class="hand">Tú</b>
+                <div class="poker-row">${m.player.map((c, i) => cardHtml(c, { sel: m.selected.includes(i), click: m.phase === 'play' ? `mgPokerToggle(${i})` : '' })).join('')}</div>
+                <span class="mg-hand">${HAND_NAMES[ph.rank]}</span></div>
+            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p><button class="btn-mint" onclick="mgLeave()">Continuar</button>` : `
+            <p class="hand">${m.selected.length ? `Vas a cambiar ${m.selected.length} carta${m.selected.length > 1 ? 's' : ''}.` : 'Toca las cartas que quieras cambiar (o ninguna).'}</p>
+            <div class="controls-row"><button class="btn-mint" onclick="mgPokerShow()">${m.selected.length ? 'Cambiar y mostrar' : 'Plantarme y mostrar'}</button></div>`}`, 'wide mg-panel');
+    }
+    window.mgPokerToggle = function (i) {
+        const m = mg();
+        if (!m || m.kind !== 'poker' || m.phase !== 'play') return;
+        const k = m.selected.indexOf(i);
+        if (k >= 0) m.selected.splice(k, 1); else m.selected.push(i);
+        if (window.Sfx) Sfx.select();
+        render();
+    };
+    window.mgPokerShow = function () {
+        const m = mg();
+        if (!m || m.kind !== 'poker' || m.phase !== 'play') return;
+        m.selected.forEach((i) => { m.player[i] = m.deck.shift(); });
+        m.player.sort((a, b) => a.r - b.r);
+        MG.houseDiscards(m.house).forEach((i) => { m.house[i] = m.deck.shift(); });
+        const a = MG.evalHand(m.player), h = MG.evalHand(m.house);
+        const cmp = MG.compareHands(a, h);
+        const name = (e) => HAND_NAMES[e.rank].toLowerCase();
+        if (cmp > 0) {
+            const big = a.rank >= 3; // trío o mejor paga doble
+            finish('win', `¡Ganas con ${name(a)} contra ${name(h)}!${big && !m.free ? ' Mano fuerte: paga doble.' : ''}`,
+                { gold: betPayout(m, big ? 3 : 2) });
+        } else if (cmp === 0) finish('draw', `Empate: los dos con ${name(a)}. Te devuelven tu apuesta.`, { gold: m.bet });
+        else finish('lose', `La casa gana con ${name(h)} contra tu ${name(a)}.`);
+    };
+
+    // ---------- AJEDREZ ----------
+    function chessDepth() { const c = GAME.player ? GAME.player.act : 1; return c >= 3 ? 3 : c === 2 ? 2 : 1; }
+    function chessSloppy() { const c = GAME.player ? GAME.player.act : 1; return c >= 3 ? 0 : c === 2 ? 0.08 : 0.3; }
+    function startChess(m) {
+        m.board = MG.newBoard();
+        m.turn = 'player';
+        m.sel = null;
+        m.targets = [];
+        m.last = null;
+        m.plies = 0;
+        m.lost = []; // piezas tuyas comidas
+        m.won = [];  // piezas del rival que te comiste
+        m.phase = 'play';
+        m.note = 'Es tu turno. Toca una de tus piezas (las verdes).';
+        render();
+    }
+    function renderChess(m, info) {
+        const cells = [];
+        for (let r = 0; r < CH.ROWS; r++) {
+            for (let c = 0; c < CH.COLS; c++) {
+                const p = m.board[r][c];
+                const isSel = m.sel && m.sel.r === r && m.sel.c === c;
+                const target = m.targets.find((t) => t.r === r && t.c === c);
+                const last = m.last && ((m.last.fr === r && m.last.fc === c) || (m.last.tr === r && m.last.tc === c));
+                const clickable = m.phase === 'play' && m.turn === 'player' && !m.busy;
+                cells.push(`<div class="sq ${(r + c) % 2 ? 'dark' : 'light'} ${isSel ? 'sel' : ''} ${target ? (p ? 'cap' : 'dot') : ''} ${last ? 'last' : ''}" ${clickable ? `onclick="mgChessClick(${r},${c})"` : ''}>
+                    ${p ? `<span class="piece ${p.c === 0 ? 'mine' : 'theirs'}">${GLYPH[p.t]}&#xFE0E;</span>` : ''}</div>`);
+            }
+        }
+        const tray = (list, cls) => `<div class="tray ${cls}">${list.map((t) => `<span>${GLYPH[t]}&#xFE0E;</span>`).join('') || '<i>—</i>'}</div>`;
+        const mine = MG.countPieces(m.board, 0), theirs = MG.countPieces(m.board, 1);
+        return panel(art(info.sprite, info.icon, { size: 'md' }), info.name, `
+            <div class="chess-layout">
+                <div class="chess-side">
+                    <div class="hand chess-count">Piezas rivales: <b>${theirs}</b></div>
+                    ${tray(m.won, 'won')}
+                    <div class="hand chess-count">Tus piezas: <b>${mine}</b></div>
+                    ${tray(m.lost, 'lost')}
+                </div>
+                <div class="chess-board">${cells.join('')}</div>
+                <div class="chess-side">
+                    <p class="hand chess-note">${m.phase === 'result' ? m.text : m.note}</p>
+                    ${m.phase === 'result' ? '<button class="btn-mint" onclick="mgLeave()">Continuar</button>'
+                        : `<button class="secondary" onclick="mgChessResign()" ${m.busy ? 'disabled' : ''}>Rendirme</button>`}
+                </div>
+            </div>`, 'wide mg-panel mg-chess');
+    }
+    window.mgChessClick = function (r, c) {
+        const m = mg();
+        if (!m || m.kind !== 'chess' || m.phase !== 'play' || m.turn !== 'player' || m.busy) return;
+        const target = m.targets.find((t) => t.r === r && t.c === c);
+        if (target && m.sel) { chessMove(m, { fr: m.sel.r, fc: m.sel.c, tr: r, tc: c }); return; }
+        const p = m.board[r][c];
+        if (p && p.c === 0) {
+            const moves = MG.movesFor(m.board, r, c);
+            if (!moves.length) { m.sel = null; m.targets = []; m.note = 'Esa pieza no tiene a dónde ir.'; if (window.Sfx) Sfx.denied(); }
+            else { m.sel = { r, c }; m.targets = moves; m.note = 'Elige a dónde mover (puntos = libre, aro rojo = comer).'; if (window.Sfx) Sfx.select(); }
+        } else { m.sel = null; m.targets = []; }
+        render();
+    };
+    function chessMove(m, mv) {
+        const res = MG.applyMove(m.board, mv);
+        const mover = m.board[mv.fr][mv.fc];
+        m.board = res.board;
+        m.last = mv;
+        m.sel = null;
+        m.targets = [];
+        m.plies++;
+        if (res.captured) {
+            (mover.c === 0 ? m.won : m.lost).push(res.captured.t);
+            if (window.Sfx) Sfx.hit();
+        } else if (window.Sfx) Sfx.mapMove();
+        if (res.promoted) m.note = mover.c === 0 ? '¡Tu peón se coronó reina!' : '¡Un peón rival se coronó reina!';
+        else m.note = mover.c === 0 ? 'El rival está pensando…' : 'Es tu turno.';
+        if (checkChessEnd(m)) return;
+        m.turn = mover.c === 0 ? 'enemy' : 'player';
+        render();
+        if (m.turn === 'enemy') enemyChessTurn(m);
+        else if (!MG.allMoves(m.board, 0).length) { m.note = 'No tienes movimientos: pasas el turno.'; m.turn = 'enemy'; render(); enemyChessTurn(m); }
+    }
+    async function enemyChessTurn(m) {
+        m.busy = true;
+        render();
+        await wait(650);
+        if (GAME.mg !== m || m.phase !== 'play') return;
+        const mv = MG.chooseEnemyMove(m.board, chessDepth(), chessSloppy());
+        m.busy = false;
+        if (!mv) {
+            // el rival no puede mover: pasa
+            m.note = 'El rival no tiene movimientos. Es tu turno.';
+            m.turn = 'player';
+            if (!MG.allMoves(m.board, 0).length) { chessFinishByMaterial(m); return; }
+            render();
+            return;
+        }
+        chessMove(m, mv);
+    }
+    // Gana quien se come todo; tras 60 jugadas se decide por material
+    function checkChessEnd(m) {
+        const mine = MG.countPieces(m.board, 0), theirs = MG.countPieces(m.board, 1);
+        if (!theirs) { chessWin(m, '¡Te comiste TODAS las piezas rivales!'); return true; }
+        if (!mine) { chessLose(m, 'El rival se comió todas tus piezas.'); return true; }
+        if (m.plies >= 60) { chessFinishByMaterial(m); return true; }
+        return false;
+    }
+    function chessFinishByMaterial(m) {
+        const a = MG.material(m.board, 0), b = MG.material(m.board, 1);
+        if (a > b) chessWin(m, 'Se acabó el tiempo y tienes más material que el rival: ¡ganas!');
+        else if (a < b) chessLose(m, 'Se acabó el tiempo y el rival tiene más material.');
+        else finish('draw', 'Tablas: nadie logró ventaja. Te llevas un poquito de oro.', { gold: 15 });
+    }
+    function chessWin(m, why) {
+        const act = GAME.player.act;
+        finish('win', `${why}`, { gold: 35 + 10 * act, relic: true });
+    }
+    function chessLose(m, why) {
+        finish('lose', why, { hp: 6 + 2 * GAME.player.act });
+    }
+    window.mgChessResign = function () {
+        const m = mg();
+        if (!m || m.kind !== 'chess' || m.phase !== 'play' || m.busy) return;
+        if (!confirm('¿Rendirte? Perderás vida.')) return;
+        chessLose(m, 'Te rendiste.');
+    };
+
+    // ---------- pantalla ----------
+    window.renderMinigame = function () {
+        const m = mg();
+        if (!m) return '';
+        const info = KINDS[m.kind];
+        if (m.phase === 'intro') return renderIntro(m, info);
+        if (m.kind === 'dice') return renderDice(m, info);
+        if (m.kind === 'poker') return renderPoker(m, info);
+        return renderChess(m, info);
+    };
+})();
