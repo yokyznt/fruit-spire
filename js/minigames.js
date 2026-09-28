@@ -521,7 +521,7 @@
     // una copia sigue al mouse; al soltarla en una casilla válida, se mueve.
     // (Tocar y tocar sigue funcionando igual.)
     let chessDrag = null;
-    document.addEventListener('pointerdown', (e) => {
+    if (typeof document !== 'undefined') document.addEventListener('pointerdown', (e) => {
         const piece = e.target.closest && e.target.closest('.chess-board .piece.mine');
         const m = mg();
         if (!piece || e.button > 0 || !m || m.kind !== 'chess' || m.phase !== 'play' || m.turn !== 'player' || m.busy) return;
@@ -539,7 +539,7 @@
         const el = document.elementFromPoint(x, y);
         return el && el.closest ? el.closest('.chess-board .sq') : null;
     }
-    document.addEventListener('pointermove', (e) => {
+    if (typeof document !== 'undefined') document.addEventListener('pointermove', (e) => {
         const d = chessDrag;
         if (!d) return;
         if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
@@ -555,7 +555,7 @@
         const sq = chessSquareAt(e.clientX, e.clientY);
         if (sq && (sq.classList.contains('dot') || sq.classList.contains('cap'))) sq.classList.add('hover');
     });
-    document.addEventListener('pointerup', (e) => {
+    if (typeof document !== 'undefined') document.addEventListener('pointerup', (e) => {
         const d = chessDrag;
         if (!d) return;
         chessDrag = null;
