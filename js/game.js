@@ -22,6 +22,22 @@ function pickCombatBg(kind) {
     return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// Notas de parche que se muestran en el menú principal. La entrada más nueva va primero.
+const PATCH_NOTES = [
+    {
+        date: '2026-09-28',
+        title: 'Correcciones de calidad',
+        changes: [
+            'Las reliquias ya no se amontonan ni deforman el resto de la interfaz cuando tienes muchas.',
+            'El ícono de intención de los enemigos ahora tiene el mismo tamaño y proporción que el de ataque.',
+            'El tutorial ya no se puede saltar: hay que completar cada acción para avanzar.',
+            'Arreglado el bug de cartas que terminaban el turno automáticamente al jugarlas.',
+            'El calabozo tiene un aspecto más tenebroso, una fruta atrapada (no solo un corazón) y la salida ahora está en una esquina superior con un ícono de escalera.',
+            'Al terminar un combate ahora es obligatorio elegir una carta de recompensa.',
+            'Nuevo apartado de Notas en el menú principal con las actualizaciones del juego.'
+        ]
+    }
+];
 const NODE_INFO = {
     enemy: { sprite: 'node_enemy', icon: '⚔️', label: 'Enemigo', desc: 'Unos bichos te esperan. ¡A pelear!' },
     elite: { sprite: 'node_elite', icon: '🔥', label: 'Élite', desc: 'Un enemigo durísimo. Si ganas, te llevas una reliquia.' },
@@ -272,6 +288,8 @@ function grantRandomRelic(player) {
 // ---------------------------------------------------------
 function showMainMenu() { exitTutorial(); GAME.screen = 'menu'; GAME.modal = null; render(); }
 function goToCharacterSelect() { GAME.screen = 'character-select'; render(); }
+function openNotes() { GAME.screen = 'notes'; render(); }
+function closeNotes() { GAME.screen = 'menu'; render(); }
 function openCollection() { GAME.screen = 'collection'; render(); }
 function openWardrobe() {
     if (GAME.player && window.CHARACTER_DB[GAME.player.characterId]) GAME.wardrobeChar = GAME.player.characterId;

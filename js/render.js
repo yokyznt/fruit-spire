@@ -265,7 +265,7 @@ function afterRender() {
 
 function renderHud() {
     const p = GAME.player;
-    if (!p || ['menu', 'character-select', 'collection', 'wardrobe'].includes(GAME.screen)) return '';
+    if (!p || ['menu', 'notes', 'character-select', 'collection', 'wardrobe'].includes(GAME.screen)) return '';
     const char = window.CHARACTER_DB[p.characterId] || {};
     const act = currentAct();
     const diff = difficulty();
@@ -357,6 +357,7 @@ function seedRewardBox() {
 function renderScreen() {
     switch (GAME.screen) {
         case 'menu': return renderMainMenu();
+        case 'notes': return renderNotes();
         case 'character-select': return renderCharacterSelect();
         case 'collection': return renderCollection();
         case 'wardrobe': return renderWardrobe();
@@ -424,6 +425,33 @@ function renderMainMenu() {
         </div>
         <button class="fullscreen-btn" onclick="toggleFullscreen()" ${tip(['Pantalla completa', 'Entrar o salir de la pantalla completa (también con F11).'])}>⛶</button>
         <button class="fullscreen-btn sound-btn" onclick="toggleGameSound()" ${tip(['Sonido', 'Silenciar o activar los efectos y el ambiente.'])}>${window.isMuted && window.isMuted() ? '🔇' : '🔊'}</button>
+        <button class="fullscreen-btn notes-btn" onclick="openNotes()" ${tip(['Notas', 'Novedades y parches del juego.'])}>📝</button>
+    </div>`;
+}
+
+function renderNotes() {
+    const notes = PATCH_NOTES || [];
+    return `
+    <div class="menu-screen">
+        ${logoHtml('Notas', 'big')}
+        <div class="panel notes-panel">
+            <a class="notes-insta" href="https://www.instagram.com/yokyznt" target="_blank" rel="noopener noreferrer">
+                📸 Creador del juego: <strong>@yokyznt</strong> en Instagram
+            </a>
+            <div class="notes-list">
+                ${notes.map(n => `
+                    <div class="notes-entry">
+                        <div class="notes-entry-head">
+                            <span class="notes-entry-title hand">${n.title}</span>
+                            <span class="notes-entry-date">${n.date}</span>
+                        </div>
+                        <ul>${n.changes.map(c => `<li>${c}</li>`).join('')}</ul>
+                    </div>`).join('') || '<p class="hand empty-note">Todavía no hay notas.</p>'}
+            </div>
+        </div>
+        <div class="menu-buttons">
+            <button onclick="closeNotes()">Volver</button>
+        </div>
     </div>`;
 }
 
