@@ -127,6 +127,29 @@ function cardTips(card) {
     return sections.length ? tip(sections) : '';
 }
 const TYPE_LABELS = { attack: 'ataque', skill: 'habilidad', power: 'poder', curse: 'maldición', status: 'estado' };
+// Texto de la carta con el daño / cáscara REAL (ver Combat.previewCard):
+// los números suben en verde o bajan en rojo según tus mejoras y perjuicios.
+function previewDescHtml(card, prev) {
+    if (!prev) return highlightDesc(card.description);
+    const finals = [];
+    const mark = (list, re, tag) => {
+        let k = 0;
+        return (text) => text.replace(re, (m, n, rest) => {
+            if (k >= list.length) return m;
+            finals.push({ base: +n, val: list[k++] });
+            return `§${tag}${String.fromCharCode(97 + finals.length - 1)}§${rest}`;
+        });
+    };
+    let text = card.description;
+    text = mark(prev.dmg, /([0-9]+)( de daño)/g, 'D')(text);
+    text = mark(prev.block, /([0-9]+)( de cáscara)/g, 'B')(text);
+    let html = highlightDesc(text);
+    finals.forEach((f, i) => {
+        const cls = f.val > f.base ? 'up' : f.val < f.base ? 'down' : '';
+        html = html.replace(new RegExp(`§[DB]${String.fromCharCode(97 + i)}§`), `<b class="num live ${cls}">${f.val}</b>`);
+    });
+    return html;
+}
 function renderCardHtml(card, opts) {
     opts = opts || {};
     const cardArt = card.image
@@ -144,7 +167,7 @@ function renderCardHtml(card, opts) {
         <div class="card-art">${cardArt}</div>
         <div class="card-name">${card.name}</div>
         <div class="card-type-tag hand">${TYPE_LABELS[card.type] || card.type}</div>
-        <div class="card-desc ${card.description.length > 64 ? 'long' : ''}">${highlightDesc(card.description)}</div>
+        <div class="card-desc ${card.description.length > 64 ? 'long' : ''}">${opts.preview ? previewDescHtml(card, opts.preview) : highlightDesc(card.description)}</div>
     </div>`;
 }
 
@@ -821,7 +844,8 @@ function intentInfo(c, e) {
         lines.push(`Va a atacar${hits > 1 ? ` ${hits} veces` : ''}.`);
     }
     if (m.block) {
-        set('defend', 'ui_shield', `${m.block}`, m.block);
+        const blk = e.getStatus('frail') ? Math.floor(m.block * 0.75) : m.block;
+        set('defend', 'ui_shield', `${blk}`, blk);
         lines.push('Se pondrá cáscara.');
     }
     if (m.allyBlock) lines.push('Dará cáscara a sus aliados.');
@@ -932,7 +956,7 @@ function renderCombat() {
         const disabled = card.unplayable || card.cost > p.energy || !playerTurn;
         const off = i - (n - 1) / 2;
         return `<div class="fan-slot ${GAME.dealIn ? 'deal-in' : ''} ${GAME.selectedCard === i ? 'selected' : ''}" data-flip="h${i}" ${card.retain ? 'data-retain="1"' : ''} style="--r:${(off * 3.5).toFixed(1)}deg;--y:${(off * off * 3.5).toFixed(1)}px;--i:${i};--ov:${overlap.toFixed(0)}px">
-            ${renderCardHtml(card, { onclick: `selectCard(${i})`, disabled, alwaysClick: playerTurn })}
+            ${renderCardHtml(card, { onclick: `selectCard(${i})`, disabled, alwaysClick: playerTurn, preview: card.unplayable ? null : c.previewCard(card, null) })}
         </div>`;
     }).join('');
 

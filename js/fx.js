@@ -408,6 +408,32 @@ function highlightDrop(d, res, on) {
     const el = res === 'self' ? d.playerEl : (d.zones.find((z) => z.i === res) || {}).el;
     if (el) el.classList.toggle('targeted', on);
     d.slot.classList.toggle('ready', on);
+    showDropPreview(d, on && res !== 'self' ? res : null, on ? el : null);
+}
+// Mientras arrastras: la carta muestra su daño real contra ESE enemigo y sobre él
+// aparece el total que le vas a hacer (y la cáscara que ganarías, sobre ti)
+function showDropPreview(d, enemyIdx, el) {
+    document.querySelectorAll('.drop-preview').forEach((x) => x.remove());
+    const c = GAME.combat;
+    if (!c || d.card.unplayable) return;
+    const target = enemyIdx != null ? c.enemies[enemyIdx] : null;
+    const prev = c.previewCard(d.card, target);
+    const desc = d.slot.querySelector('.card-desc');
+    if (desc) desc.innerHTML = previewDescHtml(d.card, prev);
+    if (!el) return;
+    let html = '';
+    if (prev.total > 0 && target) {
+        const lost = Math.max(0, prev.total - target.block);
+        html += `<span class="dp dmg">${art('ui_sword', '', { size: 'sm' })}<b>${prev.total}</b>${target.block ? `<small>(-${lost} ❤️)</small>` : ''}${lost >= target.hp ? '<i>¡KO!</i>' : ''}</span>`;
+    }
+    const blk = prev.block.reduce((a, b) => a + b, 0);
+    if (blk > 0) html += `<span class="dp blk">${art('ui_shield', '', { size: 'sm' })}<b>+${blk}</b></span>`;
+    if (!html) return;
+    const box = document.createElement('div');
+    box.className = 'drop-preview';
+    box.innerHTML = html;
+    heartifyDom(box);
+    (d.playerEl && !target && blk > 0 ? d.playerEl : el).appendChild(box);
 }
 
 function endCardDrag(e, cancelled) {
@@ -420,6 +446,7 @@ function endCardDrag(e, cancelled) {
     cancelAnimationFrame(d.raf);
     const res = cancelled ? null : cardDropResult(d);
     if (d.hover != null) highlightDrop(d, d.hover, false);
+    document.querySelectorAll('.drop-preview').forEach((x) => x.remove());
     d.stage.classList.remove('drag-active');
     d.zones.forEach((z) => z.el.classList.remove('targetable'));
 

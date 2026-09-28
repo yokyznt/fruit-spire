@@ -1,7 +1,7 @@
 // Corre todas las pruebas automáticas del juego (no necesitan navegador): node tests/run-all.js
 const { spawnSync } = require('child_process');
 const path = require('path');
-const tests = ['map.test.js', 'minigames.test.js', 'combat.test.js', 'items.test.js', 'seeds.test.js', 'mechanics.test.js'];
+const tests = ['map.test.js', 'minigames.test.js', 'combat.test.js', 'items.test.js', 'seeds.test.js', 'mechanics.test.js', 'preview.test.js'];
 let failed = 0;
 for (const t of tests) {
     const r = spawnSync(process.execPath, [path.join(__dirname, t)], { encoding: 'utf8' });

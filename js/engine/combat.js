@@ -464,6 +464,58 @@ class Combat {
         return ctx;
     }
 
+    // ---------- vista previa de una carta ----------
+    // Corre el efecto de la carta "en seco" (sin cambiar nada) y devuelve los golpes
+    // y la cáscara que daría con TODO aplicado: Madurez, Marchitez, Magulladura,
+    // Firmeza, Blandura, objetos, reglas del piso… target: enemigo (o null).
+    // → { dmg: [final, ...], block: [final, ...], total }
+    previewCard(card, target) {
+        const P = this.player, self = this;
+        const out = { dmg: [], block: [], total: 0 };
+        const neutral = { getStatus: () => 0, isAlive: () => true, hp: 99, block: 0, statuses: {} };
+        const tgt = target || (this.aliveEnemies().length === 1 ? this.aliveEnemies()[0] : null);
+        const vs = (t) => t || tgt || neutral;
+        const jar = card.type === 'attack' && this.hasRelic('frasco_almibar') && !(this.relicState.frasco_almibar && this.relicState.frasco_almibar.used);
+        const hit = (n, t) => {
+            const oldMult = this.damageMult;
+            if (jar) this.damageMult = 2;
+            const d = this.previewDamage(P, vs(t), n);
+            this.damageMult = oldMult;
+            out.dmg.push(d); out.total += d;
+            return { damage: d, hpLoss: 0, killed: false };
+        };
+        const blockOf = (n, fromCard) => {
+            let a = n;
+            if (fromCard) a += P.getStatus('dexterity');
+            if (P.getStatus('frail')) a = Math.floor(a * 0.75);
+            const ch = window.CHARACTER_DB[P.characterId];
+            if (ch && ch.onGainBlock && fromCard) a = ch.onGainBlock(P, a);
+            out.block.push(Math.max(0, a));
+        };
+        const noop = () => {};
+        // nada se puede modificar: jugador y combate de solo lectura
+        const ro = (obj, allow) => new Proxy(obj, {
+            get(o, k) { const v = o[k]; if (typeof v === 'function') return allow && allow[k] ? allow[k] : (allow ? noop : v.bind(o)); return v; },
+            set() { return true; }
+        });
+        const combatRO = ro(this, { gainBlock: (e, n, fromCard) => { if (e === P) blockOf(n, fromCard); }, previewDamage: this.previewDamage.bind(this), aliveEnemies: this.aliveEnemies.bind(this), hasRelic: this.hasRelic.bind(this) });
+        const ctx = {
+            combat: combatRO, player: ro(P, { getStatus: P.getStatus.bind(P), isAlive: P.isAlive.bind(P) }), card, enemy: tgt || this.enemy, enemies: this.aliveEnemies(),
+            cardsPlayed: this.turnState.cardsPlayed,
+            attack: (n, t) => hit(n, t),
+            attackAll: (n) => { const al = this.aliveEnemies(); if (tgt || al.length <= 1) hit(n, tgt || al[0]); else { const ds = al.map((e) => this.previewDamage(P, e, n)); out.dmg.push(Math.max(...ds)); out.total += ds.reduce((a, b) => a + b, 0); } },
+            attackRandom: (n) => hit(n, null),
+            block: (n) => blockOf(n, true), addBlock: (e, n) => { if (e === P) blockOf(n, true); },
+            dealDamage: (s, t, n) => hit(n, t).damage,
+            gardenSize: () => (P.garden || []).length
+        };
+        ['apply', 'applyAll', 'buff', 'draw', 'gainEnergy', 'heal', 'loseHp', 'gainMaxHp', 'addToHand', 'addToDiscard', 'exhaustRandom', 'summon', 'plant', 'grow', 'harvestAll', 'addStatus']
+            .forEach((k) => { ctx[k] = () => 0; });
+        try { card.effect(ctx); } catch (e) { /* una carta rara: sin vista previa */ }
+        void self;
+        return out;
+    }
+
     // ---------- semillas (objetos de un solo uso) ----------
     useSeed(seedId, targetIndex) {
         const seed = window.SEED_DB[seedId];
