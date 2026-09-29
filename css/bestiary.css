@@ -37,8 +37,12 @@
 .best-name { font-weight: 700; line-height: 1.1; min-height: 2.2em; display: flex; align-items: center; }
 .best-tier { font-size: .76em; padding: 0 10px; border-radius: 99px; background: #EFE5D2; }
 .best-kills { position: absolute; top: -8px; right: -6px; min-width: 26px; padding: 0 6px; border-radius: 99px; background: var(--banana); box-shadow: 0 0 0 2px var(--ink); font-family: var(--f-display); font-size: 1em; }
-/* aún no enfrentado: apagadito */
-.best-tile.unseen .best-art, .best-detail-art.unseen { filter: grayscale(.6); opacity: .7; }
+/* no descubierto: silueta oscura */
+.best-tile.unseen .best-art, .best-detail-art.unseen { filter: brightness(0); opacity: .28; }
+.best-detail-art { position: relative; }
+.best-q { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: var(--f-display); font-size: 5em; color: #fff; text-shadow: 0 0 0 var(--ink), 3px 3px 0 rgba(74,52,40,.35); -webkit-text-stroke: 3px var(--ink); pointer-events: none; }
+.best-detail-art.unseen { filter: none; opacity: 1; }
+.best-detail-art.unseen .art { filter: brightness(0); opacity: .28; }
 .best-tile.unseen { background: #EFE6D6; }
 .best-tile.unseen .best-name { color: var(--ink-soft); }
 /* colores por tipo */

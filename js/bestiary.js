@@ -2,8 +2,8 @@
 // BESTIARY.JS — Bestiario: todos los enemigos, ordenados por castillo y
 // piso, con lo que hace cada uno (vida, rasgos y cada jugada explicada).
 // Se abre desde el menú (o desde una partida: "Volver a la partida").
-// Todo se puede leer desde el principio; los que aún no enfrentas se ven
-// apagaditos, y se cuenta cuántas veces derrotaste a cada uno.
+// Los que aún no enfrentas salen como silueta "no descubierto": su ficha se
+// llena al verlos en un combate. Se cuenta cuántas veces derrotaste a cada uno.
 //   bestiarySee(id)          lo marca como visto (al aparecer en combate)
 //   bestiaryRecordCombat(c)  suma los derrotados de un combate
 // ============================================================
@@ -127,7 +127,7 @@
         const sel = GAME.bestiary.sel === id;
         return `<button class="best-tile tier-${k} ${rec ? '' : 'unseen'} ${sel ? 'sel' : ''}" onclick="bestiarySelect('${id}')">
             <span class="best-art">${art(def.sprite || def.id, def.icon, { size: 'lg' })}</span>
-            <span class="best-name">${def.name}</span>
+            <span class="best-name">${rec ? def.name : '???'}</span>
             ${k !== 'normal' ? `<span class="best-tier">${TIER[k]}</span>` : ''}
             ${rec && rec.kills ? `<span class="best-kills" title="Veces derrotado">×${rec.kills}</span>` : ''}
         </button>`;
@@ -136,12 +136,21 @@
         if (!id) {
             return `<div class="best-detail empty">${art('ui_book', '📖', { size: 'xl' })}
                 <p class="hand">Toca un enemigo para ver qué hace.</p>
-                <p class="best-tip">Los que se ven apagaditos todavía no los enfrentas. El número ×N es cuántas veces los has derrotado.</p></div>`;
+                <p class="best-tip">Las siluetas son enemigos que aún no descubres: enfréntalos para llenar su ficha. El número ×N es cuántas veces los has derrotado.</p></div>`;
         }
         const def = window.ENEMY_DB[id];
         const cat = catalog();
         const k = cat.tierOf[id] || 'normal';
         const rec = book[id];
+        if (!rec) {
+            return `<div class="best-detail tier-${k} undiscovered">
+                <div class="best-detail-art unseen">${art(def.sprite || def.id, def.icon, { size: 'xxl' })}<b class="best-q">?</b></div>
+                <div class="best-ribbon">${TIER[k]}</div>
+                <h3 class="hand">No descubierto</h3>
+                <p class="best-tip">Todavía no te has cruzado con este enemigo. Enfréntalo en un combate para descubrir su nombre, su vida y lo que hace.</p>
+                <p class="best-where"><b>Pista:</b> ${(cat.where[id] || []).join(' · ')}</p>
+            </div>`;
+        }
         const tr = traits(def);
         const moves = (def.moves || []).map((m) => {
             const d = describeMove(m);
@@ -150,12 +159,12 @@
         }).join('');
         const hp = def.hpMin === def.hpMax || !def.hpMax ? `${def.hpMin}` : `${def.hpMin}–${def.hpMax}`;
         return `<div class="best-detail tier-${k}">
-            <div class="best-detail-art ${rec ? '' : 'unseen'}">${art(def.sprite || def.id, def.icon, { size: 'xxl' })}</div>
+            <div class="best-detail-art">${art(def.sprite || def.id, def.icon, { size: 'xxl' })}</div>
             <div class="best-ribbon">${TIER[k]}</div>
             <h3 class="hand">${def.name}</h3>
             <div class="best-stats">
                 <span>${hp} ❤️</span>
-                <span>${rec ? (rec.kills ? `Derrotado ${rec.kills} ${rec.kills === 1 ? 'vez' : 'veces'}` : 'Ya lo viste') : 'Aún no lo enfrentas'}</span>
+                <span>${rec.kills ? `Derrotado ${rec.kills} ${rec.kills === 1 ? 'vez' : 'veces'}` : 'Ya lo viste'}</span>
             </div>
             <p class="best-where"><b>Dónde:</b> ${(cat.where[id] || []).join(' · ')}</p>
             ${tr.list.length ? `<h4 class="hand">Rasgos</h4><ul class="best-traits" ${tr.statuses.length ? tip(tr.statuses.map(([s, n]) => statusTip(s, n))) : ''}>${tr.list.map((x) => `<li>${x}</li>`).join('')}</ul>` : ''}
@@ -197,7 +206,7 @@
                 <div class="best-head">
                     ${art('ui_book', '📖', { size: 'lg' })}
                     <h1 class="hand-title">Bestiario</h1>
-                    <span class="best-count hand">${seen} de ${all.length} enemigos vistos</span>
+                    <span class="best-count hand">${seen} de ${all.length} enemigos descubiertos</span>
                 </div>
                 <div class="best-tabs">${tabs.map((t) => `<button class="best-tab ${st.tab === t.n ? 'on' : ''}" onclick="bestiaryTab(${t.n})">${art(t.sprite, t.icon, { size: 'sm' })}<span>${t.label}</span></button>`).join('')}</div>
                 <div class="best-body">

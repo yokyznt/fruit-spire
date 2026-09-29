@@ -12,7 +12,7 @@ window.PATCH_NOTES = [
     {
         version: '2.3', date: '28 sep 2026', title: 'Bestiario y tutorial nuevo',
         items: [
-            '¡Bestiario! En el menú (o desde una partida) puedes ver a los 121 enemigos ordenados por castillo y piso, con la regla de cada piso, su vida, sus rasgos y lo que hace cada una de sus jugadas. Los que aún no enfrentas se ven apagaditos y se cuenta cuántas veces derrotaste a cada uno.',
+            '¡Bestiario! En el menú (o desde una partida) están los 121 enemigos ordenados por castillo y piso, con la regla de cada piso. Los que aún no enfrentas salen como silueta «No descubierto»; al verlos en combate se llena su ficha con su vida, sus rasgos y lo que hace cada jugada, y se cuenta cuántas veces los derrotaste.',
             'Tutorial renovado: ahora enseña el daño real al arrastrar cartas, cómo la cáscara recibe el golpe primero, las explicaciones al pasar el mouse, la mochila (usarás una semilla contra el jefe) y las reglas de cada piso.',
             'El tutorial muestra en qué capítulo vas y cuánto falta, Profe Limón te felicita al completar cada paso y puedes avanzar con Enter. La pantalla final repasa todo lo aprendido y deja repetirlo.'
         ],
