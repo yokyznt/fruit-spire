@@ -31,6 +31,7 @@
         const snap = { gold: p.gold, hp: p.hp, maxHp: p.maxHp, deck: p.deck.slice(), seeds: p.seeds.slice() };
         const start = (GAME.loot = GAME.loot || []).length;
         GAME.lootCapture = true; // giveRelic encola en vez de dar
+        GAME.deckLog = []; // los ayudantes de eventos anotan aquí lo que le hacen al mazo
         let res;
         try { res = fn(); } finally { GAME.lootCapture = false; }
         // cartas nuevas al final del mazo (las maldiciones y estados entran solas)
@@ -43,6 +44,10 @@
                 else window.queueLoot({ k: 'card', id });
             });
         }
+        // cambios del mazo que no son premios: transformar, madurar, quitar o
+        // una maldición que se cuela. Se muestran animados en el resultado.
+        GAME.deckChanges = GAME.deckLog.length ? GAME.deckLog : deckDiff(snap.deck, p.deck);
+        GAME.deckLog = null;
         // semillas que aparecieron en huecos vacíos
         p.seeds.forEach((id, i) => { if (id && !snap.seeds[i]) { p.seeds[i] = null; window.queueLoot({ k: 'seed', id }); } });
         const dGold = p.gold - snap.gold, dMax = p.maxHp - snap.maxHp, dHp = p.hp - snap.hp;
@@ -61,6 +66,41 @@
         const added = GAME.loot.splice(start).sort((x, y) => ORDER[x.k] - ORDER[y.k]);
         GAME.loot.push(...added);
         return res;
+    };
+
+    function deckDiff(before, after) {
+        // cartas que salieron o entraron (contando copias)
+        const count = (list) => list.reduce((m, id) => m.set(id, (m.get(id) || 0) + 1), new Map());
+        const a = count(before), b = count(after);
+        const removed = [], added = [];
+        a.forEach((n, id) => { for (let k = 0; k < n - (b.get(id) || 0); k++) removed.push(id); });
+        b.forEach((n, id) => { for (let k = 0; k < n - (a.get(id) || 0); k++) added.push(id); });
+        if (!removed.length && !added.length) return [];
+        // cambios en su lugar (transformar o madurar): misma posición, otra carta
+        if (before.length === after.length) {
+            const moved = before.map((id, i) => i).filter((i) => before[i] !== after[i]);
+            if (moved.length === removed.length) {
+                return moved.map((i) => ({ kind: after[i] === before[i] + '+' ? 'upgrade' : 'transform', from: before[i], to: after[i] }));
+            }
+        }
+        return [...removed.map((id) => ({ kind: 'remove', from: id })), ...added.map((id) => ({ kind: 'add', to: id }))];
+    }
+    // Las cartas del mazo que cambiaron, animadas (se ven una sola vez)
+    window.deckChangesHtml = function () {
+        const list = GAME.deckChanges || [];
+        if (!list.length) return '';
+        const card = (id) => { const c = window.getCard(id); return c ? renderCardHtml(c, {}) : ''; };
+        const name = (id) => (window.getCard(id) || {}).name || '';
+        const LABEL = { transform: 'se transformó', upgrade: '¡madurada!', remove: 'salió de tu mazo', add: 'entró a tu mazo' };
+        return `<div class="dc-row">${list.slice(0, 4).map((ch, i) => `
+            <div class="dc dc-${ch.kind}" style="--i:${i}">
+                <div class="dc-stage">
+                    ${ch.from ? `<div class="dc-card dc-from">${card(ch.from)}</div>` : ''}
+                    ${ch.to ? `<div class="dc-card dc-to">${card(ch.to)}</div>` : ''}
+                    <span class="dc-burst">${'<i></i>'.repeat(8)}</span>
+                </div>
+                <p class="dc-label hand">${ch.kind === 'transform' ? `${name(ch.from)} <b>→</b> ${name(ch.to)}` : name(ch.from || ch.to)} <small>${LABEL[ch.kind]}</small></p>
+            </div>`).join('')}</div>`;
     };
 
     // Da de verdad un premio

@@ -1101,16 +1101,24 @@ function leaveShop() { if (GAME.anim) return; GAME.restMode = null; GAME.screen 
 // ---------------------------------------------------------
 function eventHelpers() {
     const p = GAME.player;
+    // lo que le pasa al mazo, para mostrarlo animado en el resultado (ver js/loot.js)
+    const log = (ch) => { if (GAME.deckLog) GAME.deckLog.push(ch); };
     return {
         act: p.act,
         grantRandomRelic,
-        addCard(id) { p.deck.push(id); markDiscovered([id]); },
+        addCard(id) {
+            p.deck.push(id);
+            markDiscovered([id]);
+            const c = window.getCard(id);
+            if (c && (c.type === 'curse' || c.type === 'status')) log({ kind: 'add', to: id });
+        },
         randomCard(rarity) { const r = rarity || pickOne(REWARD_RARITIES); return pickOne(cardsOfRarity(r, null, false)) || pickOne(cardsOfRarity(r)); },
         upgradeRandom(n) {
             const idx = p.deck.map((id, i) => i).filter((i) => (window.getCard(p.deck[i]) || {}).canUpgrade);
             const names = [];
             for (let k = 0; k < n && idx.length; k++) {
                 const i = idx.splice(Math.floor(Math.random() * idx.length), 1)[0];
+                log({ kind: 'upgrade', from: p.deck[i], to: `${p.deck[i]}+` });
                 p.deck[i] = `${p.deck[i]}+`;
                 names.push(window.getCard(p.deck[i]).name);
             }
@@ -1120,6 +1128,7 @@ function eventHelpers() {
             const idx = p.deck.map((id, i) => i).filter((i) => !basicOnly || (window.getCard(p.deck[i]) || {}).rarity === 'basic');
             if (!idx.length) return null;
             const [id] = p.deck.splice(pickOne(idx), 1);
+            log({ kind: 'remove', from: id });
             return window.getCard(id).name;
         },
         duplicateRandom() {
@@ -1151,6 +1160,7 @@ function eventHelpers() {
             const old = window.getCard(p.deck[i]);
             const rarity = old.rarity === 'basic' ? 'common' : old.rarity;
             const next = pickOne(cardsOfRarity(rarity)) || pickOne(cardsOfRarity('common'));
+            log({ kind: 'transform', from: p.deck[i], to: next.id });
             p.deck[i] = next.id;
             markDiscovered([next.id]);
             return `Tu ${old.name} se transforma en ${next.name}.`;

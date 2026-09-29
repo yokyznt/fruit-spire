@@ -319,7 +319,7 @@
             <p class="hand mg-stake">${m.free ? 'Partida gratis' : `Apuesta: ${art('ui_coin', '🪙', { size: 'xs' })} ${m.bet}`}</p>
             ${row(m.house, 'house', 'La casa')}
             ${row(m.player, 'player', 'Tú')}
-            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p>${lootRowHtml()}<button class="btn-mint" onclick="mgLeave()" ${lootPending() ? 'disabled' : ''}>Continuar</button>` : `
+            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p>${deckChangesHtml()}${lootRowHtml()}<button class="btn-mint" onclick="mgLeave()" ${lootPending() ? 'disabled' : ''}>Continuar</button>` : `
             <div class="controls-row">
                 <button class="btn-mint" ${canAct ? '' : 'disabled'} onclick="mgDiceRoll()">Tirar un dado</button>
                 <button class="btn-banana" ${canAct && m.player.length ? '' : 'disabled'} onclick="mgDiceStand()">Plantarme con ${ps}</button>
@@ -384,7 +384,7 @@
             <div class="mg-row"><b class="hand">Tú</b>
                 <div class="poker-row">${m.player.map((c, i) => cardHtml(c, { sel: m.selected.includes(i), click: m.phase === 'play' ? `mgPokerToggle(${i})` : '' })).join('')}</div>
                 <span class="mg-hand">${HAND_NAMES[ph.rank]}</span></div>
-            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p>${lootRowHtml()}<button class="btn-mint" onclick="mgLeave()" ${lootPending() ? 'disabled' : ''}>Continuar</button>` : `
+            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p>${deckChangesHtml()}${lootRowHtml()}<button class="btn-mint" onclick="mgLeave()" ${lootPending() ? 'disabled' : ''}>Continuar</button>` : `
             <p class="hand">${m.selected.length ? `Vas a cambiar ${m.selected.length} carta${m.selected.length > 1 ? 's' : ''}.` : 'Toca las cartas que quieras cambiar (o ninguna).'}</p>
             <div class="controls-row"><button class="btn-mint" onclick="mgPokerShow()">${m.selected.length ? 'Cambiar y mostrar' : 'Plantarme y mostrar'}</button></div>`}`, 'wide mg-panel');
     }

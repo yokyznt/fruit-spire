@@ -62,3 +62,36 @@
 .mg-panel .loot-coins { width: 76px; height: 58px; transform: scale(.8); }
 .mg-panel .loot-hint { display: none; }
 .mg-panel .mg-result { margin: 6px 0 2px; }
+
+/* ---------- cartas del mazo que cambian (transformar, madurar, quitar, entrar) ---------- */
+.dc-row { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; margin: 8px auto 2px; }
+.dc { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dc-stage { position: relative; width: 124px; height: 172px; perspective: 700px; }
+.dc-card { position: absolute; left: 50%; top: 50%; width: 176px; height: 250px; margin: -125px 0 0 -88px; transform: scale(.66); backface-visibility: hidden; }
+.dc-card .card { pointer-events: none; }
+/* transformar / madurar: la vieja gira y se va; la nueva gira y llega */
+.dc-transform .dc-from, .dc-upgrade .dc-from { animation: dcOut .7s ease-in .6s both; }
+.dc-transform .dc-to, .dc-upgrade .dc-to { animation: dcIn .7s var(--ease-out) 1.25s both; }
+@keyframes dcOut { 0% { transform: scale(.66) rotateY(0); opacity: 1; } 60% { opacity: 1; } 100% { transform: scale(.5) rotateY(90deg); opacity: 0; } }
+@keyframes dcIn { 0% { transform: scale(.5) rotateY(-90deg); opacity: 0; } 30% { opacity: 1; } 70% { transform: scale(.74) rotateY(0); } 100% { transform: scale(.66) rotateY(0); opacity: 1; } }
+/* destellos al cambiar */
+.dc-burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.dc-burst i { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; opacity: 0; background: #FFCF4D; box-shadow: 0 0 8px 2px #FFE27A; }
+.dc-burst i:nth-child(2n) { background: #F2A0C8; box-shadow: 0 0 8px 2px #FFD0E6; }
+.dc-burst i:nth-child(3n) { background: #8FDCC0; box-shadow: 0 0 8px 2px #C9F2E2; }
+.dc-transform .dc-burst i, .dc-upgrade .dc-burst i, .dc-add .dc-burst i { animation: dcBurst .9s ease-out 1.15s both; }
+.dc-burst i:nth-child(1) { --a: 0deg; } .dc-burst i:nth-child(2) { --a: 45deg; } .dc-burst i:nth-child(3) { --a: 90deg; } .dc-burst i:nth-child(4) { --a: 135deg; }
+.dc-burst i:nth-child(5) { --a: 180deg; } .dc-burst i:nth-child(6) { --a: 225deg; } .dc-burst i:nth-child(7) { --a: 270deg; } .dc-burst i:nth-child(8) { --a: 315deg; }
+@keyframes dcBurst { 0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(.4); } 60% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-95px) scale(1); } }
+.dc-upgrade .dc-burst i { background: #FFCF4D; box-shadow: 0 0 10px 3px #FFE27A; }
+/* quitar: tiembla y se desvanece hacia abajo */
+.dc-remove .dc-from { animation: dcRemove 1.3s ease-in .6s both; }
+@keyframes dcRemove { 0% { transform: scale(.66); opacity: 1; filter: none; } 25% { transform: scale(.66) rotate(-4deg); } 40% { transform: scale(.66) rotate(4deg); } 55% { transform: scale(.66) rotate(-2deg); filter: grayscale(.8); } 100% { transform: scale(.4) translateY(120px) rotate(12deg); opacity: 0; filter: grayscale(1); } }
+/* entrar (maldiciones): cae desde arriba */
+.dc-add .dc-to { animation: dcAdd .8s var(--ease-back) .5s both; }
+@keyframes dcAdd { 0% { transform: scale(.5) translateY(-220px) rotate(-14deg); opacity: 0; } 100% { transform: scale(.66); opacity: 1; } }
+.dc-label { margin: 0; font-size: 1.05em; text-align: center; opacity: 0; animation: dcLabel .4s ease 1.6s both; }
+.dc-label small { display: block; font-size: .85em; color: var(--ink-soft); }
+.dc-upgrade .dc-label small { color: #B8860B; }
+.dc-remove .dc-label small { color: #B0394C; }
+@keyframes dcLabel { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

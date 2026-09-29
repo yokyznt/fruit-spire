@@ -219,7 +219,7 @@ function logoHtml(text, cls) {
 // animaciones de "aparecer" (panel, tablero, mochila…). Si la pantalla es la
 // misma, las animaciones de entrada de lo que YA estaba se adelantan al
 // final; solo aparece con animación lo que es nuevo de verdad.
-const ENTRY_ANIMS = new Set(['lootIn', 'ciIn', 'ciInLeft', 'panelIn', 'pop', 'fadeIn', 'invIn', 'slideUp', 'glowIn', 'popBubble', 'seedMenuIn', 'panelPop', 'mgIn', 'boardIn']);
+const ENTRY_ANIMS = new Set(['dcOut', 'dcIn', 'dcBurst', 'dcRemove', 'dcAdd', 'dcLabel', 'lootIn', 'ciIn', 'ciInLeft', 'panelIn', 'pop', 'fadeIn', 'invIn', 'slideUp', 'glowIn', 'popBubble', 'seedMenuIn', 'panelPop', 'mgIn', 'boardIn']);
 function viewSnapshot(root) {
     const classes = new Map();
     root.querySelectorAll('[class]').forEach((el) => {
@@ -1395,6 +1395,7 @@ function renderWell() {
     return panel(art('node_well', '🪙', { size: 'xl' }), 'Pozo de los Deseos', `
         <p>Tira una moneda y pide un deseo. Cada vez cuesta más oro… pero puedes parar cuando quieras.</p>
         ${GAME.wellLastMsg ? `<p class="hand well-msg">${GAME.wellLastMsg}</p>` : ''}
+        ${deckChangesHtml()}
         ${lootRowHtml()}
         <div class="controls-row">
             <button class="btn-mint" onclick="tossWellCoin()" ${p.gold < cost || lootPending() ? 'disabled' : ''}>Tirar moneda (${art('ui_coin', '🪙', { size: 'xs' })}${cost})</button>
@@ -1411,6 +1412,7 @@ function renderKeyFound() {
 function renderVault() {
     return panel(art('node_vault', '🔒', { size: 'xl' }), GAME.vaultOpened ? '¡Cofre Sellado abierto!' : 'Cofre Sellado', `
         <p>${GAME.lastEventMsg}</p>
+        ${deckChangesHtml()}
         ${lootRowHtml()}
         <button onclick="closeEventResult()" ${lootPending() ? 'disabled' : ''}>Continuar</button>`, GAME.vaultOpened ? 'celebrate' : '');
 }
@@ -1574,6 +1576,7 @@ function renderTreasure() {
     return panel(r ? art(r.sprite || r.id, r.icon, { size: 'xl' }) : art('node_treasure', '💎', { size: 'xl' }), 'Tesoro', `
         <p>${GAME.lastEventMsg}</p>
         ${cosmeticBox(GAME.newCosmetic)}
+        ${deckChangesHtml()}
         ${lootRowHtml()}
         <button onclick="closeEventResult()" ${lootPending() ? 'disabled' : ''}>Continuar</button>`, 'celebrate');
 }
@@ -1647,6 +1650,7 @@ function renderEventResult() {
     if (!ev) return '';
     return panel(art(ev.sprite || ev.id, ev.icon, { size: 'xl' }), ev.title, `
         <p>${GAME.lastEventMsg}</p>
+        ${deckChangesHtml()}
         ${lootRowHtml()}
         <button onclick="closeEventResult()" ${lootPending() ? 'disabled' : ''}>Continuar</button>`);
 }

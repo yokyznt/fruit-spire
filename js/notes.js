@@ -14,6 +14,7 @@ window.PATCH_NOTES = [
         items: [
             'Los premios ahora salen dibujados y se recogen tocándolos: oro, vida, vida máxima, objetos, semillas y cartas. Cada uno vuela a su lugar en la barra de arriba (el oro a tu bolsa, la vida a tu corazón, los objetos y semillas a la mochila, las cartas al mazo). Pasa en las recompensas de combate, cofres, eventos, el Pozo de los Deseos y los minijuegos.',
             'La barra de arriba salta y muestra "+N" cada vez que ganas oro, vida, objetos, semillas o cartas, vengan de donde vengan.',
+            'Cuando un evento cambia tu mazo lo ves animado: la carta que se transforma gira y se convierte en la nueva, la que madura brilla, la que pierdes se desvanece y las maldiciones caen al mazo.',
             'Nueva Colección en el menú: tus cartas, objetos (con su guiño a otros juegos), semillas y el bestiario, todo en un mismo lugar.'
         ],
         fixes: [
