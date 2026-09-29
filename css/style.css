@@ -484,7 +484,7 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .swatch { width: 40px; height: 26px; border-radius: 10px; flex: none; }
 .swatch.reachable { background: #F2FAEA; box-shadow: 0 0 0 3px var(--leaf); outline: 2px dashed var(--leaf); outline-offset: 3px; }
 .swatch.visited { background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M10 30 Q30 10 40 40 T70 40 T90 70' fill='none' stroke='%238C7462' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E") center / 70% no-repeat; box-shadow: 0 0 0 2px #D9C8AE; opacity: .7; }
-.swatch.wall { height: 14px; border-radius: 2px; background: repeating-linear-gradient(45deg, rgba(255,158,122,.8) 0 7px, rgba(255,214,200,.8) 7px 14px); }
+.swatch.swatch-wall { height: 14px; border-radius: 2px; background: repeating-linear-gradient(45deg, rgba(255,158,122,.8) 0 7px, rgba(255,214,200,.8) 7px 14px); }
 .legend-hint { font-size: 1em; color: var(--ink-soft); margin: auto 0 0; line-height: 1.3; }
 .map-legend button { align-self: center; }
 
@@ -1390,7 +1390,7 @@ button.btn-grape:hover { background: #D6C8F5; }
 .legend-list .art-md { width: 34px; height: 34px; }
 .legend-list.swatches { padding-top: 6px; gap: 6px; }
 .swatch { width: 34px; height: 22px; }
-.swatch.wall { height: 12px; }
+.swatch.swatch-wall { height: 12px; }
 .legend-hint { font-size: .95em; }
 /* quien ataca se dibuja por encima de los demás */
 .portrait[class*="anim-"] { z-index: 8; }
@@ -1910,3 +1910,27 @@ button.btn-banana:hover { background: #FFDB70; }
 
 /* tutorial: cartas que todavía no toca usar */
 .fan-slot.tut-off .card { filter: grayscale(.85) brightness(.85); opacity: .75; }
+
+/* leyenda del mapa compacta: todo cabe sin desplazarse */
+.panel.map-legend { width: 212px; overflow: hidden; gap: 2px; padding: 10px 12px 10px; }
+.map-legend .hand-title { font-size: 1.65em; line-height: 1.05; margin: 0; }
+.legend-act { font-size: 1.1em; margin: 0 0 2px; }
+.legend-rule { font-size: .95em; margin: 0; }
+.legend-variant { font-size: .9em; margin: 0 0 4px; }
+.legend-list { gap: 0; }
+.legend-list li { font-size: .9em; gap: 8px; padding: 0 4px; min-height: 30px; }
+.legend-list .art-md { width: 28px; height: 28px; }
+.legend-list.swatches { padding-top: 5px; margin-top: 3px; gap: 2px 10px; }
+.legend-list.swatches li { min-height: 24px; }
+.swatch { width: 28px; height: 18px; }
+.swatch.swatch-wall { height: 10px; }
+.legend-hint { font-size: .82em; line-height: 1.25; margin-top: 6px; }
+
+/* botón de cerrar: círculo sólido con una X dibujada */
+button.x-btn { width: 44px; height: 44px; padding: 0; border-radius: 50%; border: none; background: #FFD6DC; box-shadow: 0 0 0 3px var(--ink), 0 4px 0 3px rgba(74,52,40,.25); display: grid; place-items: center; transform: none; opacity: 1; }
+button.x-btn svg { width: 24px !important; height: 24px !important; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; fill: none; }
+button.x-btn:hover { background: #FFB8C3; transform: rotate(90deg); box-shadow: 0 0 0 3px var(--ink), 0 4px 0 3px rgba(74,52,40,.25); }
+button.x-btn:active { transform: rotate(90deg) translateY(2px); box-shadow: 0 0 0 3px var(--ink); }
+button.x-btn { transition: transform .2s var(--ease-out), background .15s; }
+.guide-quit.x-btn { width: 38px; height: 38px; }
+.guide-quit.x-btn svg { width: 18px; height: 18px; }

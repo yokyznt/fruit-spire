@@ -161,7 +161,7 @@
                     ${art('ui_bag', '🎒', { size: 'lg' })}
                     <h2 class="hand-title">Mochila</h2>
                     <span class="inv-sub hand">Tus semillas y objetos, todo junto</span>
-                    <button class="inv-close secondary" onclick="closeInventory()" ${tip(['Cerrar', 'También con Esc.'])}>✕</button>
+                    <button class="inv-close x-btn" onclick="closeInventory()" ${tip(['Cerrar', 'También con Esc.'])}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19"/></svg></button>
                 </div>
                 ${seedsSection(p)}
                 ${relicsSection(p, inv)}

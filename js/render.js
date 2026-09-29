@@ -832,10 +832,9 @@ function renderMap() {
             <ul class="legend-list swatches">
                 <li><span class="swatch reachable"></span><span>Puedes ir</span></li>
                 <li><span class="swatch visited"></span><span>Ya pisaste</span></li>
-                <li><span class="swatch wall"></span><span>Muro</span></li>
+                <li><span class="swatch swatch-wall"></span><span>Muro</span></li>
             </ul>
             <p class="legend-hint hand">Solo ➜ adelante, ⬆ arriba o ⬇ abajo, y nunca a una casilla ya pisada.</p>
-            <button class="secondary" onclick="centerMapOnPlayer()">Centrar en mí</button>
         </aside>
     </div>`;
     return html;

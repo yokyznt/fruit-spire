@@ -245,7 +245,7 @@ function showGuide() {
     const pct = Math.round(((tut.i + 1) / TUT_TOTAL) * 100);
     g.innerHTML = `
         ${s.next ? '<div class="guide-blocker"></div>' : ''}
-        <button class="guide-quit" onclick="tutQuit()" ${tip(['Salir del tutorial', 'También con Esc.'])}>✕</button>
+        <button class="guide-quit x-btn" onclick="tutQuit()" ${tip(['Salir del tutorial', 'También con Esc.'])}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19"/></svg></button>
         <div class="guide-box">
             <div class="guide-fruit ${praise ? 'cheer' : ''}">${art('profe_limon', '🍋', { size: 'xl', mood: praise ? 'happy' : undefined })}${praise ? '<span class="guide-praise hand">¡Muy bien!</span>' : ''}</div>
             <div class="guide-bubble ${s.next ? 'reading' : 'doing'}">
