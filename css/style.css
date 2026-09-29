@@ -1934,3 +1934,8 @@ button.x-btn:active { transform: rotate(90deg) translateY(2px); box-shadow: 0 0 
 button.x-btn { transition: transform .2s var(--ease-out), background .15s; }
 .guide-quit.x-btn { width: 38px; height: 38px; }
 .guide-quit.x-btn svg { width: 18px; height: 18px; }
+/* fichas de objeto: el texto se ajusta para no salirse nunca de la ficha */
+.relic-card { overflow: hidden; }
+.relic-card > .art { flex: none; }
+.relic-card .card-name { flex: none; max-height: 2.3em; overflow: hidden; line-height: 1.1; text-align: center; }
+.relic-card .relic-desc { flex: 1 1 auto; min-height: 0; overflow: hidden; text-align: center; }

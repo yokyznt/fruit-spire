@@ -106,7 +106,6 @@ function statusTipsFull(entries) {
 // Tooltip con un título, su texto y la explicación de sus términos
 function explainRelic(r, note) {
     const sections = [[r.name + (note || ''), r.description], ...keywordTips(r.description, r.name)];
-    if (r.ref) sections.push(['Guiño', '@ref:' + r.id]);
     return tip(sections);
 }
 function explain(title, text) {
@@ -351,7 +350,7 @@ function playFlip(before) {
 // Achica el texto de las cartas que no caben (en px del lienzo, sin
 // importar la escala de la ventana). Se hace una sola vez por carta.
 function fitCardText(root) {
-    (root || document).querySelectorAll('.card .card-desc:not([data-fit]), .card .card-name:not([data-fit])').forEach((el) => {
+    (root || document).querySelectorAll('.card .card-desc:not([data-fit]), .card .card-name:not([data-fit]), .relic-card .relic-desc:not([data-fit]), .relic-card .card-name:not([data-fit])').forEach((el) => {
         el.dataset.fit = '1';
         if (el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1) return;
         let size = parseFloat(getComputedStyle(el).fontSize);
@@ -1487,7 +1486,6 @@ function relicCardHtml(relic, onclick, extra) {
         ${art(relic.sprite || relic.id, relic.icon, { size: 'lg' })}
         <div class="card-name">${relic.name}</div>
         <div class="relic-desc">${relic.description}</div>
-        ${relic.ref && window.refBoxHtml ? refBoxHtml(relic, 'sm') : ''}
         ${extra || ''}
     </div>`;
 }
