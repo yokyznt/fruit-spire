@@ -308,6 +308,7 @@ function randomRelic(tiers) {
 }
 function giveRelic(player, relic) {
     player.relics.push(relic.id);
+    if (window.markFound) markFound('relics', relic.id);
     if (window.Sfx) Sfx.relicGet();
     if (relic.onPickup) relic.onPickup(player);
 }
@@ -334,7 +335,6 @@ function rememberReturn() {
     hideTip();
 }
 function backLabel() { return GAME.returnTo ? 'Volver a la partida' : 'Volver'; }
-function openCollection() { rememberReturn(); GAME.screen = 'collection'; render(); }
 function openWardrobe() {
     rememberReturn();
     if (GAME.player && window.CHARACTER_DB[GAME.player.characterId]) GAME.wardrobeChar = GAME.player.characterId;
@@ -810,6 +810,7 @@ function addSeed(id) {
     const i = p.seeds.indexOf(null);
     if (i < 0) return false;
     p.seeds[i] = id;
+    if (window.markFound) markFound('seeds', id);
     return true;
 }
 function takeRewardSeed() {
@@ -1238,7 +1239,7 @@ function leaveDungeon() { GAME.dungeon = null; GAME.screen = 'map'; saveGame(); 
 
 // funciones que se llaman desde el HTML
 Object.assign(window, {
-    showMainMenu, goToCharacterSelect, openCollection, openWardrobe, wardrobeSelect, wardrobeEquip, wardrobeClear, wearNewCosmetic, backToMenu, selectDifficulty, selectCharacter, continueGame, newGame,
+    showMainMenu, goToCharacterSelect, openWardrobe, wardrobeSelect, wardrobeEquip, wardrobeClear, wearNewCosmetic, backToMenu, selectDifficulty, selectCharacter, continueGame, newGame,
     startNewGameWithCharacter, beginAct, openDeckView, openPile, closeModal, movePlayer,
     pickRewardCard, skipReward, pickBossRelic, skipBossRelic,
     restHeal, setRestMode, leaveRest, restUpgradeCard, restRemoveCard,

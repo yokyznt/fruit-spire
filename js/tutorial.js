@@ -319,7 +319,7 @@ function renderTutorialEnd() {
         'Pasa el mouse sobre cualquier cosa para ver qué hace.',
         'Cada piso tiene su regla: léela al empezar el combate.',
         'Cada enemigo derrotado da experiencia para el <b>Pase de Batalla</b> (colores y accesorios para tus frutas).',
-        'En el <b>Bestiario</b> del menú puedes repasar a cada enemigo que conozcas.',
+        'En la <b>Colección</b> del menú puedes repasar tus cartas, objetos, semillas y a cada enemigo que conozcas.',
         'Un mazo pequeño y bien madurado suele ganarle a uno grande.'
     ];
     return panel(art('profe_limon', '🍋', { size: 'xl', mood: 'happy' }), '¡Tutorial completado!', `

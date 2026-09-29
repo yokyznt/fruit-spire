@@ -488,7 +488,7 @@ function renderScreen() {
         case 'menu': return renderMainMenu();
         case 'character-select': return renderCharacterSelect();
         case 'collection': return renderCollection();
-        case 'bestiary': return renderBestiary();
+        case 'bestiary': return renderCollection();
         case 'wardrobe': return renderWardrobe();
         case 'story': return renderStory();
         case 'ending': return renderEnding();
@@ -557,10 +557,7 @@ function renderMainMenu() {
             <button class="btn-banana" onclick="startTutorial()">Cómo jugar</button>
             <button class="btn-strawberry" onclick="openPass()">Pase de Batalla${(window.PASS && PASS.unclaimed()) ? `<span class="menu-badge">${PASS.unclaimed()}</span>` : ''}</button>
             <button class="btn-grape" onclick="openWardrobe()">Vestidor</button>
-            <div class="menu-row">
-                <button class="secondary" onclick="openCollection()">Álbum de cartas</button>
-                <button class="secondary" onclick="openBestiary()">Bestiario</button>
-            </div>
+            <button class="secondary" onclick="openCollection()">Colección</button>
         </div>
         <button class="notes-btn" onclick="openNotes()" ${tip(['Notas de la versión', 'Las novedades y arreglos del juego, y el Instagram del creador.'])}>${art('ui_notes', '', { size: 'sm' })} Notas${window.notesAreNew && notesAreNew() ? '<i class="new-dot"></i>' : ''}</button>
         <button class="fullscreen-btn" onclick="toggleFullscreen()" ${tip(['Pantalla completa', 'Entrar o salir de la pantalla completa (también con F11).'])}>⛶</button>
@@ -623,7 +620,8 @@ function cardTipAttr(card) {
     return card ? tip([[card.name, card.description], ...cardTipSections(card)]) : '';
 }
 
-function renderCollection() {
+// Las cartas del álbum (pestaña "Cartas" de la Colección, ver js/collection.js)
+function cardAlbumParts() {
     const discovered = new Set(getDiscovered());
     const all = Object.values(window.CARD_DB).filter((c) => c.rarity !== 'token');
     const groups = [
@@ -632,19 +630,15 @@ function renderCollection() {
         { title: 'Maldiciones y estados', sprite: 'fruta_magullada', icon: '🤕', cards: all.filter((c) => c.type === 'curse' || c.type === 'status') }
     ];
     const found = all.filter((c) => discovered.has(c.id)).length;
-    return `
-    <div class="menu-screen wide">
-        <div class="panel album">
-            <h1 class="hand-title">Álbum de cartas</h1>
-            <div class="menu-subtitle hand">${found} de ${all.length} stickers pegados</div>
+    return {
+        count: `${found} de ${all.length} cartas`,
+        html: `
             <div class="collection-grid">
                 ${groups.map((g) => `
                 <h3 class="album-section hand">${art(g.sprite, g.icon, { size: 'sm' })} ${g.title} <small>${g.cards.filter((c) => discovered.has(c.id)).length}/${g.cards.length}</small></h3>
                 ${g.cards.map((c) => discovered.has(c.id) ? renderCardHtml(c, {}) : '<div class="card-slot"><span>?</span></div>').join('')}`).join('')}
-            </div>
-        </div>
-        <button class="secondary" onclick="backToMenu()">${backLabel()}</button>
-    </div>`;
+            </div>`
+    };
 }
 
 // ---------- PORTADA DE NIVEL ----------

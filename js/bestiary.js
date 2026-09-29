@@ -14,6 +14,7 @@
     try { book = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { book = {}; }
     const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(book)); } catch (e) { /* sin almacenamiento */ } };
 
+    window.bestiarySeenCount = () => [Object.keys(window.ENEMY_DB).filter((id) => book[id]).length, Object.keys(window.ENEMY_DB).length];
     window.bestiarySee = function (id) {
         if (!id || (book[id] && book[id].seen)) return;
         book[id] = Object.assign({ kills: 0 }, book[id], { seen: 1 });
@@ -121,13 +122,12 @@
     }
 
     // ---------- pantalla ----------
-    window.openBestiary = function () {
-        if (typeof rememberReturn === 'function') rememberReturn();
+    // el bestiario vive dentro de la Colección (js/collection.js)
+    window.openBestiary = function () { openCollection('bestiary'); };
+    function ensureState() {
         const c = GAME.player ? Math.min(3, GAME.player.act || 1) : 1;
-        GAME.bestiary = GAME.bestiary || { tab: c, sel: null };
-        GAME.screen = 'bestiary';
-        render();
-    };
+        return GAME.bestiary || (GAME.bestiary = { tab: c, sel: null });
+    }
     window.bestiaryTab = function (t) { GAME.bestiary.tab = t; GAME.bestiary.sel = null; if (window.Sfx) Sfx.select(); render(); };
     window.bestiarySelect = function (id) { GAME.bestiary.sel = GAME.bestiary.sel === id ? null : id; if (window.Sfx) Sfx.tap(); render(); };
 
@@ -192,9 +192,9 @@
             <div class="best-grid">${ids.map(tile).join('')}</div>
         </section>`;
     }
-    window.renderBestiary = function () {
+    window.bestiaryParts = function () {
         const cat = catalog();
-        const st = GAME.bestiary || (GAME.bestiary = { tab: 1, sel: null });
+        const st = ensureState();
         const all = Object.keys(window.ENEMY_DB);
         const seen = all.filter((id) => book[id]).length;
         const tabs = [...cat.castles.map((c) => ({ n: c.castle.n, label: `Castillo ${c.castle.n}`, sprite: c.castle.sprite, icon: c.castle.icon })), { n: 0, label: 'Invocados', sprite: 'node_mystery', icon: '❔' }];
@@ -212,21 +212,13 @@
                 + section('Jefes del castillo', 'Esperan al final del último piso. Solo uno te toca en cada partida.', c.castle.sprite, c.castle.icon, c.bosses);
         }
         const selId = st.sel && window.ENEMY_DB[st.sel] ? st.sel : null;
-        return `
-        <div class="menu-screen wide">
-            <div class="panel bestiary">
-                <div class="best-head">
-                    ${art('ui_book', '📖', { size: 'lg' })}
-                    <h1 class="hand-title">Bestiario</h1>
-                    <span class="best-count hand">${seen} de ${all.length} enemigos descubiertos</span>
-                </div>
-                <div class="best-tabs">${tabs.map((t) => `<button class="best-tab ${st.tab === t.n ? 'on' : ''}" onclick="bestiaryTab(${t.n})">${art(t.sprite, t.icon, { size: 'sm' })}<span>${t.label}</span></button>`).join('')}</div>
+        return {
+            count: `${seen} de ${all.length} enemigos descubiertos`,
+            html: `<div class="best-tabs">${tabs.map((t) => `<button class="best-tab ${st.tab === t.n ? 'on' : ''}" onclick="bestiaryTab(${t.n})">${art(t.sprite, t.icon, { size: 'sm' })}<span>${t.label}</span></button>`).join('')}</div>
                 <div class="best-body">
                     <div class="best-list">${body}</div>
                     ${detail(selId)}
-                </div>
-                <button class="secondary" onclick="backToMenu()">${backLabel()}</button>
-            </div>
-        </div>`;
+                </div>`
+        };
     };
 })();
