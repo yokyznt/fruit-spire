@@ -123,3 +123,7 @@ button.btn-strawberry:hover { background: #FFB4C1; }
 @keyframes kingHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px) rotate(-3deg); } }
 .replay-btn { align-self: center; margin: 0 0 10px; display: inline-flex; align-items: center; gap: 8px; }
 .replay-btn .art { width: 26px; height: 26px; }
+/* portada del piso: título más grande y con aire alrededor */
+.act-intro { gap: 12px; }
+.logo.act-logo { font-size: 4.6em; margin: 6px 0 10px; line-height: 1; }
+.act-intro .act-scene { margin-top: 6px; }
