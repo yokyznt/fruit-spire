@@ -51,17 +51,28 @@
             bosses.forEach((id) => note(id, c.name));
             return { castle: c, themes, bosses };
         });
-        // los que solo salen invocados (o de otros lugares)
+        // los invocados: cualquiera que otro enemigo llame, cree al dividirse o críe
+        const by = {}; // id invocado → quiénes lo invocan
+        const call = (id, who) => { if (window.ENEMY_DB[id]) (by[id] = by[id] || []).includes(who) || by[id].push(who); };
+        Object.values(window.ENEMY_DB).forEach((def) => {
+            (def.moves || []).forEach((m) => (m.summon || []).forEach((id) => call(id, def.id)));
+            if (def.splitInto) call(def.splitInto, def.id);
+            if (def.breedInto || (def.start && def.start.breed)) call(def.breedInto || def.id, def.id);
+        });
         const listed = new Set(Object.keys(where));
-        const others = Object.keys(window.ENEMY_DB).filter((id) => !listed.has(id));
-        others.forEach((id) => note(id, 'Invocado por otros enemigos'));
+        const summoned = Object.keys(by);
+        summoned.forEach((id) => note(id, `Invocado por ${by[id].map((w) => window.ENEMY_DB[w].name).join(', ')}`));
+        // los que no salen en ningún piso ni los invoca nadie
+        const others = Object.keys(window.ENEMY_DB).filter((id) => !listed.has(id) && !by[id]);
+        others.forEach((id) => note(id, 'Encuentros especiales'));
         const tierOf = {};
         castles.forEach((c) => {
             c.themes.forEach((t) => { t.normal.forEach((id) => { tierOf[id] = tierOf[id] || 'normal'; }); t.elites.forEach((id) => { tierOf[id] = 'elite'; }); t.guards.forEach((id) => { tierOf[id] = 'guard'; }); });
             c.bosses.forEach((id) => { tierOf[id] = 'boss'; });
         });
+        summoned.forEach((id) => { tierOf[id] = tierOf[id] || 'other'; });
         others.forEach((id) => { tierOf[id] = 'other'; });
-        return (cache = { castles, others, where, tierOf });
+        return (cache = { castles, summoned, by, others, where, tierOf });
     }
 
     // ---------- qué hace cada jugada, en palabras ----------
@@ -143,7 +154,7 @@
         const k = cat.tierOf[id] || 'normal';
         const rec = book[id];
         if (!rec) {
-            return `<div class="best-detail tier-${k} undiscovered">
+            return `<div class="best-detail tier-${k} undiscovered" data-scroll-key="${id}">
                 <div class="best-detail-art unseen">${art(def.sprite || def.id, def.icon, { size: 'xxl' })}<b class="best-q">?</b></div>
                 <div class="best-ribbon">${TIER[k]}</div>
                 <h3 class="hand">No descubierto</h3>
@@ -158,7 +169,7 @@
             return `<li ${tips}><b class="hand">${m.name}</b><span>${d.text}</span></li>`;
         }).join('');
         const hp = def.hpMin === def.hpMax || !def.hpMax ? `${def.hpMin}` : `${def.hpMin}–${def.hpMax}`;
-        return `<div class="best-detail tier-${k}">
+        return `<div class="best-detail tier-${k}" data-scroll-key="${id}">
             <div class="best-detail-art">${art(def.sprite || def.id, def.icon, { size: 'xxl' })}</div>
             <div class="best-ribbon">${TIER[k]}</div>
             <h3 class="hand">${def.name}</h3>
@@ -186,10 +197,11 @@
         const st = GAME.bestiary || (GAME.bestiary = { tab: 1, sel: null });
         const all = Object.keys(window.ENEMY_DB);
         const seen = all.filter((id) => book[id]).length;
-        const tabs = [...cat.castles.map((c) => ({ n: c.castle.n, label: `Castillo ${c.castle.n}`, sprite: c.castle.sprite, icon: c.castle.icon })), { n: 0, label: 'Invocados y otros', sprite: 'node_mystery', icon: '❔' }];
+        const tabs = [...cat.castles.map((c) => ({ n: c.castle.n, label: `Castillo ${c.castle.n}`, sprite: c.castle.sprite, icon: c.castle.icon })), { n: 0, label: 'Invocados', sprite: 'node_mystery', icon: '❔' }];
         let body = '';
         if (st.tab === 0) {
-            body = section('Invocados y otros', 'Enemigos que aparecen cuando otros los llaman, se dividen o crían.', 'node_mystery', '❔', cat.others);
+            body = section('Invocados', 'Aparecen cuando otro enemigo los llama, se divide o cría. Algunos también salen solos en los pisos.', 'node_mystery', '❔', cat.summoned)
+                + section('Encuentros especiales', 'No salen en ningún piso ni los invoca nadie.', 'node_enemy', '❔', cat.others);
         } else {
             const c = cat.castles.find((x) => x.castle.n === st.tab) || cat.castles[0];
             body = `<p class="best-castle-sub hand">${c.castle.name} — ${c.castle.subtitle}</p>`

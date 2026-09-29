@@ -257,10 +257,42 @@ function musicContextFor() {
     return 'map' + Math.min(3, Math.max(1, GAME.player.act || 1));
 }
 
+// ---------- las listas no brincan hasta arriba al redibujar ----------
+// Se guarda el scroll de cada lista desplazada (por su clase y su
+// data-scroll-key) y se devuelve igual si sigue en la misma pantalla. Un
+// panel con otra data-scroll-key (p. ej. el detalle de otro enemigo) empieza arriba.
+function scrollKey(el, i) { return `${el.getAttribute('class')}|${el.dataset.scrollKey || ''}|${i}`; }
+function captureScroll(root) {
+    const out = { screen: GAME.screen, map: new Map() };
+    if (!root) return out;
+    const seen = new Map();
+    root.querySelectorAll('*').forEach((el) => {
+        if (!el.scrollTop && !el.scrollLeft) return;
+        const cls = el.getAttribute('class') || '';
+        const n = seen.get(cls) || 0;
+        seen.set(cls, n + 1);
+        out.map.set(scrollKey(el, n), [el.scrollTop, el.scrollLeft]);
+    });
+    return out;
+}
+function restoreScroll(prev, root) {
+    if (!prev || !prev.map.size || prev.screen !== GAME.screen) return;
+    const seen = new Map();
+    root.querySelectorAll('*').forEach((el) => {
+        if (el.scrollHeight <= el.clientHeight && el.scrollWidth <= el.clientWidth) return;
+        const cls = el.getAttribute('class') || '';
+        const n = seen.get(cls) || 0;
+        seen.set(cls, n + 1);
+        const pos = prev.map.get(scrollKey(el, n));
+        if (pos) { el.scrollTop = pos[0]; el.scrollLeft = pos[1]; }
+    });
+}
+
 function render() {
     hideTip();
     const before = captureFlip();
     const prevView = viewSnapshot(document.getElementById('screen'));
+    const prevScroll = captureScroll(document.getElementById('screen'));
     const screen = document.getElementById('screen');
     screen.className = `screen-${GAME.screen}${GAME.player ? ` act-${GAME.player.act} floor-${currentFloorNo()} theme-${currentThemeId()}` : ''}`;
     // las animaciones de reposo usan esta fase como retraso negativo, así
@@ -269,6 +301,7 @@ function render() {
     screen.innerHTML = renderHud() + `<main class="stage">${renderScreen()}</main>` + renderModal() + (window.renderInventory ? renderInventory() : '');
     heartifyDom(document.getElementById('screen'));
     settleEntryAnims(prevView, screen);
+    restoreScroll(prevScroll, screen);
     if (window.setMusicContext) setMusicContext(musicContextFor());
     playFlip(before);
     afterRender();

@@ -31,8 +31,8 @@
     border-radius: 16px; background: var(--paper-2); font-size: .9em; cursor: pointer; text-align: center; min-height: 138px;
     box-shadow: 0 0 0 2px var(--ink), 0 4px 0 2px rgba(74, 52, 40, .2); transition: transform .2s var(--ease-out);
 }
-.best-tile:hover { transform: translateY(-4px) rotate(-1deg); }
-.best-tile.sel { transform: translateY(-4px) scale(1.04); box-shadow: 0 0 0 3px var(--mint-dark), 0 0 0 7px rgba(92, 201, 167, .45), 0 4px 0 2px rgba(74, 52, 40, .2); }
+.best-tile:hover { background-color: #FFFDF6; }
+.best-tile.sel { box-shadow: 0 0 0 3px var(--mint-dark), 0 0 0 7px rgba(92, 201, 167, .45), 0 4px 0 2px rgba(74, 52, 40, .2); }
 .best-art .art-lg { width: 76px; height: 76px; }
 .best-name { font-weight: 700; line-height: 1.1; min-height: 2.2em; display: flex; align-items: center; }
 .best-tier { font-size: .76em; padding: 0 10px; border-radius: 99px; background: #EFE5D2; }
@@ -80,3 +80,5 @@
 /* menú: álbum y bestiario lado a lado */
 .menu-row { display: flex; gap: 10px; width: 100%; }
 .menu-row button { flex: 1; min-width: 0; }
+/* las fichas no se mueven al pasar el mouse ni al tocarlas: solo cambian de color/borde */
+.best-tile, .best-tile:hover, .best-tile:active, .best-tile:focus { transform: none !important; transition: background-color .15s, box-shadow .15s; }

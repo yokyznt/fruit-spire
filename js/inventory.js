@@ -118,7 +118,7 @@
         }
         const t = TIERS[r.tier] || TIERS.common;
         const status = relicStatus(r, p);
-        return `<div class="inv-detail ${t.cls}">
+        return `<div class="inv-detail ${t.cls}" data-scroll-key="${r.id}">
             <div class="inv-detail-art">${art(r.sprite || r.id, r.icon, { size: 'xxl' })}</div>
             <div class="inv-ribbon">${t.name}</div>
             <h3 class="hand">${r.name}</h3>
