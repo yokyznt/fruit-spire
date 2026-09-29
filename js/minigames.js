@@ -349,6 +349,7 @@
             if (GAME.mg !== m) return;
             await wait(350);
         }
+        if (GAME.mg !== m) return; // esta partida ya no está en pantalla
         const ps = sum(m.player), hs = sum(m.house);
         const gain = (mult) => betPayout(m, mult);
         if (hs > 21) finish('win', `¡La casa se pasó con ${hs}! Ganas.`, { gold: ps === 21 && !m.free ? gain(3) : gain(2) });

@@ -54,3 +54,11 @@
 .hud-pop.bag { color: #8C5A3C; }
 .hud-pop.deck { color: #4A7BD0; }
 @keyframes hudPop { 0% { opacity: 0; transform: translate(-50%, 12px) scale(.6); } 20% { opacity: 1; transform: translate(-50%, 2px) scale(1.2); } 70% { opacity: 1; transform: translate(-50%, -4px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -22px) scale(.9); } }
+/* en los minijuegos el panel ya es alto: premios más compactos */
+.mg-panel .loot-row { margin: 4px auto 0; }
+.mg-panel .loot-item { width: 118px; min-height: 104px; padding: 8px 6px; gap: 2px; }
+.mg-panel .loot-art { min-height: 60px; }
+.mg-panel .loot-art .art-xl { width: 62px; height: 62px; }
+.mg-panel .loot-coins { width: 76px; height: 58px; transform: scale(.8); }
+.mg-panel .loot-hint { display: none; }
+.mg-panel .mg-result { margin: 6px 0 2px; }
