@@ -650,8 +650,6 @@ function renderActIntro() {
         ${castleRowHtml(act.n)}
         <div class="act-scene">${art(`act_${act.id}`, act.icon, { size: 'xxl' })}</div>
         ${logoHtml(act.name, 'act-logo')}
-        <div class="act-subtitle hand">${act.subtitle}</div>
-        ${act.floor === 1 ? `<div class="act-story hand">${act.castle.story}</div>` : ''}
         ${act.theme.rule ? `<div class="act-rule" ${tip(['Regla del piso', 'Cada piso cambia un poco cómo se juega. Se ve en la esquina de cada combate.'])}>${art(act.theme.rule.sprite, act.theme.rule.icon, { size: 'md' })}<div><b class="hand">${act.theme.rule.name}</b><small>${act.theme.rule.desc}</small></div></div>` : ''}
         ${GAME.actHealed > 0 && (act.n > 1 || act.floor > 1) ? `<div class="act-heal">${art('ui_heal', '❤️', { size: 'xs' })} Recuperaste ${GAME.actHealed} ❤️ en el camino.</div>` : ''}
         <div class="act-boss" ${tip([boss.name, last ? 'El guardián del Rey Fruta. Vencerlo lo libera.' : guardian ? 'El guardián de este piso. Vencerlo te deja subir al siguiente.' : 'El jefe de este castillo. Vencerlo te lleva al siguiente.'])}>

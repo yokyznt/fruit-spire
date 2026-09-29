@@ -1939,3 +1939,5 @@ button.x-btn { transition: transform .2s var(--ease-out), background .15s; }
 .relic-card > .art { flex: none; }
 .relic-card .card-name { flex: none; max-height: 2.3em; overflow: hidden; line-height: 1.1; text-align: center; }
 .relic-card .relic-desc { flex: 1 1 auto; min-height: 0; overflow: hidden; text-align: center; }
+/* portada del piso: solo el título (sin descripción), con aire antes de la regla */
+.act-intro .act-logo { margin-bottom: 14px; }
