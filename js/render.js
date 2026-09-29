@@ -220,7 +220,7 @@ function logoHtml(text, cls) {
 // animaciones de "aparecer" (panel, tablero, mochila…). Si la pantalla es la
 // misma, las animaciones de entrada de lo que YA estaba se adelantan al
 // final; solo aparece con animación lo que es nuevo de verdad.
-const ENTRY_ANIMS = new Set(['panelIn', 'pop', 'fadeIn', 'invIn', 'slideUp', 'glowIn', 'popBubble', 'seedMenuIn', 'panelPop', 'mgIn', 'boardIn']);
+const ENTRY_ANIMS = new Set(['ciIn', 'ciInLeft', 'panelIn', 'pop', 'fadeIn', 'invIn', 'slideUp', 'glowIn', 'popBubble', 'seedMenuIn', 'panelPop', 'mgIn', 'boardIn']);
 function viewSnapshot(root) {
     const classes = new Map();
     root.querySelectorAll('[class]').forEach((el) => {
@@ -1124,6 +1124,57 @@ function ruleFxFor(c) {
     return { cls: `rule-${id} rs-${state}${changed ? ' rs-in' : ''}`, html: `<div class="rule-fx">${html}</div>` };
 }
 
+// ---------- ficha de la carta seleccionada (o arrastrada) ----------
+// Explica TODO lo que hace la carta: su texto con los números reales y
+// cada estado o palabra clave que menciona (también las básicas, como
+// cáscara o energía, que los tooltips normales no explican).
+const BASIC_KW_TEXT = {
+    block: ['ui_shield', 'Cáscara', KW_TEXT.block],
+    energy: ['ui_energy', 'Energía', KW_TEXT.energy],
+    roba: ['ui_play', 'Robar', 'Tomas cartas de tu pila de robo y pasan a tu mano.'],
+    recupera: ['ui_heal', 'Recuperar', 'Te cura vida, sin pasar de tu máximo.'],
+    garden: ['ui_heal', 'Viñedo', 'Tus cartas plantan brotes: crecen cada turno y al llegar a 0 se cosechan solos.']
+};
+function cardInfoHtml(card, prev, id) {
+    if (!card) return '';
+    const low = card.description.toLowerCase();
+    const rows = [];
+    const seen = new Set();
+    const add = (sprite, title, text) => { if (seen.has(title)) return; seen.add(title); rows.push({ sprite, title, text }); };
+    if (/\bdaño\b/.test(low)) add('ui_sword', 'Daño', 'Le quita vida al enemigo. Primero se gasta su cáscara.');
+    keywords().forEach((k) => {
+        if (!low.includes(k.word)) return;
+        if (k.statusId) {
+            const s = statusInfo(k.statusId);
+            const [title, text] = statusTip(k.statusId);
+            add(s.sprite, title, text);
+        } else if (k.basic) {
+            const key = k.cls === 'block' ? 'block' : k.cls === 'energy' ? 'energy' : k.word === 'roba' ? 'roba' : k.word === 'recupera' ? 'recupera' : 'garden';
+            const [sprite, title, text] = BASIC_KW_TEXT[key];
+            add(sprite, title, text);
+        } else add('ui_up', k.title, k.text);
+    });
+    // términos que aparecen dentro de otras explicaciones
+    keywordTips(card.description, [...seen]).forEach(([title, text]) => add('ui_up', title, text));
+    if (card.type === 'power') add('ui_up', 'Poder', 'Se juega una vez y dura todo el combate.');
+    if (card.upgraded) {
+        const base = window.getCard(card.baseId);
+        if (base) add('ui_up', 'Madurada', `Versión mejorada. La normal dice: «${base.description}»`);
+    }
+    const how = card.unplayable ? 'Esta carta no se puede jugar.'
+        : cardNeedsTarget(card) ? 'Arrástrala hasta un enemigo para jugarla.' : 'Arrástrala hacia arriba para jugarla.';
+    return `<div class="card-info type-${card.type}" ${id ? `id="${id}"` : ''}>
+        <div class="ci-head">
+            <span class="ci-cost">${card.cost < 0 ? '–' : card.cost}</span>
+            <b class="hand">${card.name}</b>
+            <span class="ci-type">${TYPE_LABELS[card.type] || card.type}</span>
+        </div>
+        <p class="ci-desc">${prev ? previewDescHtml(card, prev) : highlightDesc(card.description)}</p>
+        ${rows.length ? `<ul class="ci-list">${rows.map((r) => `<li>${art(r.sprite, '', { size: 'xs' })}<div><b>${r.title}</b><span>${r.text}</span></div></li>`).join('')}</ul>` : ''}
+        <p class="ci-how">${how}</p>
+    </div>`;
+}
+
 function renderCombat() {
     const c = GAME.combat;
     if (!c) return '';
@@ -1137,6 +1188,7 @@ function renderCombat() {
     const n = p.hand.length;
     const cardW = 176, avail = 900;
     const overlap = n > 1 ? Math.min(-10, (avail - n * cardW) / (n - 1)) : 0;
+    const selCard = GAME.selectedCard != null && playerTurn ? window.getCard(p.hand[GAME.selectedCard]) : null;
     const handHtml = p.hand.map((cardId, i) => {
         const card = window.getCard(cardId);
         const disabled = card.unplayable || card.cost > p.energy || !playerTurn;
@@ -1222,6 +1274,7 @@ function renderCombat() {
             <div class="enemy-side">${enemiesHtml}</div>
         </div>
 
+        ${selCard ? cardInfoHtml(selCard, c.previewCard(selCard, null)) : ''}
         <div class="combat-bottom">
             <div class="bottom-side left">
                 ${orangeHtml(p.energy, p.maxEnergy)}

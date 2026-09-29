@@ -366,6 +366,10 @@ function beginCardDrag() {
     d.slot.classList.add('dragging');
     d.stage.classList.add('drag-active');
     d.zones.forEach((z) => z.el.classList.add('targetable'));
+    // la ficha de la carta acompaña el arrastre
+    d.stage.querySelectorAll('.card-info').forEach((x) => x.remove());
+    d.stage.insertAdjacentHTML('beforeend', cardInfoHtml(d.card, GAME.combat.previewCard(d.card, null), 'drag-card-info'));
+    heartifyDom(document.getElementById('drag-card-info'));
     d.raf = requestAnimationFrame(cardDragFrame);
 }
 
@@ -450,6 +454,8 @@ function endCardDrag(e, cancelled) {
     const res = cancelled ? null : cardDropResult(d);
     if (d.hover != null) highlightDrop(d, d.hover, false);
     document.querySelectorAll('.drop-preview').forEach((x) => x.remove());
+    const info = document.getElementById('drag-card-info');
+    if (info) info.remove();
     d.stage.classList.remove('drag-active');
     d.zones.forEach((z) => z.el.classList.remove('targetable'));
 
