@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.5, -.3, .7, .6)",
+        "createdAt": "2026-09-29T21:34:56.037Z",
+        "reason": "assistant: cartoon anticipation for bars flying off in the ending cutscene; game is a cartoon sticker style that uses --ease-back throughout"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.4, -.4, .6, 1)",
+        "createdAt": "2026-09-29T21:34:56.586Z",
+        "reason": "assistant: cartoon anticipation for cages lifting in the ending cutscene, consistent with the game's cartoon motion"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.3, 1.4, .5, 1)",
+        "createdAt": "2026-09-29T21:34:57.111Z",
+        "reason": "assistant: literal motion - the hero's medal drops and settles with a small overshoot in the ending cutscene"
+      }
+    ]
+  }
+}
