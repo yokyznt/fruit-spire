@@ -1,0 +1,56 @@
+/* ============================================================
+   LOOT — premios que se recogen tocándolos (js/loot.js) y la
+   reacción de la barra de arriba cuando algo sube.
+   ============================================================ */
+.loot-row { display: flex; gap: 16px; justify-content: center; align-items: flex-end; flex-wrap: wrap; margin: 10px auto 4px; }
+.loot-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; animation: lootIn .45s var(--ease-back) both; animation-delay: calc(var(--i) * 90ms); }
+@keyframes lootIn { from { opacity: 0; transform: translateY(18px) scale(.7); } to { opacity: 1; transform: none; } }
+.loot-item {
+    position: relative; width: 150px; min-height: 150px; padding: 12px 8px 10px; border: none; border-radius: 20px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    background: radial-gradient(circle at 50% 38%, #FFF6D2, #FFE9A8 70%); color: var(--ink);
+    box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px rgba(74, 52, 40, .25);
+    animation: lootGlow 1.6s ease-in-out infinite;
+    transition: transform .2s var(--ease-out);
+}
+.loot-item:hover { transform: translateY(-6px) rotate(-2deg); }
+@keyframes lootGlow { 0%, 100% { box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px rgba(74, 52, 40, .25), 0 0 0 0 rgba(255, 207, 77, 0); } 50% { box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px rgba(74, 52, 40, .25), 0 0 22px 6px rgba(255, 207, 77, .75); } }
+.loot-item.k-heal, .loot-item.k-maxhp { background: radial-gradient(circle at 50% 38%, #FFE6EA, #FFC7D0 70%); }
+.loot-item.k-relic { background: radial-gradient(circle at 50% 38%, #F3EDFF, #DCCBFF 70%); }
+.loot-item.k-seed { background: radial-gradient(circle at 50% 38%, #EAF8EE, #C6EBD2 70%); }
+.loot-item.k-card { width: 130px; background: radial-gradient(circle at 50% 38%, #EAF4FF, #CBE2F7 70%); }
+.loot-art { position: relative; display: flex; align-items: center; justify-content: center; min-height: 86px; }
+.loot-art .art-xl { width: 88px; height: 88px; }
+.loot-coins { position: relative; width: 96px; height: 80px; }
+.loot-coins .art { position: absolute; width: 52px; height: 52px; }
+.loot-coins .art:nth-child(1) { left: 0; top: 24px; transform: rotate(-12deg); }
+.loot-coins .art:nth-child(2) { left: 24px; top: 4px; }
+.loot-coins .art:nth-child(3) { left: 46px; top: 26px; transform: rotate(10deg); }
+.loot-plus { position: absolute; right: -4px; top: -4px; width: 30px; height: 30px; border-radius: 50%; background: var(--leaf, #7BBF5A); color: #fff; font-style: normal; font-family: var(--f-display); font-size: 1.4em; line-height: 30px; box-shadow: 0 0 0 2.5px var(--ink); }
+.loot-card { display: block; width: 88px; height: 118px; position: relative; }
+.loot-card .card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.5); pointer-events: none; }
+.loot-label { font-family: var(--f-display); font-size: 1.05em; line-height: 1.1; text-align: center; }
+.loot-item.flying { opacity: .25; pointer-events: none; animation: none; }
+.loot-item.taken { cursor: default; animation: none; background: #EFE6D6; box-shadow: 0 0 0 3px #CBB89A; }
+.loot-item.taken .loot-art, .loot-item.taken .loot-label { opacity: .35; filter: grayscale(.7); }
+.loot-item.taken:hover { transform: none; }
+.loot-check { position: absolute; right: -10px; top: -10px; width: 36px; height: 36px; border-radius: 50%; background: var(--mint, #5CC9A7); box-shadow: 0 0 0 3px var(--ink); display: grid; place-items: center; animation: pop .35s var(--ease-back); }
+.loot-check svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.loot-drop { font-size: .85em; padding: 3px 14px; }
+.loot-hint { margin: 2px 0 6px; font-size: 1.15em; color: var(--mint-dark, #2E7A5E); text-align: center; }
+.loot-row.nudge .loot-item:not(.taken) { animation: lootNudge .45s ease; }
+@keyframes lootNudge { 0%, 100% { transform: none; } 25% { transform: translateY(-10px) rotate(-4deg); } 60% { transform: translateY(0) rotate(3deg); } }
+.reward-pick { margin: 12px 0 0; font-size: 1.25em; text-align: center; }
+
+/* ---------- barra de arriba: salta y muestra "+N" ---------- */
+.hud-chip, .hud-bag, .hud-deck { position: relative; }
+.hud-gain { animation: hudGain .55s var(--ease-back); }
+@keyframes hudGain { 0% { transform: scale(1); } 35% { transform: scale(1.18) rotate(-3deg); } 100% { transform: scale(1); } }
+.hud-pop { position: absolute; z-index: 400; white-space: nowrap; pointer-events: none;
+    font-family: var(--f-display); font-size: 1.7em; color: #3E8A3A; -webkit-text-stroke: 5px #fff; paint-order: stroke fill; text-shadow: 0 3px 0 rgba(74,52,40,.25);
+    animation: hudPop 1.4s var(--ease-out) forwards; }
+.hud-pop.gold { color: #C98A00; }
+.hud-pop.hp { color: #C8374F; }
+.hud-pop.bag { color: #8C5A3C; }
+.hud-pop.deck { color: #4A7BD0; }
+@keyframes hudPop { 0% { opacity: 0; transform: translate(-50%, 12px) scale(.6); } 20% { opacity: 1; transform: translate(-50%, 2px) scale(1.2); } 70% { opacity: 1; transform: translate(-50%, -4px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -22px) scale(.9); } }

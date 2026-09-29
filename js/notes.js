@@ -6,9 +6,22 @@
 // ============================================================
 
 window.CREATOR = { handle: '@yokyznt', url: 'https://www.instagram.com/yokyznt/' };
-window.GAME_VERSION = '2.4';
+window.GAME_VERSION = '2.5';
 
 window.PATCH_NOTES = [
+    {
+        version: '2.5', date: '29 sep 2026', title: 'Premios que se recogen',
+        items: [
+            'Los premios ahora salen dibujados y se recogen tocándolos: oro, vida, vida máxima, objetos, semillas y cartas. Cada uno vuela a su lugar en la barra de arriba (el oro a tu bolsa, la vida a tu corazón, los objetos y semillas a la mochila, las cartas al mazo). Pasa en las recompensas de combate, cofres, eventos, el Pozo de los Deseos y los minijuegos.',
+            'La barra de arriba salta y muestra "+N" cada vez que ganas oro, vida, objetos, semillas o cartas, vengan de donde vengan.',
+            'Nueva Colección en el menú: tus cartas, objetos (con su guiño a otros juegos), semillas y el bestiario, todo en un mismo lugar.'
+        ],
+        fixes: [
+            'La leyenda del mapa es más pequeña y cabe completa sin desplazarse; se quitó el botón «Centrar en mí».',
+            'El botón de cerrar de la mochila se ve bien.',
+            'En la tiendita, las fichas de objeto ya no se salen de su carta; el guiño solo aparece en la mochila y en la Colección.'
+        ]
+    },
     {
         version: '2.4', date: '29 sep 2026', title: '¡El final de la aventura!',
         items: [

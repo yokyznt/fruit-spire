@@ -219,7 +219,7 @@ function logoHtml(text, cls) {
 // animaciones de "aparecer" (panel, tablero, mochila…). Si la pantalla es la
 // misma, las animaciones de entrada de lo que YA estaba se adelantan al
 // final; solo aparece con animación lo que es nuevo de verdad.
-const ENTRY_ANIMS = new Set(['ciIn', 'ciInLeft', 'panelIn', 'pop', 'fadeIn', 'invIn', 'slideUp', 'glowIn', 'popBubble', 'seedMenuIn', 'panelPop', 'mgIn', 'boardIn']);
+const ENTRY_ANIMS = new Set(['lootIn', 'ciIn', 'ciInLeft', 'panelIn', 'pop', 'fadeIn', 'invIn', 'slideUp', 'glowIn', 'popBubble', 'seedMenuIn', 'panelPop', 'mgIn', 'boardIn']);
 function viewSnapshot(root) {
     const classes = new Map();
     root.querySelectorAll('[class]').forEach((el) => {
@@ -304,7 +304,7 @@ function render() {
     if (window.setMusicContext) setMusicContext(musicContextFor());
     playFlip(before);
     afterRender();
-    if (GAME.goldGain) animateGoldGain();
+    if (window.hudWatch) hudWatch();
     if (window.tutorialAfterRender) tutorialAfterRender();
 }
 
@@ -473,16 +473,6 @@ const SEED_RARITY = { common: 'Común', uncommon: 'Poco común', rare: 'Rara' };
 function seedTip(seed) {
     return explain(seed.name, `${seed.desc} Se usa una vez, en tu turno.`);
 }
-function seedRewardBox() {
-    const seed = window.SEED_DB[GAME.rewardSeed];
-    if (!seed) return '';
-    return `<div class="seed-box ${GAME.rewardSeedTaken ? 'taken' : ''}" ${seedTip(seed)}>
-        ${seedArt(seed, 'lg')}
-        <div class="cosmetic-text"><b>${GAME.rewardSeedTaken ? '¡Semilla a la bolsa!' : '¡Una semilla!'}</b><span>${seed.name}: ${seed.desc}</span></div>
-        ${GAME.rewardSeedTaken ? '' : '<button class="btn-mint" onclick="takeRewardSeed()">Tomar</button>'}
-    </div>`;
-}
-
 function renderScreen() {
     switch (GAME.screen) {
         case 'menu': return renderMainMenu();
@@ -1407,9 +1397,10 @@ function renderWell() {
     return panel(art('node_well', '🪙', { size: 'xl' }), 'Pozo de los Deseos', `
         <p>Tira una moneda y pide un deseo. Cada vez cuesta más oro… pero puedes parar cuando quieras.</p>
         ${GAME.wellLastMsg ? `<p class="hand well-msg">${GAME.wellLastMsg}</p>` : ''}
+        ${lootRowHtml()}
         <div class="controls-row">
-            <button class="btn-mint" onclick="tossWellCoin()" ${p.gold < cost ? 'disabled' : ''}>Tirar moneda (${art('ui_coin', '🪙', { size: 'xs' })}${cost})</button>
-            <button class="secondary" onclick="leaveWell()">Irme</button>
+            <button class="btn-mint" onclick="tossWellCoin()" ${p.gold < cost || lootPending() ? 'disabled' : ''}>Tirar moneda (${art('ui_coin', '🪙', { size: 'xs' })}${cost})</button>
+            <button class="secondary" onclick="leaveWell()" ${lootPending() ? 'disabled' : ''}>Irme</button>
         </div>`);
 }
 
@@ -1422,7 +1413,8 @@ function renderKeyFound() {
 function renderVault() {
     return panel(art('node_vault', '🔒', { size: 'xl' }), GAME.vaultOpened ? '¡Cofre Sellado abierto!' : 'Cofre Sellado', `
         <p>${GAME.lastEventMsg}</p>
-        <button onclick="closeEventResult()">Continuar</button>`, GAME.vaultOpened ? 'celebrate' : '');
+        ${lootRowHtml()}
+        <button onclick="closeEventResult()" ${lootPending() ? 'disabled' : ''}>Continuar</button>`, GAME.vaultOpened ? 'celebrate' : '');
 }
 
 function renderDungeon() {
@@ -1484,46 +1476,20 @@ function relicCardHtml(relic, onclick, extra) {
     </div>`;
 }
 
-// El oro ganado sube en la barra de arriba: "+N" flotando y el número contando
-function animateGoldGain() {
-    const gain = GAME.goldGain;
-    GAME.goldGain = null;
-    const chip = document.querySelector('.hud-chip.gold');
-    const num = chip && chip.querySelector('b');
-    if (!num || !GAME.player) return;
-    const to = GAME.player.gold, from = Math.max(0, to - gain);
-    num.textContent = from;
-    const pop = document.createElement('span');
-    pop.className = 'gold-gain';
-    pop.textContent = '+' + gain;
-    chip.appendChild(pop);
-    const t0 = performance.now() + 350, dur = 700;
-    const step = (t) => {
-        if (!num.isConnected) return;
-        const k = Math.min(1, Math.max(0, (t - t0) / dur));
-        num.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)));
-        if (k < 1) requestAnimationFrame(step);
-        else { restartClass(chip, 'earn'); if (window.Sfx && Sfx.coin) Sfx.coin(); }
-    };
-    requestAnimationFrame(step);
-    setTimeout(() => pop.remove(), 1600);
-}
-
 function renderReward() {
     const cardsHtml = GAME.rewardCards.map((c) => renderCardHtml(c, { onclick: `pickRewardCard('${c.id}', this)` })).join('');
     const kind = GAME.combatKind;
     const title = kind === 'boss' ? '¡Jefe derrotado!' : kind === 'elite' ? '¡Élite derrotada!' : '¡Victoria!';
-    const relic = GAME.rewardRelic;
+    const picked = GAME.rewardCardPicked;
     return panel(playerArt('happy'), title, `
         <div class="reward-scroll">
             ${petUnlockBox()}
             ${window.passGainBox ? passGainBox() : ''}
-            ${seedRewardBox()}
             ${cosmeticBox(GAME.newCosmetic)}
-            ${relic ? `<div class="reward-relic" ${explainRelic(relic)}>${art(relic.sprite || relic.id, relic.icon, { size: 'md' })}<div><b>${relic.name}</b><span>${relic.description}</span></div></div>` : ''}
-            <div class="reward-row">${cardsHtml}</div>
+            ${lootRowHtml()}
+            ${GAME.rewardCards.length && !picked ? `<p class="hand reward-pick">Elige una carta para tu mazo:</p><div class="reward-row">${cardsHtml}</div>` : ''}
         </div>
-        ${GAME.rewardCards.length ? '' : '<button class="secondary" onclick="skipReward()">Continuar</button>'}`, 'celebrate wide');
+        ${!GAME.rewardCards.length || picked ? `<button class="secondary" onclick="skipReward()" ${lootPending() ? 'disabled' : ''}>Continuar</button>` : ''}`, 'celebrate wide');
 }
 
 function renderBossRelic() {
@@ -1610,7 +1576,8 @@ function renderTreasure() {
     return panel(r ? art(r.sprite || r.id, r.icon, { size: 'xl' }) : art('node_treasure', '💎', { size: 'xl' }), 'Tesoro', `
         <p>${GAME.lastEventMsg}</p>
         ${cosmeticBox(GAME.newCosmetic)}
-        <button onclick="closeEventResult()">Continuar</button>`, 'celebrate');
+        ${lootRowHtml()}
+        <button onclick="closeEventResult()" ${lootPending() ? 'disabled' : ''}>Continuar</button>`, 'celebrate');
 }
 
 function renderShop() {
@@ -1682,7 +1649,8 @@ function renderEventResult() {
     if (!ev) return '';
     return panel(art(ev.sprite || ev.id, ev.icon, { size: 'xl' }), ev.title, `
         <p>${GAME.lastEventMsg}</p>
-        <button onclick="closeEventResult()">Continuar</button>`);
+        ${lootRowHtml()}
+        <button onclick="closeEventResult()" ${lootPending() ? 'disabled' : ''}>Continuar</button>`);
 }
 
 // ============================================================

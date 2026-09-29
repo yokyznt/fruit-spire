@@ -229,6 +229,8 @@
     };
     window.mgLeave = function () {
         if (GAME.mg && GAME.mg.busy) return;
+        if (lootNudge()) return;
+        GAME.loot = [];
         GAME.mg = null;
         GAME.screen = 'map';
         saveGame();
@@ -242,9 +244,12 @@
         m.phase = 'result';
         m.outcome = outcome;
         let text = msg;
-        if (opts.gold) { p.gold += opts.gold; }
+        GAME.loot = [];
+        withLootCapture(() => {
+            if (opts.gold) { p.gold += opts.gold; }
+            if (opts.relic) { GAME.lastRelic = null; text += ` ${grantRandomRelic(p)}`; }
+        });
         if (opts.hp) { p.hp = Math.max(1, p.hp - opts.hp); text += ` Pierdes ${opts.hp} ❤️.`; }
-        if (opts.relic) { GAME.lastRelic = null; text += ` ${grantRandomRelic(p)}`; }
         if (outcome === 'win' && window.PASS && !isTutorial()) { const g = window.PASS.addXp(15); if (g && g.levels) text += ` ¡Subes de nivel en el Pase de Batalla!`; }
         m.text = text;
         if (window.Sfx) (outcome === 'win' ? Sfx.win : outcome === 'lose' ? Sfx.denied : Sfx.pop)();
@@ -314,7 +319,7 @@
             <p class="hand mg-stake">${m.free ? 'Partida gratis' : `Apuesta: ${art('ui_coin', '🪙', { size: 'xs' })} ${m.bet}`}</p>
             ${row(m.house, 'house', 'La casa')}
             ${row(m.player, 'player', 'Tú')}
-            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p><button class="btn-mint" onclick="mgLeave()">Continuar</button>` : `
+            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p>${lootRowHtml()}<button class="btn-mint" onclick="mgLeave()" ${lootPending() ? 'disabled' : ''}>Continuar</button>` : `
             <div class="controls-row">
                 <button class="btn-mint" ${canAct ? '' : 'disabled'} onclick="mgDiceRoll()">Tirar un dado</button>
                 <button class="btn-banana" ${canAct && m.player.length ? '' : 'disabled'} onclick="mgDiceStand()">Plantarme con ${ps}</button>
@@ -378,7 +383,7 @@
             <div class="mg-row"><b class="hand">Tú</b>
                 <div class="poker-row">${m.player.map((c, i) => cardHtml(c, { sel: m.selected.includes(i), click: m.phase === 'play' ? `mgPokerToggle(${i})` : '' })).join('')}</div>
                 <span class="mg-hand">${HAND_NAMES[ph.rank]}</span></div>
-            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p><button class="btn-mint" onclick="mgLeave()">Continuar</button>` : `
+            ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p>${lootRowHtml()}<button class="btn-mint" onclick="mgLeave()" ${lootPending() ? 'disabled' : ''}>Continuar</button>` : `
             <p class="hand">${m.selected.length ? `Vas a cambiar ${m.selected.length} carta${m.selected.length > 1 ? 's' : ''}.` : 'Toca las cartas que quieras cambiar (o ninguna).'}</p>
             <div class="controls-row"><button class="btn-mint" onclick="mgPokerShow()">${m.selected.length ? 'Cambiar y mostrar' : 'Plantarme y mostrar'}</button></div>`}`, 'wide mg-panel');
     }
@@ -498,7 +503,7 @@
                 <div class="chess-board">${cells.join('')}</div>
                 <div class="chess-side">
                     <p class="hand chess-note">${m.phase === 'result' ? m.text : m.note}</p>
-                    ${m.phase === 'result' ? '<button class="btn-mint" onclick="mgLeave()">Continuar</button>'
+                    ${m.phase === 'result' ? `${lootRowHtml()}<button class="btn-mint" onclick="mgLeave()" ${lootPending() ? 'disabled' : ''}>Continuar</button>`
                         : `<button class="secondary" onclick="mgChessResign()" ${m.busy ? 'disabled' : ''}>Rendirme</button>`}
                 </div>
             </div>`, 'wide mg-panel mg-chess');

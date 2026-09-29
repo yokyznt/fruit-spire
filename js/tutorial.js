@@ -68,7 +68,7 @@ const TUT_STEPS = [
     { screen: 'combat', pos: 'top', spot: '.hand-row, .end-turn', until: tutScreen('reward'), text: '¡Sigue así hasta ganar!' },
 
     // ---------- recompensas ----------
-    { screen: 'reward', pos: 'bl', spot: '.reward-row .card', until: tutScreen('map'), text: '¡Ganaste! Elige una <b>carta</b> para tu mazo.' },
+    { screen: 'reward', pos: 'bl', spot: () => (lootPending() ? '.loot-item:not(.taken):not(.flying)' : '.reward-row .card, button[onclick="skipReward()"]'), until: tutScreen('map'), text: '¡Ganaste! Toca cada <b>premio</b> para guardarlo y elige una carta.' },
     { screen: 'map', pos: 'bl', next: true, spot: '.hud-bag', text: 'También ganaste una <b>semilla</b>. Está en tu Mochila.' },
 
     // ---------- el resto del mapa ----------
@@ -78,10 +78,10 @@ const TUT_STEPS = [
         text: 'Elige una: <b>curarte</b>, mejorar una carta o quitar una.'
     },
     { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('treasure'), text: 'Ahora el <b>cofre</b>.' },
-    { screen: 'treasure', pos: 'bl', spot: 'button[onclick*="closeEventResult"]', until: tutScreen('map'), text: '¡Un <b>objeto</b>! Te ayuda todo el viaje. Pulsa Continuar.' },
+    { screen: 'treasure', pos: 'bl', spot: () => (lootPending() ? '.loot-item:not(.taken):not(.flying)' : 'button[onclick*="closeEventResult"]'), until: tutScreen('map'), text: '¡Un <b>objeto</b>! Tócalo para guardarlo en tu Mochila.' },
     { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('event'), text: 'Ahora el <b>misterio</b>.' },
     { screen: 'event', pos: 'bl', spot: '.event-options button', until: tutScreen('event-result'), text: 'Elige una opción.' },
-    { screen: 'event-result', pos: 'bl', spot: 'button[onclick*="closeEventResult"]', until: tutScreen('map'), text: 'Pulsa <b>Continuar</b>.' },
+    { screen: 'event-result', pos: 'bl', spot: () => (lootPending() ? '.loot-item:not(.taken):not(.flying)' : 'button[onclick*="closeEventResult"]'), until: tutScreen('map'), text: 'Recoge lo que ganaste y pulsa <b>Continuar</b>.' },
     { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('shop'), text: 'Ahora la <b>tiendita</b>.' },
     { screen: 'shop', pos: 'bl', spot: '.shop-item, .reward-row.picker .card, button[onclick*="closeShopPicker"]', until: tutFlag('shop-buy'), text: 'Compra algo con tu <b>oro</b>.' },
     { screen: 'shop', pos: 'bl', spot: 'button[onclick*="leaveShop"]', until: tutScreen('map'), text: 'Pulsa <b>Salir</b>.' },

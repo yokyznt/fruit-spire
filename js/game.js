@@ -59,7 +59,7 @@ const WELL_OUTCOMES = [
 ];
 function wellCost() { return 15 + (GAME.wellSpins || 0) * 12; }
 function tossWellCoin() {
-    if (GAME.anim) return;
+    if (GAME.anim || lootNudge()) return;
     const cost = wellCost();
     if (GAME.player.gold < cost) { if (window.Sfx) Sfx.denied(); showToast('No te alcanza el oro'); return; }
     GAME.player.gold -= cost;
@@ -67,13 +67,14 @@ function tossWellCoin() {
     const total = WELL_OUTCOMES.reduce((s, o) => s + o.w, 0);
     let r = Math.random() * total, picked = WELL_OUTCOMES[WELL_OUTCOMES.length - 1];
     for (const o of WELL_OUTCOMES) { r -= o.w; if (r <= 0) { picked = o; break; } }
-    GAME.wellLastMsg = picked.run(GAME.player, eventHelpers());
+    GAME.loot = [];
+    GAME.wellLastMsg = withLootCapture(() => picked.run(GAME.player, eventHelpers()));
     if (window.Sfx) Sfx.sparkle();
     if (GAME.player.hp <= 0) { clearSave(); GAME.screen = 'gameover'; render(); return; }
     saveGame();
     render();
 }
-function leaveWell() { GAME.screen = 'map'; saveGame(); render(); }
+function leaveWell() { if (lootNudge()) return; GAME.loot = []; GAME.screen = 'map'; saveGame(); render(); }
 
 const RESUMABLE_SCREENS = ['act-intro', 'dungeon', 'well', 'reward'];
 const SAVE_KEY = 'fruitSpireSave_v3';      // v3: niveles, dificultad, cartas maduradas
@@ -164,8 +165,8 @@ function saveGame() {
             screen: RESUMABLE_SCREENS.includes(GAME.screen) ? GAME.screen
                 : (SIDE_SCREENS.includes(GAME.screen) && RESUMABLE_SCREENS.includes(GAME.returnTo)) ? GAME.returnTo : 'map',
             // recompensas pendientes (para no perderlas si sales o recargas)
-            reward: { gold: GAME.rewardGold, cards: (GAME.rewardCards || []).map((c) => c.id), relic: GAME.rewardRelic ? GAME.rewardRelic.id : null,
-                seed: GAME.rewardSeed, seedTaken: GAME.rewardSeedTaken, after: GAME.afterReward, kind: GAME.combatKind },
+            reward: { cards: (GAME.rewardCards || []).map((c) => c.id), picked: !!GAME.rewardCardPicked, after: GAME.afterReward, kind: GAME.combatKind },
+            loot: window.openLoot ? openLoot() : [],
             dungeon: GAME.dungeon ? Object.assign({}, GAME.dungeon, { pending: null }) : null,
             wellSpins: GAME.wellSpins || 0,
             wellLastMsg: GAME.wellLastMsg || ''
@@ -220,14 +221,14 @@ function loadGame() {
         GAME.wellSpins = data.wellSpins || 0;
         GAME.wellLastMsg = data.wellLastMsg || '';
         GAME.screen = RESUMABLE_SCREENS.includes(data.screen) ? data.screen : 'map';
+        GAME.loot = [];
+        const savedLoot = (data.loot || []).map((it) => Object.assign({ taken: false }, it));
         if (GAME.screen === 'reward') {
             const rw = data.reward;
-            if (rw && rw.cards && rw.cards.length) {
-                GAME.rewardGold = rw.gold || 0;
-                GAME.rewardCards = rw.cards.map((id) => window.getCard(id)).filter(Boolean);
-                GAME.rewardRelic = rw.relic ? window.RELIC_DB[rw.relic] || null : null;
-                GAME.rewardSeed = rw.seed || null;
-                GAME.rewardSeedTaken = !!rw.seedTaken;
+            if (rw && ((rw.cards && rw.cards.length && !rw.picked) || savedLoot.length)) {
+                GAME.loot = savedLoot;
+                GAME.rewardCards = (rw.cards || []).map((id) => window.getCard(id)).filter(Boolean);
+                GAME.rewardCardPicked = !!rw.picked;
                 GAME.afterReward = rw.after || 'map';
                 GAME.combatKind = rw.kind || 'enemy';
                 GAME.passGain = null;
@@ -235,6 +236,8 @@ function loadGame() {
             } else GAME.screen = 'map';
         }
         if (GAME.screen === 'dungeon' && !GAME.dungeon) GAME.screen = 'map';
+        // fuera de las recompensas, lo que quedó sin recoger se da solo
+        if (GAME.screen !== 'reward' && window.grantAllLoot) grantAllLoot(savedLoot);
         GAME.combat = null;
         return true;
     } catch (e) { return false; }
@@ -297,7 +300,7 @@ function rollRewardCards(n, kind, type) {
     return result;
 }
 function randomRelic(tiers) {
-    const owned = new Set(GAME.player.relics);
+    const owned = new Set([...GAME.player.relics, ...(window.lootRelicIds ? lootRelicIds() : [])]);
     const pool = Object.values(window.RELIC_DB).filter((r) => !owned.has(r.id) && tiers.includes(r.tier));
     if (!pool.length) return null;
     // las raras salen menos
@@ -307,6 +310,7 @@ function randomRelic(tiers) {
     return pool[pool.length - 1];
 }
 function giveRelic(player, relic) {
+    if (GAME.lootCapture) { queueLoot({ k: 'relic', id: relic.id }); return; }
     player.relics.push(relic.id);
     if (window.markFound) markFound('relics', relic.id);
     if (window.Sfx) Sfx.relicGet();
@@ -556,7 +560,8 @@ function enterNode(type) {
     } else if (type === T.TREASURE) {
         if (window.Sfx) Sfx.chestOpen();
         GAME.lastRelic = null;
-        GAME.lastEventMsg = grantRandomRelic(GAME.player);
+        GAME.loot = [];
+        GAME.lastEventMsg = withLootCapture(() => grantRandomRelic(GAME.player));
         GAME.newCosmetic = null;
         GAME.screen = 'treasure';
         saveGame();
@@ -570,6 +575,8 @@ function enterNode(type) {
         saveGame();
     } else if (type === T.VAULT) {
         const p = GAME.player;
+        GAME.loot = [];
+        withLootCapture(() => {
         if (p.hasGoldenKey) {
             p.hasGoldenKey = false;
             const gold = 40 + Math.floor(Math.random() * 20);
@@ -583,6 +590,7 @@ function enterNode(type) {
             GAME.lastEventMsg = `El cofre está sellado. Sin la Llave Dorada solo puedes forzar la cerradura: consigues ${gold} de oro.`;
             GAME.vaultOpened = false;
         }
+        });
         if (window.Sfx) Sfx.chestOpen();
         GAME.screen = 'vault';
         saveGame();
@@ -729,10 +737,10 @@ function onCombatEnd(result, kind) {
         const isExit = cell.x === d.exit.x && cell.y === d.exit.y;
         if (isExit) {
             const gold = 45 + Math.floor(Math.random() * 25);
-            p.gold += gold;
             GAME.lastRelic = null;
             GAME.newCosmetic = null;
-            GAME.lastEventMsg = `${grantRandomRelic(p)} Y ${gold} de oro por vaciar el calabozo.`;
+            GAME.loot = [];
+            GAME.lastEventMsg = withLootCapture(() => { p.gold += gold; return `${grantRandomRelic(p)} Y ${gold} de oro por vaciar el calabozo.`; });
             GAME.dungeon = null;
             if (window.Sfx) Sfx.chestOpen();
             GAME.screen = 'treasure';
@@ -776,19 +784,17 @@ function onCombatEnd(result, kind) {
                 : 12 + Math.floor(Math.random() * 12);
     const pet = window.petFor(p.characterId);
     const petGold = pet && pet.onWin ? pet.onWin(p) || 0 : 0;
-    p.gold += gold + petGold;
-    GAME.rewardGold = gold + petGold;
-    GAME.goldGain = gold + petGold;
+    GAME.loot = [];
+    queueLoot({ k: 'gold', n: gold + petGold });
     GAME.rewardCards = rollRewardCards(3, rewardKind);
-    GAME.rewardRelic = null;
+    GAME.rewardCardPicked = false;
     if (rewardKind === 'elite') {
         const relic = randomRelic(['common', 'uncommon', 'rare']);
-        if (relic) { giveRelic(p, relic); GAME.rewardRelic = relic; }
+        if (relic) queueLoot({ k: 'relic', id: relic.id });
     }
     const seedChance = GAME.tutorial ? 1 : kind === 'boss' ? 1 : kind === 'elite' ? 0.55 : 0.35;
-    GAME.rewardSeed = GAME.tutorial ? 'semilla_chile' : Math.random() < seedChance ? window.rollSeed().id : null;
-    if (GAME.rewardSeed && addSeed(GAME.rewardSeed)) GAME.rewardSeedTaken = true;
-    else GAME.rewardSeedTaken = false;
+    const seedId = GAME.tutorial ? 'semilla_chile' : Math.random() < seedChance ? window.rollSeed().id : null;
+    if (seedId) queueLoot({ k: 'seed', id: seedId });
     GAME.newCosmetic = null; // los accesorios ahora se ganan en el Pase de Batalla
     GAME.afterReward = isCastleBoss ? 'boss-relic' : kind === 'boss' ? 'next-floor' : 'map';
     GAME.screen = 'reward';
@@ -812,13 +818,6 @@ function addSeed(id) {
     p.seeds[i] = id;
     if (window.markFound) markFound('seeds', id);
     return true;
-}
-function takeRewardSeed() {
-    if (GAME.rewardSeedTaken || !GAME.rewardSeed) return;
-    if (!addSeed(GAME.rewardSeed)) { showToast('Tu bolsa está llena: tira una semilla para hacer espacio'); return; }
-    GAME.rewardSeedTaken = true;
-    render();
-    restartClass(document.querySelector('.hud-bag'), 'bump');
 }
 // Tocar una semilla abre su menú (usar / tirar)
 function clickSeed(i) {
@@ -880,6 +879,9 @@ async function useSeed(i, targetIdx) {
 }
 
 function finishReward() {
+    if (lootNudge()) return;
+    GAME.loot = [];
+    GAME.rewardCardPicked = false;
     GAME.combat = null;
     if (GAME.afterReward === 'boss-relic') { openBossRelics(); return; }
     if (GAME.afterReward === 'next-floor') { startNextAct(); return; }
@@ -897,10 +899,16 @@ function pickRewardCard(cardId, el) {
     if (row) row.querySelectorAll('.card').forEach((c) => { if (c !== el) c.classList.add('fade-away'); });
     if (el) el.classList.add('taken');
     flyGhost(el, '.hud-deck');
-    setTimeout(() => { GAME.anim = false; finishReward(); }, 820);
+    GAME.rewardCardPicked = true;
+    // si aún quedan premios por recoger, se espera a que los recojas
+    setTimeout(() => { GAME.anim = false; if (lootPending()) { saveGame(); render(); } else finishReward(); }, 820);
 }
+// al recoger el último premio de la recompensa (ya con la carta elegida) se sigue solo
+window.onLootDone = function () {
+    if (GAME.screen === 'reward' && (GAME.rewardCardPicked || !GAME.rewardCards.length) && GAME.rewardCards.length) setTimeout(() => { if (GAME.screen === 'reward' && !GAME.anim) finishReward(); }, 450);
+};
 // La carta es obligatoria: solo se puede continuar sin elegir si no hubo ninguna que ofrecer
-function skipReward() { if (!GAME.anim && !GAME.rewardCards.length) finishReward(); }
+function skipReward() { if (!GAME.anim && (!GAME.rewardCards.length || GAME.rewardCardPicked)) finishReward(); }
 
 // ---------- objetos de jefe y paso de nivel ----------
 function openBossRelics() {
@@ -1200,8 +1208,11 @@ function resolveEventOption(idx) {
         render();
         return;
     }
-    const msg = option.effect(GAME.player, eventHelpers());
+    GAME.loot = [];
+    const msg = withLootCapture(() => option.effect(GAME.player, eventHelpers()));
     if (msg && typeof msg === 'object' && msg.fight) {
+        grantAllLoot(GAME.loot);
+        GAME.loot = [];
         // el evento resultó ser una trampa: ¡pelea!
         GAME.currentEvent = null;
         showToast(msg.msg || '¡Es una trampa!');
@@ -1218,7 +1229,7 @@ function resolveEventOption(idx) {
     }
     render();
 }
-function closeEventResult() { GAME.currentEvent = null; GAME.screen = 'map'; saveGame(); render(); }
+function closeEventResult() { if (lootNudge()) return; GAME.loot = []; GAME.currentEvent = null; GAME.screen = 'map'; saveGame(); render(); }
 
 // ---------------------------------------------------------
 // CALABOZO: mini-mazmorra de 3x3 que aparece a veces en Misterio. Entras por
@@ -1245,6 +1256,6 @@ Object.assign(window, {
     restHeal, setRestMode, leaveRest, restUpgradeCard, restRemoveCard,
     buyShopCard, buyShopRelic, openShopRemoval, shopRemoveCard, closeShopPicker, leaveShop,
     resolveEventOption, closeEventResult,
-    wearNewPet, clickSeed, discardSeed, useSeedFromMenu, useSeedOn, cancelSeedAim, takeRewardSeed, buyShopSeed,
+    wearNewPet, clickSeed, discardSeed, useSeedFromMenu, useSeedOn, cancelSeedAim, buyShopSeed,
     tossWellCoin, leaveWell, enterDungeonCell, leaveDungeon
 });
