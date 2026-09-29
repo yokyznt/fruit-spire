@@ -247,8 +247,8 @@ function settleEntryAnims(prev, root) {
 // Qué lista de canciones suena en cada pantalla (ver js/audio.js)
 function musicContextFor() {
     const s = GAME.screen;
-    const back = ['pass', 'wardrobe', 'collection', 'notes'].includes(s) && GAME.returnTo ? GAME.returnTo : s;
-    if (['menu', 'character-select', 'story', 'collection', 'wardrobe', 'pass', 'notes', 'victory'].includes(back) || !GAME.player) return 'menu';
+    const back = ['pass', 'wardrobe', 'collection', 'bestiary', 'notes'].includes(s) && GAME.returnTo ? GAME.returnTo : s;
+    if (['menu', 'character-select', 'story', 'collection', 'bestiary', 'wardrobe', 'pass', 'notes', 'victory'].includes(back) || !GAME.player) return 'menu';
     if (back === 'combat') return GAME.combatKind === 'boss' ? 'boss' : GAME.combatKind === 'elite' ? 'elite' : 'combat';
     if (back === 'shop') return 'shop';
     if (back === 'rest' || back === 'gameover') return 'rest';
@@ -375,7 +375,7 @@ function afterRender() {
 
 function renderHud() {
     const p = GAME.player;
-    if (!p || ['menu', 'character-select', 'collection', 'wardrobe', 'story', 'pass', 'notes'].includes(GAME.screen)) return '';
+    if (!p || ['menu', 'character-select', 'collection', 'bestiary', 'wardrobe', 'story', 'pass', 'notes'].includes(GAME.screen)) return '';
     const char = window.CHARACTER_DB[p.characterId] || {};
     const act = currentAct();
     const diff = difficulty();
@@ -451,6 +451,7 @@ function renderScreen() {
         case 'menu': return renderMainMenu();
         case 'character-select': return renderCharacterSelect();
         case 'collection': return renderCollection();
+        case 'bestiary': return renderBestiary();
         case 'wardrobe': return renderWardrobe();
         case 'story': return renderStory();
         case 'pass': return renderPass();
@@ -518,7 +519,10 @@ function renderMainMenu() {
             <button class="btn-banana" onclick="startTutorial()">Cómo jugar</button>
             <button class="btn-strawberry" onclick="openPass()">Pase de Batalla${(window.PASS && PASS.unclaimed()) ? `<span class="menu-badge">${PASS.unclaimed()}</span>` : ''}</button>
             <button class="btn-grape" onclick="openWardrobe()">Vestidor</button>
-            <button class="secondary" onclick="openCollection()">Álbum de cartas</button>
+            <div class="menu-row">
+                <button class="secondary" onclick="openCollection()">Álbum de cartas</button>
+                <button class="secondary" onclick="openBestiary()">Bestiario</button>
+            </div>
         </div>
         <button class="notes-btn" onclick="openNotes()" ${tip(['Notas de la versión', 'Las novedades y arreglos del juego, y el Instagram del creador.'])}>${art('ui_notes', '', { size: 'sm' })} Notas${window.notesAreNew && notesAreNew() ? '<i class="new-dot"></i>' : ''}</button>
         <button class="fullscreen-btn" onclick="toggleFullscreen()" ${tip(['Pantalla completa', 'Entrar o salir de la pantalla completa (también con F11).'])}>⛶</button>
@@ -1142,6 +1146,7 @@ function renderCombat() {
             GAME.lastPhase[i] = e.phase;
             if (e.getStatus('frozen')) classes.push('is-frozen');
         }
+        if (window.bestiarySee) bestiarySee(e.defId);
         const intent = intentInfo(c, e);
         const hidden = !!(c.rule && c.rule.hideIntent && c.turnNumber % 2 === 1);
         const acting = !playerTurn && GAME.actingEnemy === i;

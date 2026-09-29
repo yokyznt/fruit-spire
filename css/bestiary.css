@@ -1,0 +1,78 @@
+/* ============================================================
+   BESTIARY.CSS — Bestiario (js/bestiary.js): pestañas por castillo,
+   secciones por piso, fichas de enemigos y el detalle a la derecha.
+   ============================================================ */
+.panel.bestiary { width: 1280px; max-width: 100%; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.best-head { display: flex; align-items: center; gap: 12px; }
+.best-head .hand-title { margin: 0; }
+.best-count { margin-left: auto; font-size: 1.25em; color: var(--ink-soft); }
+
+.best-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.best-tab { display: inline-flex; align-items: center; gap: 6px; padding: 4px 16px 4px 6px; background: var(--edge); font-size: 1em; }
+.best-tab.on { background: var(--mint); color: #fff; }
+.best-tab .art-sm { width: 34px; height: 34px; }
+
+.best-body { flex: 1; min-height: 0; display: flex; gap: 18px; }
+.best-list {
+    flex: 1; min-width: 0; overflow-y: auto; padding: 4px 10px 16px; border-radius: 16px; scrollbar-width: thin;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .035) 0 2px, transparent 2px 22px), #F7EBD5;
+    box-shadow: inset 0 0 0 2px #E6D6BC, inset 0 6px 14px rgba(74, 52, 40, .08);
+}
+.best-castle-sub { margin: 8px 4px 0; font-size: 1.2em; color: var(--ink-soft); }
+.best-section { margin-top: 12px; }
+.best-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; font-size: 1.55em; font-weight: normal; border-bottom: 2px dashed #E0CDA8; padding-bottom: 3px; }
+.best-h small { font-size: .6em; color: var(--ink-soft); }
+.best-rule { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-family: var(--f-body, inherit); font-size: .55em; padding: 2px 12px 2px 4px; border-radius: 99px; background: #FFF3C4; box-shadow: 0 0 0 1.5px var(--ink); cursor: help; }
+.best-sub { margin: 4px 0 0; color: var(--ink-soft); font-size: .95em; }
+.best-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; margin-top: 10px; }
+
+.best-tile {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px;
+    border-radius: 16px; background: var(--paper-2); font-size: .9em; cursor: pointer; text-align: center; min-height: 138px;
+    box-shadow: 0 0 0 2px var(--ink), 0 4px 0 2px rgba(74, 52, 40, .2); transition: transform .2s var(--ease-out);
+}
+.best-tile:hover { transform: translateY(-4px) rotate(-1deg); }
+.best-tile.sel { transform: translateY(-4px) scale(1.04); box-shadow: 0 0 0 3px var(--mint-dark), 0 0 0 7px rgba(92, 201, 167, .45), 0 4px 0 2px rgba(74, 52, 40, .2); }
+.best-art .art-lg { width: 76px; height: 76px; }
+.best-name { font-weight: 700; line-height: 1.1; min-height: 2.2em; display: flex; align-items: center; }
+.best-tier { font-size: .76em; padding: 0 10px; border-radius: 99px; background: #EFE5D2; }
+.best-kills { position: absolute; top: -8px; right: -6px; min-width: 26px; padding: 0 6px; border-radius: 99px; background: var(--banana); box-shadow: 0 0 0 2px var(--ink); font-family: var(--f-display); font-size: 1em; }
+/* aún no enfrentado: apagadito */
+.best-tile.unseen .best-art, .best-detail-art.unseen { filter: grayscale(.6); opacity: .7; }
+.best-tile.unseen { background: #EFE6D6; }
+.best-tile.unseen .best-name { color: var(--ink-soft); }
+/* colores por tipo */
+.tier-elite .best-tier, .best-detail.tier-elite .best-ribbon { background: #FFD9C2; color: #A04A1A; }
+.tier-guard .best-tier, .best-detail.tier-guard .best-ribbon { background: #FFE9A8; color: #8A5A0A; }
+.tier-boss .best-tier, .best-detail.tier-boss .best-ribbon { background: #E8DCFF; color: #5A3E9E; }
+.tier-other .best-tier { background: #E1EEF6; color: #3E6A86; }
+.best-tile.tier-elite { background: linear-gradient(#FFF7F0, #FFE6D6); }
+.best-tile.tier-guard { background: linear-gradient(#FFFBEA, #FFF1C4); }
+.best-tile.tier-boss { background: linear-gradient(#F8F2FF, #E9DCFF); }
+.best-tile.tier-boss::after { content: ''; position: absolute; inset: 4px; border-radius: 12px; border: 2px dashed rgba(155, 127, 212, .5); pointer-events: none; }
+
+.best-detail {
+    width: 360px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+    padding: 16px 18px; border-radius: 18px; background: var(--paper-2); overflow-y: auto; scrollbar-width: thin;
+    box-shadow: 0 0 0 2px var(--ink), 0 6px 0 2px rgba(74, 52, 40, .18);
+}
+.best-detail.empty { justify-content: center; color: var(--ink-soft); }
+.best-detail.empty .hand { font-size: 1.4em; margin: 6px 0 0; }
+.best-tip { font-size: .95em; line-height: 1.35; }
+.best-detail-art .art-xxl { width: 160px; height: 160px; animation: bob 2.6s ease-in-out infinite; }
+.best-ribbon { padding: 3px 18px; border-radius: 6px; font-family: var(--f-display); background: #EFE5D2; box-shadow: 0 0 0 2px var(--ink); transform: rotate(-2deg); }
+.best-detail h3 { margin: 2px 0 0; font-size: 1.9em; font-weight: normal; line-height: 1.05; }
+.best-stats { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.best-stats > span { padding: 2px 12px; border-radius: 99px; background: #fff; box-shadow: 0 0 0 1.5px #D9C8AE; font-size: .95em; }
+.best-where { margin: 2px 0; font-size: .92em; color: var(--ink-soft); }
+.best-detail h4 { align-self: flex-start; margin: 8px 0 0; font-size: 1.3em; font-weight: normal; border-bottom: 2px dashed #E6D6BC; width: 100%; text-align: left; }
+.best-traits, .best-moves { list-style: none; margin: 0; padding: 0; width: 100%; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+.best-traits li { font-size: .92em; line-height: 1.35; padding: 6px 10px; border-radius: 10px; background: #F2FAEA; }
+.best-moves li { display: flex; flex-direction: column; padding: 6px 10px; border-radius: 10px; background: #fff; box-shadow: 0 0 0 1.5px #EADBC2; cursor: help; }
+.best-moves li b.hand { font-weight: normal; font-size: 1.2em; }
+.best-moves li span { font-size: .92em; line-height: 1.35; }
+.best-detail .kw { font-weight: 700; color: #B0624A; }
+
+/* menú: álbum y bestiario lado a lado */
+.menu-row { display: flex; gap: 10px; width: 100%; }
+.menu-row button { flex: 1; min-width: 0; }

@@ -15,6 +15,18 @@
     // =========================================================
     // ÍCONOS DE LAS MECÁNICAS NUEVAS
     // =========================================================
+    S.ui_book = () => svg(`
+        <path d="M50 30 Q32 18 10 22 L10 80 Q32 76 50 88 Q68 76 90 80 L90 22 Q68 18 50 30 Z" fill="#8C5A3C" ${st(4)}/>
+        <path d="M50 30 Q34 20 16 24 L16 74 Q34 72 50 82 Z" fill="#FFF8EC" ${st(3)}/>
+        <path d="M50 30 Q66 20 84 24 L84 74 Q66 72 50 82 Z" fill="#FFF3DC" ${st(3)}/>
+        <path d="M50 30 L50 84" ${st(3)} fill="none"/>
+        <path d="M22 36 Q30 34 40 38 M22 46 Q30 44 40 48 M22 56 Q30 54 38 58" stroke="#C9B38F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <ellipse cx="68" cy="52" rx="10" ry="8" fill="#7BBF5A" ${st(2.5)}/>
+        <circle cx="76" cy="44" r="6" fill="#7BBF5A" ${st(2.5)}/>
+        <path d="M74 38 Q72 32 70 31 M78 38 Q80 32 83 31" ${st(2)} fill="none"/>
+        <circle cx="75" cy="44" r="1.6" fill="${INK}"/><circle cx="78.5" cy="44" r="1.6" fill="${INK}"/>
+        <path d="M60 58 L57 63 M66 60 L65 65 M72 59 L74 64" ${st(2)} fill="none"/>
+        <path d="M58 16 L58 34 L63 30 L68 34 L68 16" fill="#E0455E" ${st(2.5)}/>`);
     S.st_taunt = () => svg(`
         ${shieldShape(50, 48, 1.8, '#5A6FB0')}
         <path d="M50 26 L50 52" stroke="#fff" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="66" r="5" fill="#fff"/>`);

@@ -326,7 +326,7 @@ function showMainMenu() { GAME.returnTo = null; GAME.inventory = null; exitTutor
 function goToCharacterSelect() { GAME.screen = 'character-select'; render(); }
 // Pantallas "de lado" (pase, vestidor, álbum, notas): si se abren en plena
 // partida (p. ej. desde las recompensas), Volver regresa justo ahí.
-const SIDE_SCREENS = ['pass', 'wardrobe', 'collection', 'notes'];
+const SIDE_SCREENS = ['pass', 'wardrobe', 'collection', 'bestiary', 'notes'];
 function rememberReturn() {
     if (SIDE_SCREENS.includes(GAME.screen)) return;
     GAME.returnTo = GAME.screen === 'menu' ? null : GAME.screen;
@@ -697,6 +697,7 @@ function onCombatEnd(result, kind) {
     GAME.modal = null;
     const p = GAME.player;
     awardCombatXp(GAME.combat); // gane o pierda, cada enemigo derrotado suma al pase
+    if (window.bestiaryRecordCombat) bestiaryRecordCombat(GAME.combat);
     // tutorial: no se puede perder (se repite el combate) y el jefe lo termina
     if (GAME.tutorial) {
         if (result !== 'win') {

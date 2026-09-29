@@ -172,7 +172,7 @@
     document.addEventListener('keydown', (e) => {
         if (e.target && /input|textarea/i.test(e.target.tagName)) return;
         if (e.key === 'Escape' && GAME.inventory) { closeInventory(); e.stopImmediatePropagation(); return; }
-        if ((e.key === 'i' || e.key === 'I') && GAME.player && !['menu', 'character-select', 'story', 'collection', 'wardrobe', 'pass', 'notes'].includes(GAME.screen)) {
+        if ((e.key === 'i' || e.key === 'I') && GAME.player && !['menu', 'character-select', 'story', 'collection', 'bestiary', 'wardrobe', 'pass', 'notes'].includes(GAME.screen)) {
             if (GAME.inventory) closeInventory(); else openInventory();
         }
     }, true);
