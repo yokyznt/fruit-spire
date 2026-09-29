@@ -335,6 +335,9 @@
         else if (e.key === 'ArrowLeft' && GAME.story && GAME.story.i > 0) { e.preventDefault(); goScene(GAME.story.i - 1); }
     });
 
+    // piezas de dibujo compartidas con el final (js/ending.js)
+    window.CINE_KIT = { A, P, at, svgBox, houseSvg, treeSvg, bushSvg, bunting, noteSvg, bubble, wheelSvg, wagonSvg, ropeSvg, towerSvg, towerBars, mountainsSvg, stars, typewriter, cast };
+
     window.renderStory = function () {
         if (!GAME.story) GAME.story = { i: 0, replay: false, t0: performance.now() };
         const c = cast();

@@ -6,9 +6,21 @@
 // ============================================================
 
 window.CREATOR = { handle: '@yokyznt', url: 'https://www.instagram.com/yokyznt/' };
-window.GAME_VERSION = '2.3';
+window.GAME_VERSION = '2.4';
 
 window.PATCH_NOTES = [
+    {
+        version: '2.4', date: '29 sep 2026', title: '¡El final de la aventura!',
+        items: [
+            'Nuevo final animado al vencer al último jefe: se rompen los barrotes de la torre, se abren las jaulas, todos vuelven al pueblo en las carretas (¡jaladas por los bichos!), hay una gran fiesta con fuegos artificiales y el Rey Fruta te nombra Héroe del Reino. Puedes verlo otra vez desde las Notas.',
+            'Al seleccionar o arrastrar una carta aparece encima de ella su ficha: el daño y la cáscara reales y la explicación de cada efecto y estado que causa.',
+            'Tutorial más claro: Profe Limón habla corto y solo deja hacer lo que pide (las cartas que no tocan se ven apagadas y los atajos de teclado se bloquean). El primer combate es contra un solo enemigo.'
+        ],
+        fixes: [
+            'El tutorial ya no se atora si abres la mochila en el cofre o la cierras antes de usar la semilla.',
+            'La burbuja de Profe Limón ya no tiene «¡Hazlo para seguir!» ni «Salir»: para salir del tutorial usa la ✕ de arriba o Esc.'
+        ]
+    },
     {
         version: '2.3', date: '28 sep 2026', title: 'Bestiario y tutorial nuevo',
         items: [
@@ -115,6 +127,7 @@ window.renderNotes = function () {
                 <span><b class="hand">¡Sígueme en Instagram!</b><br>Creador del juego: <u>${window.CREATOR.handle}</u></span>
             </a>
             <button class="btn-banana replay-btn" onclick="replayStory()">${art('ui_play', '', { size: 'xs' })} Ver la historia otra vez</button>
+            ${window.endingSeen && endingSeen() ? `<button class="btn-mint replay-btn" onclick="replayEnding()">${art('ui_play', '', { size: 'xs' })} Ver el final otra vez</button>` : ''}
             <div class="notes-scroll">
                 ${window.PATCH_NOTES.map((n, i) => `
                 <section class="note ${i === 0 ? 'latest' : ''}">

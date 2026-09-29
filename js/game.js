@@ -763,6 +763,8 @@ function onCombatEnd(result, kind) {
         // el Rey Fruta queda libre: se acabó la partida
         GAME.unlockMsg = unlockNextDifficulty(p.characterId, p.difficulty);
         clearSave();
+        // primero el final animado; al terminar pasa a la pantalla de victoria
+        if (window.startEnding) { GAME.combat = null; startEnding(); return; }
         GAME.screen = 'victory';
         render();
         return;

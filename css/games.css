@@ -124,11 +124,11 @@
 
 /* ficha de la carta seleccionada o arrastrada (cardInfoHtml en render.js) */
 .card-info {
-    position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 15; width: 400px; pointer-events: none;
+    position: absolute; left: 0; top: 0; z-index: 15; width: 340px; pointer-events: none; transition: top .2s var(--ease-out), left .2s var(--ease-out);
     padding: 12px 16px 10px; border-radius: 18px; background: rgba(255, 253, 246, .97);
     box-shadow: 0 0 0 3px var(--ink), 0 8px 0 3px rgba(74, 52, 40, .22); animation: ciIn .22s var(--ease-out);
 }
-@keyframes ciIn { from { opacity: 0; transform: translate(-50%, 10px) scale(.96); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes ciIn { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
 .card-info.type-attack { box-shadow: 0 0 0 3px var(--ink), inset 0 5px 0 #F2A0AA, 0 8px 0 3px rgba(74, 52, 40, .22); }
 .card-info.type-skill { box-shadow: 0 0 0 3px var(--ink), inset 0 5px 0 #8FDCC0, 0 8px 0 3px rgba(74, 52, 40, .22); }
 .card-info.type-power { box-shadow: 0 0 0 3px var(--ink), inset 0 5px 0 #FFD98A, 0 8px 0 3px rgba(74, 52, 40, .22); }
@@ -145,7 +145,3 @@
 .ci-list li .art-xs { flex: none; width: 26px; height: 26px; margin-top: 1px; }
 .ci-list li b { display: block; }
 .ci-list li span { color: var(--ink-soft); }
-.ci-how { margin: 8px 0 0; font-size: .82em; color: var(--mint-dark); text-align: center; }
-/* con varios enemigos, la ficha se corre junto a tu fruta para no tapar sus intenciones */
-.arena.multi ~ .card-info { left: 22px; top: 60px; width: 330px; transform: none; animation-name: ciInLeft; }
-@keyframes ciInLeft { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }

@@ -370,6 +370,7 @@ function beginCardDrag() {
     d.stage.querySelectorAll('.card-info').forEach((x) => x.remove());
     d.stage.insertAdjacentHTML('beforeend', cardInfoHtml(d.card, GAME.combat.previewCard(d.card, null), 'drag-card-info'));
     heartifyDom(document.getElementById('drag-card-info'));
+    placeCardInfo(document.getElementById('drag-card-info'), d.slot);
     d.raf = requestAnimationFrame(cardDragFrame);
 }
 
@@ -475,6 +476,20 @@ function endCardDrag(e, cancelled) {
     d.slot.animate([{ transform: from }, { transform: to }], { duration: 420, easing: 'cubic-bezier(.22, 1.15, .36, 1)' });
 }
 
+// La ficha de la carta aparece justo encima de ella (sin salirse del escenario)
+function placeCardInfo(info, slot) {
+    const stage = document.querySelector('.combat-stage');
+    if (!info || !slot || !stage) return;
+    const s = stage.getBoundingClientRect(), c = (slot.querySelector('.card') || slot).getBoundingClientRect();
+    const k = s.width / stage.offsetWidth || 1; // escala del lienzo
+    const w = info.offsetWidth, h = info.offsetHeight;
+    let left = (c.left + c.width / 2 - s.left) / k - w / 2;
+    let top = (c.top - s.top) / k - h - 14;
+    left = Math.max(10, Math.min(stage.offsetWidth - w - 10, left));
+    top = Math.max(8, top);
+    info.style.left = left + 'px';
+    info.style.top = top + 'px';
+}
 function setupCardDrag() {
     // La animación de reparto deja la carta "congelada" en su último cuadro
     // (fill: both), lo que impide levantarla o arrastrarla. Se quita al terminar.
@@ -884,6 +899,8 @@ function hideTip() {
 function showTip(el) {
     const t = document.getElementById('tooltip');
     if (!t) return;
+    // la carta seleccionada ya muestra su ficha: no hace falta el tooltip encima
+    if (el.closest && el.closest('.fan-slot.selected')) { hideTip(); return; }
     tipTarget = el;
     t.innerHTML = el.dataset.tip.split('||').map((sec) => {
         const [title, text] = sec.split('::');

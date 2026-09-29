@@ -248,7 +248,7 @@ function settleEntryAnims(prev, root) {
 function musicContextFor() {
     const s = GAME.screen;
     const back = ['pass', 'wardrobe', 'collection', 'bestiary', 'notes'].includes(s) && GAME.returnTo ? GAME.returnTo : s;
-    if (['menu', 'character-select', 'story', 'collection', 'bestiary', 'wardrobe', 'pass', 'notes', 'victory'].includes(back) || !GAME.player) return 'menu';
+    if (['menu', 'character-select', 'story', 'ending', 'collection', 'bestiary', 'wardrobe', 'pass', 'notes', 'victory'].includes(back) || !GAME.player) return 'menu';
     if (back === 'combat') return GAME.combatKind === 'boss' ? 'boss' : GAME.combatKind === 'elite' ? 'elite' : 'combat';
     if (back === 'shop') return 'shop';
     if (back === 'rest' || back === 'gameover') return 'rest';
@@ -402,13 +402,18 @@ function afterRender() {
             });
         }));
     }
+    if (GAME.screen === 'combat' && GAME.selectedCard != null) {
+        const place = () => placeCardInfo(document.querySelector('.combat-stage > .card-info'), document.querySelectorAll('.hand-row .fan-slot')[GAME.selectedCard]);
+        place();
+        setTimeout(place, 260); // otra vez cuando la carta termina de levantarse
+    }
     GAME.dealIn = false;
     GAME.combatEnter = false;
 }
 
 function renderHud() {
     const p = GAME.player;
-    if (!p || ['menu', 'character-select', 'collection', 'bestiary', 'wardrobe', 'story', 'pass', 'notes'].includes(GAME.screen)) return '';
+    if (!p || ['menu', 'character-select', 'collection', 'bestiary', 'wardrobe', 'story', 'ending', 'pass', 'notes'].includes(GAME.screen)) return '';
     const char = window.CHARACTER_DB[p.characterId] || {};
     const act = currentAct();
     const diff = difficulty();
@@ -487,6 +492,7 @@ function renderScreen() {
         case 'bestiary': return renderBestiary();
         case 'wardrobe': return renderWardrobe();
         case 'story': return renderStory();
+        case 'ending': return renderEnding();
         case 'pass': return renderPass();
         case 'notes': return renderNotes();
         case 'gift': return renderGift();
@@ -1161,8 +1167,6 @@ function cardInfoHtml(card, prev, id) {
         const base = window.getCard(card.baseId);
         if (base) add('ui_up', 'Madurada', `Versión mejorada. La normal dice: «${base.description}»`);
     }
-    const how = card.unplayable ? 'Esta carta no se puede jugar.'
-        : cardNeedsTarget(card) ? 'Arrástrala hasta un enemigo para jugarla.' : 'Arrástrala hacia arriba para jugarla.';
     return `<div class="card-info type-${card.type}" ${id ? `id="${id}"` : ''}>
         <div class="ci-head">
             <span class="ci-cost">${card.cost < 0 ? '–' : card.cost}</span>
@@ -1171,7 +1175,6 @@ function cardInfoHtml(card, prev, id) {
         </div>
         <p class="ci-desc">${prev ? previewDescHtml(card, prev) : highlightDesc(card.description)}</p>
         ${rows.length ? `<ul class="ci-list">${rows.map((r) => `<li>${art(r.sprite, '', { size: 'xs' })}<div><b>${r.title}</b><span>${r.text}</span></div></li>`).join('')}</ul>` : ''}
-        <p class="ci-how">${how}</p>
     </div>`;
 }
 

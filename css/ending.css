@@ -1,0 +1,131 @@
+/* ============================================================
+   ENDING — el final animado en 5 escenas (js/ending.js).
+   Usa el mismo escenario de 1440x810 que la intro (css/intro.css);
+   aquí solo va lo propio del final: .cine.ending con la escena .es-N.
+   ============================================================ */
+.screen-ending .stage { padding: 0; }
+
+/* cielo de cada escena: noche → amanecer → día → atardecer de fiesta → día */
+.cine.ending .sky { opacity: 0; }
+.cine.ending.es-0 .sky.night, .cine.ending.es-1 .sky.dawn, .cine.ending.es-2 .sky.day, .cine.ending.es-3 .sky.dusk, .cine.ending.es-4 .sky.day { opacity: 1; }
+.cine.ending .cine-stars { opacity: 0; }
+.cine.ending.es-0 .cine-stars { opacity: 1; }
+.cine.ending.es-3 .cine-stars { opacity: .6; }
+.cine.ending .cine-sun { transform: translateY(700px); opacity: 0; }
+.cine.ending.es-2 .cine-sun, .cine.ending.es-4 .cine-sun { transform: none; opacity: 1; }
+.cine.ending .cine-moon { opacity: 0; }
+.cine.ending.es-0 .cine-moon, .cine.ending.es-3 .cine-moon { opacity: 1; transform: none; }
+.cine.ending.es-0 .cloud { opacity: .2; }
+.cine.ending.es-0 .cine-ground-fill { background: #3A3448; }
+.cine.ending.es-1 .cine-ground-fill, .cine.ending.es-2 .cine-ground-fill { background: #7BBF5A; }
+.cine.ending.es-3 .cine-ground-fill { background: #6BA84E; }
+.cine.ending.es-4 .cine-ground-fill { background: #8CCB5F; }
+
+/* qué escena se ve */
+.cine.ending.es-0 .sc-e0, .cine.ending.es-1 .sc-e1, .cine.ending.es-2 .sc-e2, .cine.ending.es-3 .sc-e3, .cine.ending.es-4 .sc-e4 {
+    opacity: 1; visibility: visible; transition: opacity .9s ease, visibility 0s;
+}
+.cine.ending .cine-next { display: inline-block; }
+.cine.ending.es-4 .cine-next { display: none; }
+.cine.ending .cine-go { display: none; }
+.cine.ending.es-4 .cine-go { display: block; animation: goIn .6s 2.6s var(--ease-back) both, goBob 1.4s 3.2s ease-in-out infinite; }
+.cine.ending.es-0 .cine-caption { left: 30px; transform: none; width: 520px; }
+
+/* ---------- 0: la torre ---------- */
+.cine .e-tower { position: absolute; inset: 0; transform-origin: 720px 420px; }
+.cine.ending.es-0 .e-tower { animation: towerZoom 7s ease-out forwards; }
+.cine .e-king-window { position: relative; width: 136px; height: 136px; }
+.cine.ending.es-0 .e-king-window .ca { animation: kingSway 1s 2s ease-in-out infinite; transform-origin: 50% 100%; }
+.cine.ending.es-0 .e-bars { animation: barsOff 1.1s 1.2s cubic-bezier(.5, -.3, .7, .6) forwards; transform-origin: 720px 400px; }
+@keyframes barsOff { 30% { transform: translateY(-20px) rotate(-4deg); } 100% { transform: translate(260px, 900px) rotate(40deg); opacity: 0; } }
+.cine .e-thanks { opacity: 0; transform: scale(0); }
+.cine.ending.es-0 .e-thanks { animation: popBubble .45s 2.4s var(--ease-back) forwards; }
+.cine .e-spark { opacity: 0; }
+.cine.ending.es-0 .sc-e0 .e-spark { animation: sparkPop 1.4s ease-in-out infinite; animation-delay: calc(2s + var(--i) * .3s); }
+.cine.ending.es-0 .e-boss .ca { animation: bossFall 1.6s .3s cubic-bezier(.5, 0, .8, .4) forwards; transform-origin: 50% 60%; }
+@keyframes bossFall { 25% { transform: translateY(-40px) rotate(-20deg); } 100% { transform: translate(420px, 500px) rotate(540deg) scale(.5); opacity: 0; } }
+.cine.ending.es-0 .e-flee.r .ca { animation: fleeR 1.8s .6s ease-in forwards; }
+.cine.ending.es-0 .e-flee.l .ca { animation: fleeL 1.8s .8s ease-in forwards; }
+@keyframes fleeR { 0% { transform: none; } 20% { transform: translateY(-30px) scaleX(-1); } 100% { transform: translateX(700px) scaleX(-1); } }
+@keyframes fleeL { 0% { transform: none; } 20% { transform: translateY(-30px); } 100% { transform: translateX(-700px); } }
+.cine .e-hero0 { opacity: 0; }
+.cine.ending.es-0 .e-hero0 { animation: heroJump .9s 1s var(--ease-back) forwards; }
+.cine.ending.es-0 .e-hero0 .ca { animation: dance .5s 2s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+
+/* ---------- 1: las jaulas ---------- */
+.cine .e-fruit { opacity: .9; }
+.cine .e-freed { width: 110px; height: 110px; }
+.cine.ending.es-1 .e-fruit .e-freed { animation: freedHop .5s ease-in-out infinite alternate; animation-delay: calc(1.2s + var(--i) * .45s); }
+@keyframes freedHop { from { transform: translateY(0) scale(1.05, .95); } to { transform: translateY(-60px) scale(.95, 1.05) rotate(6deg); } }
+.cine .e-cage .art .sprite { filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .2)); }
+.cine.ending.es-1 .e-cage { animation: cageOpen .9s cubic-bezier(.4, -.4, .6, 1) forwards; animation-delay: calc(.5s + var(--i) * .45s); }
+@keyframes cageOpen { 30% { transform: translateY(12px) rotate(-3deg); } 100% { transform: translateY(-640px) rotate(18deg); opacity: 0; } }
+.cine .e-hero1 { opacity: 0; transform: translateX(300px); }
+.cine.ending.es-1 .e-hero1 { animation: limonIn .8s .2s var(--ease-back) forwards; }
+.cine.ending.es-1 .e-hero1 .ca { animation: dance .5s 1s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+
+/* confeti */
+.cine .e-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.cine .e-confetti i { position: absolute; top: -30px; width: 12px; height: 18px; border-radius: 3px; box-shadow: 0 0 0 2px rgba(74, 52, 40, .5); opacity: 0; }
+.cine.ending.es-1 .e-confetti i, .cine.ending.es-3 .e-confetti i, .cine.ending.es-4 .e-confetti i { animation: confettiFall var(--t) linear infinite; animation-delay: var(--d); }
+@keyframes confettiFall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 1; transform: translateY(880px) rotate(var(--r)); } }
+
+/* ---------- 2: el regreso ---------- */
+.cine .e-parallax { position: absolute; inset: 0; }
+.cine.ending.es-2 .e-parallax { animation: parallaxBack 9s linear forwards; }
+@keyframes parallaxBack { to { transform: translateX(-180px); } }
+.cine .e-grass { position: absolute; left: -600px; right: -600px; top: 731px; height: 90px; background: #5DA33E; }
+.cine .e-convoy { position: absolute; left: 0; top: 0; width: 2500px; height: 810px; transform: translateX(-2500px); }
+.cine.ending.es-2 .e-convoy { animation: convoyBack 9s linear forwards; }
+@keyframes convoyBack { from { transform: translateX(-2500px); } to { transform: translateX(1300px); } }
+.cine .e-cart { position: absolute; top: 360px; width: 420px; height: 340px; }
+.cine.ending.es-2 .e-puller .ca { animation: walk .3s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+.cine.ending.es-2 .e-convoy .wheel { animation: spinCW .7s linear infinite; }
+@keyframes spinCW { to { transform: rotate(360deg); } }
+.cine .e-riders { position: absolute; display: flex; align-items: flex-end; gap: 4px; }
+.cine .e-rider { display: inline-flex; }
+.cine.ending.es-2 .e-rider .ca { animation: dance .45s ease-in-out infinite alternate; animation-delay: calc(var(--i) * .13s); transform-origin: 50% 100%; }
+.cine .e-sweat .sweat { position: absolute; width: 10px; height: 14px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: #8FD0F0; box-shadow: 0 0 0 2px #4A3428; opacity: 0; }
+.cine .e-sweat .sweat.s2 { left: 26px; top: -10px; }
+.cine.ending.es-2 .e-sweat .sweat { animation: tearDrop 1s ease-in infinite; }
+.cine.ending.es-2 .e-sweat .sweat.s2 { animation-delay: .5s; }
+.cine.ending.es-2 .e-flag .cine-svg { animation: flagWave .6s ease-in-out infinite alternate; transform-origin: 8px 88px; }
+@keyframes flagWave { from { transform: rotate(-4deg); } to { transform: rotate(5deg) skewY(-3deg); } }
+.cine.ending.es-2 .e-leader .ca { animation: walk .3s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+
+/* ---------- 3: la fiesta ---------- */
+.cine.ending.es-3 .e-dance .ca { animation: dance .55s ease-in-out infinite alternate; animation-delay: calc(var(--i, 0) * .14s); transform-origin: 50% 100%; }
+.cine.ending.es-3 .e-dance.king .ca { animation: kingSway 1.2s ease-in-out infinite; }
+.cine.ending.es-3 .e-pet .ca, .cine.ending.es-4 .e-pet .ca { animation: cinePetHop .45s ease-in-out infinite alternate; animation-delay: calc(var(--i) * .11s); transform-origin: 50% 100%; }
+.cine .e-note { opacity: 0; }
+.cine.ending.es-3 .e-note { animation: noteUp 2.4s ease-out infinite; animation-delay: calc(var(--i) * .5s); }
+.cine .e-fw { position: absolute; width: 0; height: 0; }
+.cine .e-fw i { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px 2px var(--c); opacity: 0; }
+.cine.ending.es-3 .e-fw i { animation: fwBurst 2.6s ease-out infinite; animation-delay: calc(.4s + var(--i) * .55s); }
+@keyframes fwBurst {
+    0% { opacity: 0; transform: rotate(var(--a)) translateY(0) scale(.4); }
+    8% { opacity: 1; }
+    45% { opacity: 1; transform: rotate(var(--a)) translateY(-110px) scale(1); }
+    70%, 100% { opacity: 0; transform: rotate(var(--a)) translateY(-140px) scale(.3); }
+}
+.cine.ending.es-3 .bunting .cine-svg { animation: flagWave 1.4s ease-in-out infinite alternate; transform-origin: 570px 20px; }
+
+/* ---------- 4: el héroe ---------- */
+.cine .e-rays { position: absolute; left: 720px; top: 480px; width: 0; height: 0; }
+.cine .e-rays::before { content: ''; position: absolute; left: -900px; top: -900px; width: 1800px; height: 1800px; border-radius: 50%; background: repeating-conic-gradient(rgba(255, 236, 150, .55) 0 9deg, transparent 9deg 24deg); animation: spin 30s linear infinite; }
+.cine .e-halo { opacity: 0; left: 470px; top: 240px; }
+.cine.ending.es-4 .e-halo { animation: glowIn 1.6s .6s forwards; }
+.cine .e-hero4, .cine .e-king4, .cine .e-limon4 { opacity: 0; }
+.cine.ending.es-4 .e-hero4 { animation: heroJump .9s .4s var(--ease-back) forwards; }
+.cine.ending.es-4 .e-hero4 .ca { animation: breathe 2.2s 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.cine.ending.es-4 .e-king4 { animation: limonIn .8s .2s var(--ease-back) forwards; transform: translateX(-300px); }
+.cine.ending.es-4 .e-king4 .ca { animation: kingSway 2s 1s ease-in-out infinite; transform-origin: 50% 100%; }
+.cine.ending.es-4 .e-limon4 { animation: limonIn .8s 1s var(--ease-back) forwards; transform: translateX(300px); }
+.cine.ending.es-4 .e-limon4 .ca { animation: cinePetHop .5s 1.8s ease-in-out infinite alternate; }
+.cine .e-medal { opacity: 0; transform: translateY(-300px); }
+.cine.ending.es-4 .e-medal { animation: medalDrop 1s 1.4s cubic-bezier(.3, 1.4, .5, 1) forwards; }
+@keyframes medalDrop { 0% { opacity: 1; transform: translateY(-300px) rotate(-20deg); } 100% { opacity: 1; transform: translateY(260px) rotate(0); } }
+.cine.ending.es-4 .sc-e4 .e-spark { animation: sparkPop 1.6s ease-in-out infinite; animation-delay: calc(2s + var(--i) * .3s); }
+.cine .e-title { position: absolute; left: 0; right: 0; top: 150px; text-align: center; opacity: 0; transform: scale(.5); }
+.cine.ending.es-4 .e-title { animation: popBubble .6s 2.2s var(--ease-back) forwards; }
+.cine .e-sub { font-size: 1.8em; color: #4A3428; margin-top: -6px; text-shadow: 0 2px 0 #fff; }
