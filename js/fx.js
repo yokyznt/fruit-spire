@@ -136,6 +136,7 @@ function noEnergy(slot) {
 // Jugarla es obligatoriamente arrastrándola hasta su objetivo.
 function selectCard(i) {
     if (!canPlayNow()) return;
+    if (window.tutCardAllowed && GAME.combat && !tutCardAllowed(window.getCard(GAME.combat.player.hand[i]))) { tutDenied(document.querySelectorAll('.hand-row .fan-slot')[i]); return; }
     if (window.Sfx) Sfx.select();
     GAME.selectedCard = GAME.selectedCard === i ? null : i;
     render();
@@ -173,6 +174,7 @@ async function playCard(i, targetIdx, drop) {
     const card = window.getCard(c.player.hand[i]);
     if (!card) return;
     const slot = document.querySelectorAll('.hand-row .fan-slot')[i];
+    if (window.tutCardAllowed && !tutCardAllowed(card)) { tutDenied(slot); return; }
     if (card.unplayable) { if (window.Sfx) Sfx.denied(); restartClass(slot, 'nope'); showToast('Esa carta no se puede jugar'); return; }
     if (card.cost > c.player.energy) { noEnergy(slot); return; }
     const needsTarget = cardNeedsTarget(card);
@@ -336,6 +338,7 @@ function onCardPointerDown(e) {
     const index = Array.prototype.indexOf.call(slot.parentNode.children, slot);
     const card = window.getCard(GAME.combat.player.hand[index]);
     if (!card) return;
+    if (window.tutCardAllowed && !tutCardAllowed(card)) { tutDenied(slot); return; }
     const p = toCanvas(e);
     cardDrag = { id: e.pointerId, slot, index, card, start: p, pos: p, moved: false, raf: 0, hover: null };
 }

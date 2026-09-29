@@ -642,6 +642,8 @@ function playCombatIntro(enemyIds, kind) {
 
 function startCombat(enemyIds, kind) {
     GAME.inventory = null;
+    // tutorial: el primer combate es siempre contra un solo enemigo que solo ataca
+    if (GAME.tutorial && GAME.tutorial.firstFight && kind !== 'boss') enemyIds = ['avispa_furiosa'];
     const defs = enemyIds.map((id) => window.ENEMY_DB[id]);
     GAME.screen = 'combat';
     GAME.combatKind = kind;
