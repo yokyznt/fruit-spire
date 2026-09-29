@@ -677,7 +677,7 @@ function startCombat(enemyIds, kind) {
             }, 350);
         }
         setTimeout(() => onCombatEnd(result, kind), 1500);
-    }, { mods: window.scaledMods(difficulty().mods, GAME.player.act, currentFloorNo()), rule: GAME.tutorial ? null : currentTheme().rule });
+    }, { mods: window.scaledMods(difficulty().mods, GAME.player.act, currentFloorNo()), rule: GAME.tutorial ? (kind === 'boss' ? window.FLOOR_THEMES.huerto.rule : null) : currentTheme().rule });
     if (GAME.tutorial && GAME.tutorial.firstFight) {
         GAME.tutorial.firstFight = false;
         const hand = GAME.combat.player.hand;
@@ -781,7 +781,7 @@ function onCombatEnd(result, kind) {
         if (relic) { giveRelic(p, relic); GAME.rewardRelic = relic; }
     }
     const seedChance = GAME.tutorial ? 1 : kind === 'boss' ? 1 : kind === 'elite' ? 0.55 : 0.35;
-    GAME.rewardSeed = Math.random() < seedChance ? window.rollSeed().id : null;
+    GAME.rewardSeed = GAME.tutorial ? 'semilla_chile' : Math.random() < seedChance ? window.rollSeed().id : null;
     if (GAME.rewardSeed && addSeed(GAME.rewardSeed)) GAME.rewardSeedTaken = true;
     else GAME.rewardSeedTaken = false;
     GAME.newCosmetic = null; // los accesorios ahora se ganan en el Pase de Batalla
@@ -867,6 +867,7 @@ async function useSeed(i, targetIdx) {
     await wait(320);
     if (GAME.combat !== c) return;
     c.useSeed(id, targetIdx);
+    if (window.tutorialNotify) tutorialNotify('seed-use');
     spawnFx(c.lastEvents, { fx: 'burst' });
     await wait(400);
     if (GAME.combat === c && !c.ended) GAME.anim = false;
@@ -1072,6 +1073,7 @@ function shopRemoveCard(deckIndex, el) {
         GAME.player.gold -= price;
         GAME.player.removals = (GAME.player.removals || 0) + 1;
         GAME.shopStock.removeUsed = true;
+        if (window.tutorialNotify) tutorialNotify('shop-buy');
         GAME.restMode = null;
         saveGame();
         render();

@@ -22,56 +22,90 @@ const TUT_MAP = { cols: 8, rows: 3 };
 const tutFlag = (name) => () => !!(GAME.tutorial && GAME.tutorial.flags[name]);
 const tutScreen = (name) => () => GAME.screen === name;
 
+const tutCanPlaySkill = () => {
+    const c = GAME.combat;
+    return !!c && c.turn === 'player' && c.player.hand.some((id) => (window.getCard(id) || {}).type === 'skill' && c.canPlay(id));
+};
+
 const TUT_STEPS = [
     // ---------- el mapa ----------
-    { screen: 'map', pos: 'center', next: true, text: '¡Hola! Soy Profe Limón. Te voy a enseñar a jugar Fruit Spire, paso a paso. Tu misión: subir los 3 castillos y rescatar al Rey Fruta.' },
-    { screen: 'map', pos: 'top', next: true, spot: '#player-token', text: 'Esta es tu fruta. Cada piso es un mapa que se cruza de izquierda a derecha, hasta el jefe.' },
-    { screen: 'map', pos: 'top', next: true, spot: '.wall', text: 'Solo puedes avanzar adelante, arriba o abajo. Nunca hacia atrás, ni a casillas ya pisadas. Las cintas de colores son muros.' },
-    { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('combat'), text: 'Las casillas con borde verde son a donde puedes ir. Toca la del enemigo para pelear.' },
+    { ch: 'El mapa', screen: 'map', pos: 'center', next: true, text: '¡Hola! Soy <b>Profe Limón</b>. Te voy a enseñar a jugar Fruit Spire, paso a paso. Tu misión: subir los <b>3 castillos</b> y rescatar al Rey Fruta. (Puedes avanzar con <b>Enter</b>).' },
+    { ch: 'El mapa', screen: 'map', pos: 'top', next: true, spot: '#player-token', text: 'Esta es tu fruta. Cada piso es un mapa que se cruza de izquierda a derecha, hasta la guarida del jefe.' },
+    { ch: 'El mapa', screen: 'map', pos: 'top', next: true, spot: '.wall', text: 'Solo puedes avanzar adelante, arriba o abajo. Nunca hacia atrás, ni a casillas ya pisadas. Las cintas de colores son muros.' },
+    { ch: 'El mapa', screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('combat'), text: 'Las casillas con borde verde punteado son a donde puedes ir. Toca la del enemigo para pelear.' },
 
     // ---------- el primer combate ----------
-    { screen: 'combat', pos: 'top', next: true, spot: '#enemy-0', text: '¡Tu primer combate! Este es el enemigo. Tienes que bajar su vida a 0.' },
-    { screen: 'combat', pos: 'top', next: true, spot: '#enemy-0 .intent-bubble', text: 'Esta burbuja es su intención: lo que hará en su turno. La espada con un número es cuánto daño te hará.' },
-    { screen: 'combat', pos: 'top', next: true, spot: '.combatant.player .plate', text: 'Esta es tu vida. Si llega a 0, pierdes la partida.' },
-    { screen: 'combat', pos: 'top', next: true, spot: '.hand-row', text: 'Abajo está tu mano de cartas. Cada turno robas 5 cartas nuevas.' },
-    { screen: 'combat', pos: 'top', next: true, spot: '.energy-orange', text: 'La naranja es tu energía. Cada carta cuesta lo que dice su bolita naranja. Se recarga cada turno.' },
-    { screen: 'combat', pos: 'top', spot: '.hand-row', until: tutFlag('card:attack'), text: 'Arrastra un Golpe de Cáscara hacia arriba, sobre el enemigo, para atacarlo.' },
+    { ch: 'Combate', screen: 'combat', pos: 'top', next: true, spot: '#enemy-0', text: '¡Tu primer combate! Este es el enemigo. Tienes que bajar su vida a 0.' },
+    { ch: 'Combate', screen: 'combat', pos: 'top', next: true, spot: '#enemy-0 .intent-bubble', text: 'Esta burbuja es su <b>intención</b>: lo que hará en su turno. La espada con un número es el daño que te hará <b>de verdad</b>, ya contando sus mejoras y tus debilidades.' },
+    { ch: 'Combate', screen: 'combat', pos: 'top', next: true, spot: '.combatant.player .plate', text: 'Esta es tu vida. Si llega a 0, pierdes la partida.' },
+    { ch: 'Combate', screen: 'combat', pos: 'top', next: true, spot: '.hand-row', text: 'Abajo está tu mano de cartas. Cada turno robas 5 cartas nuevas.' },
+    { ch: 'Combate', screen: 'combat', pos: 'top', next: true, spot: '.energy-orange', text: 'La naranja es tu <b>energía</b>. Cada carta cuesta lo que dice su bolita naranja. Se recarga cada turno.' },
+    { ch: 'Combate', screen: 'combat', pos: 'top', spot: '.hand-row', until: tutFlag('card:attack'), text: 'Arrastra un <b>Golpe de Cáscara</b> hacia arriba, sobre el enemigo. Mientras lo arrastras, un globito sobre él te dice el <b>daño real</b> que le harás (y si lo derrotas).' },
     {
-        screen: 'combat', pos: 'top', spot: '.hand-row', until: tutFlag('card:skill'),
-        text: '¡Eso! Ahora arrastra un Jugo Defensivo hacia arriba: te da cáscara, que bloquea el daño del enemigo.',
-        skipIf: () => {
-            const c = GAME.combat;
-            return !c || c.player.energy < 1 || !c.player.hand.some((id) => (window.getCard(id) || {}).type === 'skill');
-        }
+        // también se da por cumplido si ya no puede jugar ninguna habilidad (para no atorarse)
+        ch: 'Combate', screen: 'combat', pos: 'top', spot: '.hand-row',
+        until: () => tutFlag('card:skill')() || !tutCanPlaySkill(),
+        text: '¡Eso! Ahora arrastra un <b>Jugo Defensivo</b> hacia arriba: te da <b>cáscara</b>, que te protege del próximo golpe.',
+        skipIf: () => !tutCanPlaySkill()
     },
-    { screen: 'combat', pos: 'top', next: true, spot: '.pile', text: 'Estas son tus pilas: a la izquierda la de robo y a la derecha el descarte. Cuando se acaba la de robo, el descarte se baraja.' },
-    { screen: 'combat', pos: 'top', spot: '.end-turn', until: tutFlag('turn-end'), text: 'Cuando ya no quieras jugar más cartas, pulsa Terminar turno. Entonces actúa el enemigo.' },
-    { screen: 'combat', pos: 'top', until: tutScreen('reward'), text: 'Tu cáscara absorbió el golpe. Sigue jugando cartas y terminando turnos hasta ganar. ¡Tú puedes!' },
+    {
+        ch: 'Combate', screen: 'combat', pos: 'top', next: true, spot: '.combatant.player .combat-block-badge',
+        text: 'Este escudito es tu cáscara. Cuando te pegan, <b>primero se gasta la cáscara</b> y solo lo que sobra te quita vida. Ojo: se pierde al empezar tu siguiente turno.',
+        skipIf: () => !GAME.combat || GAME.combat.player.block <= 0
+    },
+    {
+        ch: 'Combate', screen: 'combat', pos: 'top', spot: '#enemy-0 .intent-bubble', until: tutFlag('tip:intent'),
+        text: 'Casi todo tiene explicación. <b>Pasa el mouse</b> (o toca) sobre la intención del enemigo para ver exactamente qué va a hacer. Las palabras de colores de las cartas también se explican así.',
+        skipIf: () => !document.querySelector('#enemy-0 .intent-bubble')
+    },
+    { ch: 'Combate', screen: 'combat', pos: 'top', next: true, spot: '.pile', text: 'Estas son tus pilas: a la izquierda la de robo y a la derecha el descarte. Cuando se acaba la de robo, el descarte se baraja.' },
+    { ch: 'Combate', screen: 'combat', pos: 'top', spot: '.end-turn', until: tutFlag('turn-end'), text: 'Cuando ya no quieras jugar más cartas, pulsa <b>Terminar turno</b>. Entonces actúa el enemigo: mira cómo su golpe gasta primero tu cáscara.' },
+    { ch: 'Combate', screen: 'combat', pos: 'top', until: tutScreen('reward'), text: 'Sigue jugando cartas y terminando turnos hasta ganar. Si el enemigo va a pegar fuerte, ¡protégete! Tú puedes.' },
+
+    // ---------- recompensas ----------
+    { ch: 'Recompensas', screen: 'reward', pos: 'bl', spot: '.reward-row .card', until: tutScreen('map'), text: '¡Ganaste! Mira arriba: el oro ganado se suma a tu bolsa. Ahora <b>elige una carta</b> nueva para tu mazo (es obligatorio). Toca la que más te guste.' },
+    { ch: 'Recompensas', screen: 'map', pos: 'bl', next: true, spot: '.hud-bag', text: 'También ganaste una <b>semilla</b>. Se guarda en tu <b>Mochila</b>, arriba, junto con tus objetos (se abre tocándola o con la tecla <b>I</b>). La usaremos contra el jefe.' },
 
     // ---------- el resto del mapa ----------
-    { screen: 'reward', pos: 'bl', spot: '.reward-row .card', until: tutScreen('map'), text: '¡Ganaste! Te llevas oro y tienes que elegir una carta nueva para tu mazo. Toca la que más te guste.' },
-    { screen: 'map', pos: 'bl', next: true, spot: '.hud-bag', text: '¡También ganaste una semilla! Se guarda en tu mochila, arriba, junto a tus objetos. En combate, abre la mochila en tu turno para usarla. Cada una sirve una sola vez.' },
-    { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('rest'), text: 'Ahora ve al campamento, la casilla de la fogata.' },
+    { ch: 'Campamento', screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('rest'), text: 'Ahora ve al campamento, la casilla de la fogata.' },
     {
-        screen: 'rest', pos: 'bl', spot: '.rest-option, .reward-row.picker .card, button[onclick*="setRestMode"]', until: tutScreen('map'),
-        text: 'En el campamento eliges UNA cosa: Descansar para curarte, Madurar para mejorar una carta, o Despegar para quitarla de tu mazo. Elige una.'
+        ch: 'Campamento', screen: 'rest', pos: 'bl', spot: '.rest-option, .reward-row.picker .card, button[onclick*="setRestMode"]', until: tutScreen('map'),
+        text: 'En el campamento eliges UNA cosa: <b>Descansar</b> para curarte, <b>Madurar</b> para mejorar una carta, o <b>Despegar</b> para quitarla de tu mazo. Elige una.'
     },
-    { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('treasure'), text: 'Sigue hacia el cofre del tesoro.' },
+    { ch: 'Tesoro', screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('treasure'), text: 'Sigue hacia el cofre del tesoro.' },
     {
-        screen: 'treasure', pos: 'bl', spot: 'button[onclick*="closeEventResult"], .hud-bag', until: tutScreen('map'),
-        text: '¡Un objeto! Te ayuda durante todo el viaje. Tus objetos se guardan en la mochila de arriba: tócala cuando quieras para verlos. Pulsa Continuar.'
+        ch: 'Tesoro', screen: 'treasure', pos: 'bl', spot: 'button[onclick*="closeEventResult"], .hud-bag', until: tutScreen('map'),
+        text: '¡Un <b>objeto</b>! Funciona solo durante todo el viaje. Se guarda en tu Mochila, donde puedes verlo en grande. Pulsa Continuar.'
     },
-    { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('event'), text: 'El sobre es un misterio: un evento con decisiones. ¡Vamos!' },
-    { screen: 'event', pos: 'bl', spot: '.event-options button', until: tutScreen('event-result'), text: 'Lee y elige una opción. Algunas tienen premio y otras, riesgo.' },
-    { screen: 'event-result', pos: 'bl', spot: 'button[onclick*="closeEventResult"]', until: tutScreen('map'), text: 'Eso fue lo que pasó. Pulsa Continuar para volver al mapa.' },
-    { screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('shop'), text: 'Ahora la tiendita.' },
-    { screen: 'shop', pos: 'bl', spot: '.shop-item', until: tutFlag('shop-buy'), text: 'Aquí gastas tu oro en cartas, objetos, semillas o en quitar una carta de tu mazo. Toca algo para comprarlo.' },
-    { screen: 'shop', pos: 'bl', spot: 'button[onclick*="leaveShop"]', until: tutScreen('map'), text: '¡Comprado! Cuando termines, pulsa Salir.' },
-    { screen: 'map', pos: 'top', next: true, spot: '.node.elite', text: 'Las casillas de fuego son élites: enemigos duros que te dan un objeto. Hoy no pasarás por ahí. Otras casillas, como las Mesas de Juegos, traen dados, póker y ajedrez.' },
-    { screen: 'map', pos: 'top', spot: '.boss-lair', until: tutScreen('combat'), text: 'Al final está la guarida del jefe. Vencerlo te lleva al siguiente piso. ¡Entra!' },
-    { screen: 'combat', pos: 'top', next: true, spot: '#enemy-0 .intent-bubble', text: '¡El jefe! Mira siempre su intención: si va a atacar fuerte, protégete con cáscara.' },
-    { screen: 'combat', pos: 'top', until: tutScreen('tutorial-end'), text: '¡Vamos, dale con todo!' }
+    { ch: 'Misterio', screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('event'), text: 'El sobre es un <b>misterio</b>: un evento con decisiones. ¡Vamos!' },
+    { ch: 'Misterio', screen: 'event', pos: 'bl', spot: '.event-options button', until: tutScreen('event-result'), text: 'Lee y elige una opción. Algunas tienen premio y otras, riesgo.' },
+    { ch: 'Misterio', screen: 'event-result', pos: 'bl', spot: 'button[onclick*="closeEventResult"]', until: tutScreen('map'), text: 'Eso fue lo que pasó. Pulsa Continuar para volver al mapa.' },
+    { ch: 'Tiendita', screen: 'map', pos: 'top', spot: '.node.reachable', until: tutScreen('shop'), text: 'Ahora la tiendita.' },
+    { ch: 'Tiendita', screen: 'shop', pos: 'bl', spot: '.shop-item, .reward-row.picker .card, button[onclick*="closeShopPicker"]', until: tutFlag('shop-buy'), text: 'Aquí gastas tu oro en cartas, objetos, semillas o en quitar una carta de tu mazo. Toca algo para comprarlo.' },
+    { ch: 'Tiendita', screen: 'shop', pos: 'bl', spot: 'button[onclick*="leaveShop"]', until: tutScreen('map'), text: '¡Comprado! Cuando termines, pulsa Salir.' },
+    { ch: 'El jefe', screen: 'map', pos: 'top', next: true, spot: '.node.elite', text: 'Las casillas de fuego son <b>élites</b>: enemigos duros que dan un objeto. En los castillos también hay <b>Mesas de Juegos</b> (dados, póker y ajedrez), trampillas a calabozos y más sorpresas.' },
+    { ch: 'El jefe', screen: 'map', pos: 'top', spot: '.boss-lair', until: tutScreen('combat'), text: 'Al final está la guarida del jefe. Vencerlo te lleva al siguiente piso. ¡Entra!' },
+
+    // ---------- el jefe ----------
+    {
+        ch: 'El jefe', screen: 'combat', pos: 'top', spot: '.rule-chip', until: tutFlag('tip:rule'),
+        text: 'Cada piso tiene una <b>regla</b> que cambia los combates (¡y hasta el fondo!). Pasa el mouse sobre esta etiqueta para leer la de aquí.',
+        skipIf: () => !document.querySelector('.rule-chip')
+    },
+    { ch: 'El jefe', screen: 'combat', pos: 'top', next: true, spot: '#enemy-0 .intent-bubble', text: '¡El jefe! Mira siempre su intención: si va a atacar fuerte, protégete con cáscara.' },
+    {
+        ch: 'El jefe', screen: 'combat', pos: 'top', spot: '.hud-bag', until: () => !!GAME.inventory || tutFlag('seed-use')(),
+        text: 'Hora de usar tu semilla. Abre la <b>Mochila</b> (arriba): brilla cuando es tu turno y tienes una semilla lista.',
+        skipIf: () => !GAME.player || !(GAME.player.seeds || []).some(Boolean)
+    },
+    {
+        ch: 'El jefe', screen: 'combat', pos: 'top', spot: '.inv-seed .btn-mint', until: tutFlag('seed-use'),
+        text: 'Aquí están tus semillas y tus objetos. Pulsa <b>Usar</b> en la semilla: cada una sirve una sola vez.',
+        skipIf: () => !GAME.player || !(GAME.player.seeds || []).some(Boolean)
+    },
+    { ch: 'El jefe', screen: 'combat', pos: 'top', until: tutScreen('tutorial-end'), text: '¡Buenísimo! Ahora termina con él: ¡dale con todo!' }
 ];
+const TUT_TOTAL = TUT_STEPS.length;
 
 // ---------- empezar / salir ----------
 function exitTutorial() {
@@ -154,7 +188,7 @@ function tutCheck() {
     for (let guard = 0; guard < 40; guard++) {
         const s = TUT_STEPS[t.i];
         if (!s) break;
-        if (s.until && s.until()) { t.i = tutNextIndex(t.i + 1); continue; }
+        if (s.until && s.until()) { t.praise = true; t.i = tutNextIndex(t.i + 1); continue; }
         if (s.screen && s.screen !== GAME.screen && !GAME.anim) {
             const j = TUT_STEPS.findIndex((x, k) => k > t.i && x.screen === GAME.screen);
             if (j > t.i) { t.i = tutNextIndex(j); continue; }
@@ -194,22 +228,28 @@ function hideGuide() {
     if (g) g.remove();
     document.querySelectorAll('.tut-spot').forEach((el) => el.classList.remove('tut-spot'));
     const screen = document.getElementById('screen');
-    if (screen) screen.classList.remove('tut-lockdown');
+    if (screen) screen.classList.remove('tut-lockdown', 'tut-solo');
 }
 function showGuide() {
     const s = tutStep();
     if (!s) return;
     const g = guideEl();
     g.className = `guide pos-${s.pos || 'bl'} ${s.next ? 'blocking' : ''}`;
+    const tut = GAME.tutorial;
+    const praise = tut.praise;
+    tut.praise = false;
+    if (praise && window.Sfx) Sfx.buff();
+    const pct = Math.round(((tut.i + 1) / TUT_TOTAL) * 100);
     g.innerHTML = `
         ${s.next ? '<div class="guide-blocker"></div>' : ''}
         <div class="guide-box">
-            <div class="guide-fruit">${art('profe_limon', '🍋', { size: 'xl' })}</div>
+            <div class="guide-fruit ${praise ? 'cheer' : ''}">${art('profe_limon', '🍋', { size: 'xl', mood: praise ? 'happy' : undefined })}${praise ? '<span class="guide-praise hand">¡Muy bien!</span>' : ''}</div>
             <div class="guide-bubble">
+                <div class="guide-progress"><span class="hand">${s.ch || ''}</span><i><b style="width:${pct}%"></b></i><small>${tut.i + 1}/${TUT_TOTAL}</small></div>
                 <b class="hand">Profe Limón</b>
                 <p>${s.text}</p>
                 <div class="guide-actions">
-                    ${s.next ? `<button class="btn-mint" onclick="tutAdvance()">Siguiente</button>` : '<span class="guide-hint hand">¡Hazlo para seguir!</span>'}
+                    ${s.next ? `<button class="btn-mint" onclick="tutAdvance()">Siguiente <small>(Enter)</small></button>` : '<span class="guide-hint hand">¡Hazlo para seguir!</span>'}
                     <button class="secondary guide-exit" onclick="if(confirm('¿Salir del tutorial?')) showMainMenu()">Salir</button>
                 </div>
             </div>
@@ -250,21 +290,47 @@ function highlightSpot() {
     const screen = document.getElementById('screen');
     // pasos de acción: se oscurece todo y solo se puede tocar lo resaltado, para
     // que no se pierdan probando otra cosa (y no puedan saltarse lo que se pide)
-    if (screen) screen.classList.toggle('tut-lockdown', !!(s && s.until && s.spot));
-    if (!s || !s.spot) return;
-    [...document.querySelectorAll(s.spot)].slice(0, 12).forEach((el) => el.classList.add('tut-spot'));
+    const spots = s && s.spot ? [...document.querySelectorAll(s.spot)].slice(0, 12) : [];
+    spots.forEach((el) => el.classList.add('tut-spot'));
+    // solo se bloquea si hay algo resaltado que tocar: así nunca se queda atorado
+    if (screen) screen.classList.toggle('tut-lockdown', !!(s && s.until && spots.length));
+    if (screen) screen.classList.toggle('tut-solo', spots.length === 1);
 }
 
 // ---------- fin ----------
 function renderTutorialEnd() {
-    return panel(art('profe_limon', '🍋', { size: 'xl' }), '¡Tutorial completado!', `
-        <p>Ya conoces el mapa, el combate, los campamentos, los tesoros, los misterios y la tiendita.
-        En una partida de verdad hay 3 castillos de 3 pisos cada uno, con jefes guardianes, mesas de juegos y muchas sorpresas.
-        ¡Sube la torre y rescata al Rey Fruta!</p>
+    const learned = [
+        ['node_enemy', 'Combates', 'cartas, energía, intenciones y daño real'],
+        ['ui_shield', 'Cáscara', 'se gasta antes que tu vida'],
+        ['ui_bag', 'Mochila', 'objetos y semillas (tecla I)'],
+        ['node_rest', 'Campamento', 'curarte, madurar o despegar'],
+        ['node_mystery', 'Misterios', 'decisiones con premio o riesgo'],
+        ['node_shop', 'Tiendita', 'cartas, objetos y semillas']
+    ];
+    const tips = [
+        'Pasa el mouse sobre cualquier cosa para ver qué hace.',
+        'Cada piso tiene su regla: léela al empezar el combate.',
+        'Cada enemigo derrotado da experiencia para el <b>Pase de Batalla</b> (colores y accesorios para tus frutas).',
+        'En el <b>Bestiario</b> del menú puedes repasar a cada enemigo que conozcas.',
+        'Un mazo pequeño y bien madurado suele ganarle a uno grande.'
+    ];
+    return panel(art('profe_limon', '🍋', { size: 'xl', mood: 'happy' }), '¡Tutorial completado!', `
+        <div class="tut-learned">${learned.map(([sp, name, what], i) => `<div class="tut-chip" style="--i:${i}">${art(sp, '', { size: 'md' })}<b class="hand">${name}</b><span>${what}</span></div>`).join('')}</div>
+        <ul class="tut-tips">${tips.map((x) => `<li>${x}</li>`).join('')}</ul>
+        <p>En una partida de verdad hay <b>3 castillos de 3 pisos</b>, con jefes guardianes, mesas de juegos y muchas sorpresas. ¡Sube la torre y rescata al Rey Fruta!</p>
         <div class="controls-row">
             <button class="btn-mint" onclick="goToCharacterSelect()">¡Jugar de verdad!</button>
+            <button class="secondary" onclick="startTutorial()">Repetir tutorial</button>
             <button class="secondary" onclick="showMainMenu()">Volver al menú</button>
-        </div>`, 'celebrate');
+        </div>`, 'celebrate wide');
 }
+
+// Enter, espacio o flecha derecha: "Siguiente" en los pasos de lectura
+document.addEventListener('keydown', (e) => {
+    const s = tutStep();
+    if (!s || !s.next || !['Enter', ' ', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    tutAdvance();
+});
 
 Object.assign(window, { startTutorial, tutAdvance, exitTutorial, tutorialNotify });

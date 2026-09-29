@@ -890,6 +890,7 @@ function showTip(el) {
     }).join('');
     heartifyDom(t);
     t.classList.add('show');
+    if (window.tutorialNotify) { if (el.classList.contains('rule-chip')) tutorialNotify('tip:rule'); if (el.classList.contains('intent-bubble')) tutorialNotify('tip:intent'); }
     const r = el.getBoundingClientRect();
     const app = document.getElementById('app').getBoundingClientRect();
     const box = { w: t.offsetWidth, h: t.offsetHeight };
