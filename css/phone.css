@@ -63,3 +63,27 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .phone button { min-height: 44px; }
 .phone .status-chip { min-width: 40px; min-height: 36px; }
 .phone #tooltip { width: 320px; font-size: 1.05em; }
+
+/* ============================================================
+   PANTALLA COMPLETA: los paneles (eventos, tienda, recompensas,
+   campamento, calabozo, mesas de juego…) ocupan toda la pantalla,
+   sin márgenes ni papel inclinado. Vale para computadora y teléfono.
+   ============================================================ */
+.stage:has(> .panel), .stage:has(> .mg-table), .stage:has(> .menu-screen.wide) { padding: 0; }
+.stage > .panel, .stage > .mg-table {
+    width: 100%; max-width: none; height: 100%; max-height: none;
+    border-radius: 0; transform: none; box-shadow: none; animation-name: fadeIn;
+    justify-content: safe center; overflow-y: auto; overflow-x: hidden;
+}
+.stage > .panel::before, .stage > .panel::after { display: none; }
+.stage > .mg-table { border-width: 14px; border-radius: 0; }
+.menu-screen.wide { max-width: none; padding: 10px 18px; box-sizing: border-box; }
+.menu-screen.wide > .panel { max-width: none; transform: none; }
+/* con todo el alto disponible, las filas de cartas pueden crecer */
+.stage > .panel .reward-scroll { max-height: none; }
+.stage > .panel.wide .reward-row.scroll { max-height: 440px; }
+.phone .stage > .panel.wide .reward-row.scroll { max-height: 330px; }
+/* calabozo: el tablero crece para llenar la pantalla */
+.stage > .panel.dungeon-panel .dg-room { zoom: 1.35; }
+.phone .stage > .panel.dungeon-panel .dg-room { zoom: 1.1; }
+.phone .stage > .panel.dungeon-panel .panel-art { display: none; }
