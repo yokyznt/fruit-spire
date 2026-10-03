@@ -68,10 +68,10 @@ body::before {
 
 /* ---------- lienzo escalado ---------- */
 #app {
-    position: absolute; left: 50%; top: 50%;
+    position: absolute; left: 0; top: 0;
     width: 1440px; height: 810px;
-    transform: translate(-50%, -50%) scale(var(--s, 1));
-    transform-origin: center center;
+    transform: none; zoom: var(--s, 1);
+    transform-origin: 0 0;
 }
 #screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
 #overlay { position: absolute; inset: 0; pointer-events: none; z-index: 900; overflow: hidden; }
@@ -406,7 +406,7 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .map-viewport.dragging { cursor: grabbing; }
 .map-viewport.dragging .node { pointer-events: none; }
 .map-board {
-    position: absolute; left: 0; top: 0; will-change: transform;
+    position: absolute; left: 0; top: 0;
     background-color: var(--paper-2);
     background-image:
         linear-gradient(var(--paper-line) 1px, transparent 1px),
@@ -694,7 +694,7 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .fan-slot {
     position: relative; margin-left: var(--ov); flex: none; touch-action: none;
     transform: rotate(var(--r)) translateY(var(--y)); transform-origin: 50% 130%;
-    transition: transform .3s var(--ease-out); will-change: transform;
+    transition: transform .3s var(--ease-out);
 }
 .fan-slot:first-child { margin-left: 0; }
 /* Al pasar el mouse, la que se levanta es la CARTA de adentro; el hueco (.fan-slot)
