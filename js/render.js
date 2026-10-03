@@ -775,7 +775,7 @@ function renderMap() {
             const hasContent = type && type !== T.EMPTY && !isCurrent;
             const info = hasContent ? nodeInfo(type) : null;
             const inner = info ? art(info.sprite, info.icon, { size: 'lg' }) : '';
-            const tipAttr = info ? tip([info.label, info.desc + (reachable ? ' (clic para ir)' : '')]) : '';
+            const tipAttr = info ? tip([info.label, info.desc + (reachable && !IS_PHONE ? ' (clic para ir)' : '')]) : '';
             const onclick = reachable ? `onclick="movePlayer(${x},${y})"` : '';
             html += `<div class="${classes}" style="left:${cellPos(x)}px;top:${cellPos(y)}px;width:${MAP_CELL}px;height:${MAP_CELL}px" ${onclick} ${tipAttr}>${inner}</div>`;
         }

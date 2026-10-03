@@ -23,15 +23,19 @@
 // El juego avisa acciones con tutorialNotify('card:attack' | 'card:skill' | 'turn-end' | 'shop-buy').
 // ============================================================
 
-const TUT_MAP = { cols: 8, rows: 3 };
+// 7 columnas: la tiendita (x=5) queda pegada a la guarida del jefe (x=6)
+const TUT_MAP = { cols: 7, rows: 3 };
 const tutFlag = (name) => () => !!(GAME.tutorial && GAME.tutorial.flags[name]);
 const tutScreen = (name) => () => GAME.screen === name;
 
 const tutHasSeed = () => !!GAME.player && (GAME.player.seeds || []).some(Boolean);
-const tutCanPlaySkill = () => {
+const tutCanPlay = (type) => {
     const c = GAME.combat;
-    return !!c && c.turn === 'player' && c.player.hand.some((id) => (window.getCard(id) || {}).type === 'skill' && c.canPlay(id));
+    return !!c && c.turn === 'player' && c.player.hand.some((id) => (window.getCard(id) || {}).type === type && c.canPlay(id));
 };
+const tutCanPlaySkill = () => tutCanPlay('skill');
+// En teléfono no hay mouse ni teclado: los textos lo dicen de otra forma
+const tutTouch = (touch, mouse) => () => (IS_PHONE ? touch : mouse);
 
 const TUT_STEPS = [
     // ---------- el mapa ----------
@@ -46,10 +50,16 @@ const TUT_STEPS = [
     { screen: 'combat', pos: 'top', next: true, spot: '.combatant.player .plate', text: 'Esta es tu <b>vida</b>.' },
     { screen: 'combat', pos: 'top', next: true, spot: '.hand-row', text: 'Estas son tus <b>cartas</b>. Robas 5 cada turno.' },
     { screen: 'combat', pos: 'top', next: true, spot: '.energy-orange', text: 'Tu <b>energía</b>. Cada carta cuesta lo que dice su bolita.' },
-    { screen: 'combat', pos: 'top', spot: '.hand-row', cards: 'attack', until: tutFlag('card:attack'), text: 'Arrastra un <b>Golpe de Cáscara</b> hasta el enemigo.' },
     {
-        // se da por cumplido si ya no puede jugar ninguna habilidad (para no atorarse)
-        screen: 'combat', pos: 'top', spot: '.hand-row', cards: 'skill',
+        // se da por cumplido si ya no puede jugar ningún ataque (para no atorarse)
+        screen: 'combat', pos: 'top', spot: '.hand-row', cards: 'attack', avoid: '.combatant, .intent-bubble',
+        until: () => tutFlag('card:attack')() || !tutCanPlay('attack'),
+        text: 'Arrastra un <b>Golpe de Cáscara</b> hasta el enemigo.',
+        skipIf: () => !tutCanPlay('attack')
+    },
+    {
+        // igual: si ya no puede jugar ninguna habilidad, sigue
+        screen: 'combat', pos: 'top', spot: '.hand-row', cards: 'skill', avoid: '.combatant, .intent-bubble',
         until: () => tutFlag('card:skill')() || !tutCanPlaySkill(),
         text: 'Ahora arrastra un <b>Jugo Defensivo</b> hacia arriba.',
         skipIf: () => !tutCanPlaySkill()
@@ -60,12 +70,13 @@ const TUT_STEPS = [
         skipIf: () => !GAME.combat || GAME.combat.player.block <= 0
     },
     {
-        screen: 'combat', pos: 'top', spot: '#enemy-0 .intent-bubble', until: tutFlag('tip:intent'),
-        text: 'Pasa el mouse sobre su intención para ver los <b>detalles</b>.',
+        // tap: en este paso basta tocar lo iluminado para ver su explicación
+        screen: 'combat', pos: 'top', spot: '#enemy-0 .intent-bubble', tap: true, until: tutFlag('tip:intent'),
+        text: tutTouch('Toca su intención para ver los <b>detalles</b>.', 'Pasa el mouse sobre su intención para ver los <b>detalles</b>.'),
         skipIf: () => !document.querySelector('#enemy-0 .intent-bubble')
     },
     { screen: 'combat', pos: 'top', spot: '.end-turn', until: tutFlag('turn-end'), text: 'Pulsa <b>Terminar turno</b>.' },
-    { screen: 'combat', pos: 'top', spot: '.hand-row, .end-turn', until: tutScreen('reward'), text: '¡Sigue así hasta ganar!' },
+    { screen: 'combat', pos: 'top', spot: '.hand-row, .end-turn', avoid: '.combatant, .intent-bubble', until: tutScreen('reward'), text: '¡Sigue así hasta ganar!' },
 
     // ---------- recompensas ----------
     { screen: 'reward', pos: 'bl', spot: () => (lootPending() ? '.loot-item:not(.taken):not(.flying)' : '.reward-row .card, button[onclick="skipReward()"]'), until: tutScreen('map'), text: '¡Ganaste! Toca cada <b>premio</b> para guardarlo y elige una carta.' },
@@ -86,27 +97,32 @@ const TUT_STEPS = [
     { screen: 'shop', pos: 'bl', spot: '.shop-item, .reward-row.picker .card, button[onclick*="closeShopPicker"]', until: tutFlag('shop-buy'), text: 'Compra algo con tu <b>oro</b>.' },
     { screen: 'shop', pos: 'bl', spot: 'button[onclick*="leaveShop"]', until: tutScreen('map'), text: 'Pulsa <b>Salir</b>.' },
     { screen: 'map', pos: 'top', next: true, spot: '.node.elite', text: 'Las de fuego son <b>élites</b>: más duras, pero dan objetos.' },
-    { screen: 'map', pos: 'top', spot: '.boss-lair', until: tutScreen('combat'), text: 'Entra a la guarida del <b>jefe</b>.' },
+    {
+        // si la guarida aún no se alcanza, brilla la casilla que lleva hasta ella (nunca se atora)
+        screen: 'map', pos: 'top', spot: () => (document.querySelector('.boss-lair.reachable') ? '.boss-lair' : '.node.reachable'),
+        until: tutScreen('combat'), text: 'Entra a la guarida del <b>jefe</b>.'
+    },
 
     // ---------- el jefe ----------
     {
-        screen: 'combat', pos: 'top', spot: '.rule-chip', until: tutFlag('tip:rule'),
-        text: 'Cada piso tiene una <b>regla</b>. Pasa el mouse para leerla.',
+        screen: 'combat', pos: 'top', spot: '.rule-chip', tap: true, until: tutFlag('tip:rule'),
+        text: tutTouch('Cada piso tiene una <b>regla</b>. Tócala para leerla.', 'Cada piso tiene una <b>regla</b>. Pasa el mouse para leerla.'),
         skipIf: () => !document.querySelector('.rule-chip')
     },
     {
-        screen: 'combat', pos: 'top', spot: '.hud-bag', keys: ['i', 'I'], until: () => !!GAME.inventory || tutFlag('seed-use')(),
+        screen: 'combat', pos: 'top', spot: '.hud-bag', keys: ['i', 'I'], until: () => !!GAME.inventory || tutFlag('seed-use')() || !tutHasSeed(),
         text: 'Abre tu <b>Mochila</b>.',
         skipIf: () => !tutHasSeed()
     },
     {
-        // si cierra la mochila, vuelve a brillar la mochila para abrirla otra vez
+        // si cierra la mochila, vuelve a brillar la mochila para abrirla otra vez;
+        // si se queda sin semilla (la tiró), el paso se da por hecho
         screen: 'combat', pos: 'top', spot: () => (GAME.seedTargeting != null ? '.combatant.enemy.seed-aim' : GAME.inventory ? '.inv-seed .btn-mint' : '.hud-bag'),
-        keys: ['i', 'I'], until: tutFlag('seed-use'),
+        keys: ['i', 'I'], until: () => tutFlag('seed-use')() || (!tutHasSeed() && GAME.seedTargeting == null),
         text: 'Usa la <b>semilla</b>.',
         skipIf: () => !tutHasSeed()
     },
-    { screen: 'combat', pos: 'top', spot: '.hand-row, .end-turn', until: tutScreen('tutorial-end'), text: '¡Ahora derrótalo!' }
+    { screen: 'combat', pos: 'top', spot: '.hand-row, .end-turn', avoid: '.combatant, .intent-bubble', until: tutScreen('tutorial-end'), text: '¡Ahora derrótalo!' }
 ];
 const TUT_TOTAL = TUT_STEPS.length;
 
@@ -173,7 +189,7 @@ function tutNextIndex(from) {
 // Botón "Siguiente" de un paso de lectura
 function tutAdvance() {
     const t = GAME.tutorial;
-    if (!t) return;
+    if (!t || t.quitAsk) return;
     const s = tutStep();
     if (s && !s.next) return; // los pasos de acción solo avanzan cumpliendo lo que piden
     t.i = tutNextIndex(t.i + 1);
@@ -212,6 +228,7 @@ function tutorialAfterRender() {
     if (!t) return;
     t.lastScreen = GAME.screen;
     if (tutCheck()) { if (TUT_STEPS[t.i]) { showGuide(); return; } hideGuide(); return; }
+    if (t.quitAsk) return; // está preguntando si salir: no se toca el globo
     highlightSpot();
     placeGuide();
 }
@@ -226,7 +243,10 @@ function guideEl() {
     }
     return g;
 }
+let tutRingTimer = null;
 function hideGuide() {
+    clearInterval(tutRingTimer);
+    tutRingTimer = null;
     const g = document.getElementById('guide');
     if (g) g.remove();
     document.querySelectorAll('.tut-spot').forEach((el) => el.classList.remove('tut-spot'));
@@ -237,26 +257,44 @@ function showGuide() {
     const s = tutStep();
     if (!s) return;
     const g = guideEl();
-    g.className = `guide pos-${s.pos || 'bl'} ${s.next ? 'blocking' : ''}`;
     const tut = GAME.tutorial;
+    // preguntar antes de salir (✕ o Esc): tapa todo hasta que se responda
+    if (tut.quitAsk) {
+        g.className = 'guide pos-center blocking';
+        g.innerHTML = `
+            <div class="guide-blocker"></div>
+            <div class="guide-box">
+                <div class="guide-fruit">${art('profe_limon', '🍋', { size: 'xl' })}</div>
+                <div class="guide-bubble reading">
+                    <p>¿Salir del tutorial?</p>
+                    <div class="guide-ask"><button class="secondary" onclick="tutQuit(true)">Salir</button><button class="btn-mint" onclick="tutQuit(false)">Seguir</button></div>
+                </div>
+            </div>`;
+        return;
+    }
+    g.className = `guide pos-${s.pos || 'bl'} ${s.next ? 'blocking' : ''}`;
     const praise = tut.praise;
     tut.praise = false;
     if (praise && window.Sfx) Sfx.buff();
     const pct = Math.round(((tut.i + 1) / TUT_TOTAL) * 100);
+    const text = typeof s.text === 'function' ? s.text() : s.text;
     g.innerHTML = `
         ${s.next ? '<div class="guide-blocker"></div>' : ''}
-        <button class="guide-quit x-btn" onclick="tutQuit()" ${tip(['Salir del tutorial', 'También con Esc.'])}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19"/></svg></button>
+        <div class="tut-rings"></div>
         <div class="guide-box">
             <div class="guide-fruit ${praise ? 'cheer' : ''}">${art('profe_limon', '🍋', { size: 'xl', mood: praise ? 'happy' : undefined })}${praise ? '<span class="guide-praise hand">¡Muy bien!</span>' : ''}</div>
             <div class="guide-bubble ${s.next ? 'reading' : 'doing'}">
                 <i class="guide-progress"><b style="width:${pct}%"></b></i>
-                <p>${s.text}</p>
+                <button class="guide-quit x-btn" onclick="tutQuit()" ${tip(['Salir del tutorial', IS_PHONE ? '' : 'También con Esc.'])}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19"/></svg></button>
+                <p>${text}</p>
                 ${s.next ? '<button class="btn-mint guide-next" onclick="tutAdvance()">Siguiente ›</button>' : ''}
             </div>
         </div>`;
     restartClass(g.querySelector('.guide-box'), 'pop-in');
     highlightSpot();
     placeGuide();
+    // los marcos siguen a lo iluminado si se mueve (mapa que se desliza, mano que se reacomoda)
+    if (!tutRingTimer) tutRingTimer = setInterval(() => { if (placeSpotRings(false)) placeGuide(); }, 350);
 }
 // Pone el globo donde no tape lo que se está explicando: prueba la
 // posición preferida y luego las esquinas, y se queda con la que menos tapa.
@@ -268,8 +306,9 @@ function placeGuide() {
     const box = g.querySelector('.guide-box');
     const setPos = (pos) => { g.className = g.className.replace(/pos-\S+/, `pos-${pos}`); void box.offsetWidth; };
     const preferred = s.pos || 'bl';
-    const rects = [...document.querySelectorAll('.tut-spot')].map((el) => el.getBoundingClientRect());
-    if (!rects.length || preferred === 'center') { setPos(preferred); return; }
+    // no tapar lo iluminado ni lo que el paso pida dejar a la vista (avoid) ni la barra de arriba
+    const rects = [...document.querySelectorAll(`.tut-spot${s.avoid ? `, ${s.avoid}` : ''}, #screen > .hud > *`)].map((el) => el.getBoundingClientRect());
+    if (!document.querySelector('.tut-spot') || preferred === 'center') { setPos(preferred); return; }
     const overlap = () => {
         const b = box.getBoundingClientRect();
         return rects.reduce((sum, r) => sum + Math.max(0, Math.min(b.right, r.right) - Math.max(b.left, r.left))
@@ -303,6 +342,42 @@ function highlightSpot() {
     // solo se bloquea si hay algo resaltado que tocar: así nunca se queda atorado
     if (screen) screen.classList.toggle('tut-lockdown', !!(s && s.until && spots.length));
     if (screen) screen.classList.toggle('tut-solo', spots.length === 1);
+    placeSpotRings(true);
+    // durante un momento se recolocan en cada cuadro: lo iluminado puede estar entrando con animación
+    const t0 = performance.now();
+    const follow = (now) => { if (GAME.tutorial && now - t0 < 1300) { placeSpotRings(true); requestAnimationFrame(follow); } else if (GAME.tutorial && !GAME.tutorial.quitAsk) placeGuide(); };
+    requestAnimationFrame(follow);
+}
+// El brillo es un marco aparte (dentro de #guide) puesto encima de cada elemento iluminado:
+// así lo iluminado no cambia de posición, de forma ni de animación. Con un solo elemento en
+// un paso de acción, la sombra del marco oscurece todo lo demás.
+// exact = false: solo se mueve si el elemento cambió de sitio de verdad (no por su vaivén de reposo).
+function placeSpotRings(exact) {
+    const g = document.getElementById('guide');
+    const layer = g && g.querySelector('.tut-rings');
+    const screen = document.getElementById('screen');
+    if (!layer || !screen) return false;
+    let moved = false;
+    const spots = [...document.querySelectorAll('.tut-spot')];
+    const app = document.getElementById('app').getBoundingClientRect();
+    const solo = spots.length === 1 && screen.classList.contains('tut-lockdown');
+    while (layer.children.length > spots.length) layer.lastChild.remove();
+    spots.forEach((el, i) => {
+        const r = el.getBoundingClientRect();
+        let ring = layer.children[i];
+        if (!ring) { ring = document.createElement('i'); ring.className = 'tut-ring'; layer.appendChild(ring); }
+        ring.classList.toggle('solo', solo);
+        const pad = 6;
+        const x = (r.left - app.left) / SCALE - pad, y = (r.top - app.top) / SCALE - pad;
+        const w = r.width / SCALE + pad * 2, h = r.height / SCALE + pad * 2;
+        const was = ring.tutBox;
+        if (!exact && was && Math.abs(was.x - x) < 12 && Math.abs(was.y - y) < 12 && Math.abs(was.w - w) < 12 && Math.abs(was.h - h) < 12) return;
+        ring.tutBox = { x, y, w, h };
+        moved = true;
+        const radius = Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius) * localZoom(el) || 0, Math.min(w, h) / 2);
+        Object.assign(ring.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px`, borderRadius: `${Math.max(14, radius + pad)}px` });
+    });
+    return moved;
 }
 
 // ---------- fin ----------
@@ -310,13 +385,13 @@ function renderTutorialEnd() {
     const learned = [
         ['node_enemy', 'Combates', 'cartas, energía, intenciones y daño real'],
         ['ui_shield', 'Cáscara', 'se gasta antes que tu vida'],
-        ['ui_bag', 'Mochila', 'objetos y semillas (tecla I)'],
+        ['ui_bag', 'Mochila', IS_PHONE ? 'objetos y semillas' : 'objetos y semillas (tecla I)'],
         ['node_rest', 'Campamento', 'curarte, madurar o despegar'],
         ['node_mystery', 'Misterios', 'decisiones con premio o riesgo'],
         ['node_shop', 'Tiendita', 'cartas, objetos y semillas']
     ];
     const tips = [
-        'Pasa el mouse sobre cualquier cosa para ver qué hace.',
+        IS_PHONE ? 'Mantén el dedo sobre cualquier cosa para ver qué hace.' : 'Pasa el mouse sobre cualquier cosa para ver qué hace.',
         'Cada piso tiene su regla: léela al empezar el combate.',
         'Cada enemigo derrotado da experiencia para el <b>Pase de Batalla</b> (colores y accesorios para tus frutas).',
         'En la <b>Colección</b> del menú puedes repasar tus cartas, objetos, semillas y a cada enemigo que conozcas.',
@@ -333,9 +408,22 @@ function renderTutorialEnd() {
         </div>`, 'celebrate wide');
 }
 
-function tutQuit() {
-    if (confirm('¿Salir del tutorial?')) showMainMenu();
+// ✕ o Esc: Profe Limón pregunta antes de salir. tutQuit(true) sale, tutQuit(false) sigue.
+function tutQuit(answer) {
+    const t = GAME.tutorial;
+    if (!t) return;
+    if (answer === true) { showMainMenu(); return; }
+    t.quitAsk = answer !== false && !t.quitAsk;
+    hideTip();
+    showGuide();
 }
+// Pasos con tap: tocar lo iluminado muestra su explicación (en teléfono no hay mouse que pasar por encima)
+document.addEventListener('click', (e) => {
+    const s = tutStep();
+    if (!s || !s.tap || !e.target.closest) return;
+    const el = e.target.closest('.tut-spot[data-tip]') || (e.target.closest('.tut-spot') && e.target.closest('[data-tip]'));
+    if (el) showTip(el);
+});
 // ¿Se puede jugar esta carta en el paso actual?
 function tutCardAllowed(card) {
     if (!GAME.tutorial) return true;

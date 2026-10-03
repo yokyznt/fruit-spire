@@ -122,6 +122,13 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 /* Notas sube a la esquina de arriba: abajo taparía los botones */
 .phone .notes-btn { top: 12px; bottom: auto; left: 14px; }
 
+/* tutorial: globo más grande y Profe Limón más chico (ocupa menos y se lee mejor) */
+.phone .guide-box { zoom: 1.28; max-width: 470px; }
+.phone .guide-fruit .art { width: 74px; height: 74px; }
+.phone .guide-bubble { max-width: 330px; margin-bottom: 12px; }
+.phone .guide.pos-top .guide-box, .phone .guide.pos-tl .guide-box, .phone .guide.pos-tr .guide-box { top: 60px; }
+.phone .guide-quit { width: 40px; height: 40px; }
+
 /* portada de piso: textos más grandes */
 .phone .act-intro { gap: 4px; }
 .phone .act-intro .act-scene .art-xxl { width: 120px; height: 120px; }

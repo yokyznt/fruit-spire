@@ -1705,20 +1705,27 @@ button.btn-banana:hover { background: #FFDB70; }
 }
 .guide-bubble b { font-size: 1.4em; font-weight: normal; color: #C9A21F; }
 .guide-bubble p { margin: 2px 0 10px; font-size: 1.05em; line-height: 1.38; }
-/* lo que explica Profe Limón brilla */
-.tut-spot { position: relative; z-index: 60; animation: tutGlow 1.2s steps(1) infinite !important; border-radius: 16px; }
-.hand-row.tut-spot, .rest-options.tut-spot, .shop-row.tut-spot, .reward-row.tut-spot, .event-options.tut-spot { border-radius: 24px; }
-@keyframes tutGlow { 0%, 100% { box-shadow: 0 0 0 4px rgba(255,207,77,.9), 0 0 18px 6px rgba(255,207,77,.55); } 50% { box-shadow: 0 0 0 7px rgba(255,207,77,.6), 0 0 30px 12px rgba(255,207,77,.35); } }
+/* lo que explica Profe Limón brilla: el brillo es un marco aparte (.tut-ring, dentro de
+   #guide; lo coloca placeSpotRings en js/tutorial.js). .tut-spot ya no cambia nada de lo
+   iluminado (ni su posición, ni su forma, ni su animación): solo marca qué se puede tocar. */
+.tut-rings { position: absolute; inset: 0; pointer-events: none; }
+.tut-ring { position: absolute; display: block; border-radius: 18px; pointer-events: none; box-shadow: 0 0 0 4px rgba(255,207,77,.95), 0 0 18px 6px rgba(255,207,77,.55); }
+.tut-ring::after { content: ''; position: absolute; inset: -5px; border-radius: inherit; box-shadow: 0 0 0 4px rgba(255,207,77,.5), 0 0 26px 10px rgba(255,207,77,.4); animation: tutRing 1.2s ease-in-out infinite; }
+@keyframes tutRing { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+/* un solo elemento en un paso de acción: la sombra del marco oscurece todo lo demás */
+.tut-ring.solo { box-shadow: 0 0 0 4px rgba(255,207,77,.95), 0 0 18px 6px rgba(255,207,77,.55), 0 0 0 9999px rgba(20,14,10,.5); }
 /* paso de tutorial que pide una acción concreta: se apaga todo lo que no
    sea lo resaltado (ni se puede tocar ni se ve), para que no se distraigan
    probando otra cosa */
 #screen.tut-lockdown { pointer-events: none; }
 #screen.tut-lockdown .tut-spot,
 #screen.tut-lockdown .tut-spot * { pointer-events: auto; }
-/* un solo elemento resaltado: la sombra oscura sale de su borde hacia afuera
-   (así no oscurece su propio fondo); con varios, solo brillan */
-#screen.tut-lockdown.tut-solo .tut-spot { animation: tutGlowSolo 1.2s steps(1) infinite !important; }
-@keyframes tutGlowSolo { 0%, 100% { box-shadow: 0 0 0 4px rgba(255,207,77,.9), 0 0 18px 6px rgba(255,207,77,.55), 0 0 0 9999px rgba(20,14,10,.58); } 50% { box-shadow: 0 0 0 7px rgba(255,207,77,.6), 0 0 30px 12px rgba(255,207,77,.35), 0 0 0 9999px rgba(20,14,10,.58); } }
+/* la barra de arriba tampoco se puede tocar (salvo lo iluminado): abrir el mazo, los
+   ajustes o el menú a medio paso dejaba el tutorial atorado */
+#screen.tut-lockdown .hud > *:not(.tut-spot) { pointer-events: none; }
+/* red de seguridad: una ventana abierta (mazo, ajustes) siempre se puede cerrar */
+#screen.tut-lockdown .modal-backdrop:not(.inv-backdrop), #screen.tut-lockdown .modal-backdrop:not(.inv-backdrop) *,
+#screen.tut-lockdown .settings-overlay, #screen.tut-lockdown .settings-overlay * { pointer-events: auto; }
 @keyframes guideIn { from { transform: translateY(40px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ============================================================
@@ -1918,8 +1925,11 @@ button.btn-banana:hover { background: #FFDB70; }
 .guide-progress { position: absolute; left: 16px; right: 16px; top: 5px; height: 4px; border-radius: 99px; background: #F0E4CC; overflow: hidden; }
 .guide-progress b { display: block; height: 100%; background: linear-gradient(90deg, #FFE27A, #7BBF5A); border-radius: 99px; transition: width .5s var(--ease-out); }
 .guide-bubble { position: relative; }
-.guide-quit { position: absolute; left: 226px; top: 14px; z-index: 3; pointer-events: all; width: 38px; height: 38px; padding: 0; border-radius: 50%; font-size: 1.1em; background: rgba(255,255,255,.85); opacity: .7; }
-.guide-quit:hover { opacity: 1; }
+/* la ✕ de salir va en la esquina del globo */
+.guide-quit { position: absolute; right: -14px; top: -14px; z-index: 3; pointer-events: all; width: 38px; height: 38px; min-height: 0; padding: 0; border-radius: 50%; font-size: 1.1em; background: var(--paper-2); transform: none; box-shadow: 0 0 0 2px var(--ink); }
+.guide-ask { display: flex; gap: 10px; justify-content: flex-end; }
+.guide-ask button { font-size: 1em; padding: 6px 18px; transform: none; }
+.guide-quit:hover { background: var(--strawberry-soft); transform: none; }
 .guide-box.guide-shake { animation: guideShake .4s ease; }
 @keyframes guideShake { 0%, 100% { translate: 0 0; } 20% { translate: -8px 0; } 40% { translate: 8px 0; } 60% { translate: -5px 0; } 80% { translate: 5px 0; } }
 

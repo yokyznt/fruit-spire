@@ -6,9 +6,22 @@
 // ============================================================
 
 window.CREATOR = { handle: '@yokyznt', url: 'https://www.instagram.com/yokyznt/' };
-window.GAME_VERSION = '2.8';
+window.GAME_VERSION = '2.9';
 
 window.PATCH_NOTES = [
+    {
+        version: '2.9', date: '3 oct 2026', title: 'Tutorial arreglado',
+        items: [
+            'Lo que Profe Limón ilumina ya no se mueve ni cambia de forma: el brillo es un marco aparte.',
+            'El globo de Profe Limón es más grande en el teléfono y se acomoda donde no estorba.',
+            'En teléfono, las explicaciones del tutorial se ven con un toque.'
+        ],
+        fixes: [
+            'Ya no te quedas atorado antes de la guarida del jefe.',
+            'Durante un paso ya no se pueden abrir el mazo, los ajustes ni el menú (no se podían cerrar).',
+            'Salir del tutorial pregunta dentro del juego.'
+        ]
+    },
     {
         version: '2.8', date: '3 oct 2026', title: 'Ajustes y más fluido',
         items: [
