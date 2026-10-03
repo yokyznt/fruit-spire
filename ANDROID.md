@@ -9,6 +9,10 @@ El juego es una página web; se empaqueta con Capacitor.
    `android:screenOrientation="sensorLandscape"` para que siempre sea horizontal.
 
 ## Cada vez que cambie el juego
+Rápido: `npm run android:apk` deja `FruitSpire-debug.apk` en esta carpeta (pásalo al teléfono e instálalo).
+Necesita un JDK 17 o 21 en `~/.jdks` (Gradle 8 no corre con el Java 25 de Android Studio).
+
+Con Android Studio:
 1. `npm run android:sync` (copia el juego a `www/` y lo pasa al proyecto Android).
 2. `npm run android:open` y en Android Studio:
    - Probar: botón Run con el teléfono conectado.

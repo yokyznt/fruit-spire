@@ -3,3 +3,4 @@ Thumbs.db
 www/
 node_modules/
 android/
+*.apk
