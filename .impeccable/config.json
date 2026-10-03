@@ -20,6 +20,15 @@
         "value": "cubic-bezier(.3, 1.4, .5, 1)",
         "createdAt": "2026-09-29T21:34:57.111Z",
         "reason": "assistant: literal motion - the hero's medal drops and settles with a small overshoot in the ending cutscene"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "css/settings.css"
+        ],
+        "createdAt": "2026-10-03T23:24:24.869Z",
+        "reason": "Claude decided: L69 is the 2px ink divider between segments of a segmented control (.seg-btn + .seg-btn), not an accent border on a card"
       }
     ]
   }
