@@ -16,6 +16,8 @@ function fitCanvas() {
     app.style.width = `${BASE_W}px`;
     app.style.height = `${BASE_H}px`;
     app.style.setProperty('--s', SCALE);
+    app.classList.toggle('phone', IS_PHONE);
+    document.body.classList.toggle('portrait', IS_PHONE && window.innerHeight > window.innerWidth);
     if (GAME.screen === 'map' && GAME.mapPan) applyMapPan();
 }
 // Posición (en coordenadas del lienzo) del centro de un elemento
@@ -945,6 +947,22 @@ function setupTooltips() {
         clearTimeout(hideTipTimer);
         hideTipTimer = setTimeout(hideTip, 140);
     });
+    // Pantalla táctil: mantener el dedo un momento sobre algo muestra su explicación
+    // (sin activarlo); tocar fuera la cierra.
+    let pressTimer = null, pressShown = false;
+    document.addEventListener('touchstart', (e) => {
+        const el = e.target.closest && e.target.closest('[data-tip]');
+        clearTimeout(pressTimer);
+        pressShown = false;
+        if (!el) { hideTip(); return; }
+        pressTimer = setTimeout(() => { pressShown = true; showTip(el); }, 420);
+    }, { passive: true });
+    ['touchend', 'touchcancel', 'touchmove'].forEach((ev) => document.addEventListener(ev, () => clearTimeout(pressTimer), { passive: true }));
+    document.addEventListener('click', (e) => {
+        if (!pressShown) return;
+        pressShown = false;
+        e.stopPropagation(); e.preventDefault();
+    }, true);
 }
 
 // clic genérico de interfaz: cualquier <button> habilitado hace un "tap"

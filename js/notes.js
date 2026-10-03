@@ -6,9 +6,27 @@
 // ============================================================
 
 window.CREATOR = { handle: '@yokyznt', url: 'https://www.instagram.com/yokyznt/' };
-window.GAME_VERSION = '2.5';
+window.GAME_VERSION = '2.6';
 
 window.PATCH_NOTES = [
+    {
+        version: '2.6', date: '3 oct 2026', title: 'Más reto y listo para celular',
+        items: [
+            'Más difícil: menos tesoros por piso, objetos más débiles (y los de jefe con truco), enemigos más duros, menos curación y una maldición que se cuela al entrar a los castillos 2 y 3.',
+            'Mesas de juego nuevas: tapete de casino, crupier que reacciona, fichas apostadas, medidor hasta 21 y cartas que se voltean.',
+            'En los eventos, cada opción tiene color: azul premio, amarillo riesgo, rojo malo y crema irse.',
+            'La explicación de una carta sale solo al tocarla, con los mismos colores de sus palabras clave. Las intenciones enemigas llevan etiquetas de color (ataca, se cubre, invoca…).',
+            'Modo teléfono: todo más grande, mantén el dedo sobre algo para ver qué es.'
+        ],
+        fixes: [
+            'Dibujos sin doble boca (cuervo, vampiros, murciélago, mosquito y los de bigote).',
+            'La cáscara que un enemigo da a sus aliados ya no se borra antes de tu turno.',
+            'El +2 de «Blancas y negras» ya no se queda pegado en los pisos siguientes.',
+            'Si sales en el objeto de jefe, al continuar vuelves ahí (ya no se repite el jefe).',
+            'Los esbirros que huyen devuelven el oro robado.',
+            'Casillas vacías del mapa opacas y textos más cortos en todo el juego.'
+        ]
+    },
     {
         version: '2.5', date: '29 sep 2026', title: 'Premios que se recogen',
         items: [

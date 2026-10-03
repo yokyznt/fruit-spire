@@ -1963,3 +1963,8 @@ button.x-btn { transition: transform .2s var(--ease-out), background .15s; }
 /* los títulos de las explicaciones usan el color de su palabra clave */
 .tip-box b[class^="kw-"], .ci-list li b[class^="kw-"] { font-weight: 700; }
 .act-heal.act-curse { color: #7A5BC4; }
+
+/* casillas vacías y pisadas: opacas, para que los adornos del fondo no se vean a través */
+.node.empty { background: #FBF4E6; box-shadow: 0 0 0 2px #E6D6BC; }
+.node.visited { background: #F1E7D6; }
+.node.empty.reachable { background: #F2FAEA; box-shadow: 0 0 0 3px var(--leaf), var(--lift); }

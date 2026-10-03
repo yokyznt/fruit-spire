@@ -145,3 +145,62 @@
 .ci-list li .art-xs { flex: none; width: 26px; height: 26px; margin-top: 1px; }
 .ci-list li b { display: block; }
 .ci-list li span { color: var(--ink-soft); }
+
+
+/* ============================================================
+   MESA DE CASINO: tapete verde con borde de madera, crupier,
+   fichas apostadas, medidor hasta 21 y sello de resultado.
+   ============================================================ */
+.mg-table {
+    position: relative; width: 100%; max-width: 1060px; max-height: 100%; padding: 22px 34px 20px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; color: #FFF6E0;
+    border-radius: 44px; border: 12px solid #8C5A2E;
+    background:
+        radial-gradient(ellipse at 50% 38%, rgba(255,255,255,.14), transparent 62%),
+        repeating-linear-gradient(45deg, rgba(0,0,0,.05) 0 3px, transparent 3px 7px), #2F8A63;
+    box-shadow: 0 0 0 3px var(--ink), inset 0 0 0 3px #E9C46A, inset 0 0 40px rgba(0,0,0,.35), 0 12px 0 3px rgba(74,52,40,.3);
+    animation: mgTableIn .4s var(--ease-out) both;
+}
+@keyframes mgTableIn { from { opacity: 0; transform: translateY(24px) scale(.97); } }
+.mg-table .hand-title { color: #FFE9A8; text-shadow: 0 3px 0 rgba(0,0,0,.25); font-size: 2em; margin-bottom: 4px; }
+.mg-table .mg-row > b { color: #FFF6E0; }
+.mg-table .mg-row { margin: 6px 0; min-height: 92px; }
+.mg-dealer { position: absolute; left: 22px; top: 14px; display: flex; align-items: flex-start; gap: 6px; z-index: 2; }
+.mg-dealer .art-lg { width: 92px; height: 92px; animation: wobble 2.6s ease-in-out infinite; }
+.mg-say { position: relative; margin-top: 10px; max-width: 210px; padding: 6px 14px; border-radius: 16px; background: #FFFDF7; color: var(--ink); font-size: 1.15em; box-shadow: 0 0 0 2px var(--ink), 0 3px 0 2px rgba(0,0,0,.25); text-align: left; }
+.mg-say::before { content: ''; position: absolute; left: -9px; top: 14px; border: 6px solid transparent; border-right-color: var(--ink); }
+.mg-pot { position: absolute; right: 30px; top: 22px; display: flex; flex-direction: column-reverse; align-items: center; z-index: 2; }
+.mg-pot i { display: block; width: 54px; height: 16px; margin-top: -8px; border-radius: 50%; background: repeating-linear-gradient(90deg, #F2667A 0 9px, #FFF6E9 9px 14px); box-shadow: 0 0 0 2px var(--ink), 0 4px 0 2px #B8324A; }
+.mg-pot i:nth-child(odd) { background: repeating-linear-gradient(90deg, #FFCF4D 0 9px, #FFF6E9 9px 14px); box-shadow: 0 0 0 2px var(--ink), 0 4px 0 2px #C9941F; }
+.mg-pot b { order: -1; margin-top: 8px; font-size: 1.3em; font-weight: normal; padding: 0 12px; border-radius: 99px; background: #FFE9A8; color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+.mg-meter { position: relative; width: 420px; height: 26px; margin: 2px 0 10px; border-radius: 99px; background: rgba(0,0,0,.28); box-shadow: 0 0 0 2px var(--ink); overflow: hidden; }
+.mg-meter i { position: absolute; left: 0; top: 0; bottom: 0; background: #9BD66A; transition: width .3s var(--ease-out), background .3s; }
+.mg-meter.hot i { background: #FFCF4D; }
+.mg-meter.bust i { background: #F2667A; }
+.mg-meter span { position: relative; line-height: 26px; color: var(--ink); font-size: 1.1em; }
+.mg-table .die { box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px rgba(0,0,0,.3); }
+.mg-table .die.rolling { animation: dieTumble .28s linear infinite; }
+@keyframes dieTumble { 0% { transform: rotate(0) translateY(0); } 50% { transform: rotate(180deg) translateY(-14px); } 100% { transform: rotate(360deg) translateY(0); } }
+.pcard.deal { animation: pcDeal .35s var(--ease-out) both; animation-delay: calc(var(--k, 0) * 70ms); }
+@keyframes pcDeal { from { opacity: 0; transform: translate(260px, -120px) rotate(40deg); } }
+.pcard.flip { animation: pcFlip .5s var(--ease-out) both; animation-delay: calc(var(--k, 0) * 120ms); }
+@keyframes pcFlip { 0% { transform: rotateY(180deg) scale(.9); filter: brightness(.6); } 100% { transform: rotateY(0); } }
+.mg-table .mg-result { margin: 6px auto; font-size: 1.2em; padding: 6px 18px; }
+.mg-stamp {
+    position: absolute; right: 60px; bottom: 70px; padding: 4px 22px; font-family: var(--f-display); font-size: 2.6em; letter-spacing: 2px;
+    border: 6px solid currentColor; border-radius: 14px; transform: rotate(-12deg); pointer-events: none; background: rgba(255,253,247,.92);
+    animation: mgStamp .45s cubic-bezier(.2, 1.6, .4, 1) both;
+}
+.mg-stamp.win { color: #2E9A63; } .mg-stamp.lose { color: #D2445B; } .mg-stamp.draw { color: #C9941F; }
+@keyframes mgStamp { from { opacity: 0; transform: rotate(-12deg) scale(2.4); } }
+.mg-table.res-lose { filter: saturate(.8); }
+.mg-coin { position: absolute; animation: mgCoinFall 1.5s cubic-bezier(.3, 0, .8, 1) both; }
+@keyframes mgCoinFall { from { transform: translate(0, 0) rotate(0); opacity: 1; } to { transform: translate(var(--dx, 0), 860px) rotate(540deg); opacity: .9; } }
+.mg-table.mg-chess .chess-note, .mg-table.mg-chess .chess-count { color: #FFF6E0; }
+.mg-table.mg-chess { padding-top: 16px; }
+.mg-table.mg-chess .hand-title { font-size: 1.5em; }
+.phone .mg-table { padding: 12px 24px 10px; border-width: 8px; overflow-y: auto; }
+.phone .mg-dealer .art-lg { width: 70px; height: 70px; }
+.phone .chess-board { grid-template-columns: repeat(5, 70px); grid-auto-rows: 70px; }
+.phone .mg-table .mg-row { min-height: 80px; }
+.mg-table .mg-hand, .mg-table .mg-total, .mg-table .tray { color: var(--ink); }

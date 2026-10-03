@@ -1,2 +1,5 @@
 .DS_Store
 Thumbs.db
+www/
+node_modules/
+android/

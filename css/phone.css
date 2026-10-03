@@ -1,0 +1,65 @@
+/* ============================================================
+   PHONE.CSS — Ajustes para teléfono (clase .phone en #app, la pone
+   fitCanvas en js/fx.js). El lienzo es más chico (1180x660 de diseño),
+   así que todo se ve más grande; aquí se compacta lo que no cabría.
+   ============================================================ */
+html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+.hand-row, .fan-slot, .chess-board, .map-viewport { touch-action: none; }
+.reward-scroll, .modal-grid, .notes-scroll, .best-list, .best-detail, .inv-grid, .pass-track, .wardrobe-right, .collection-grid, .reward-row.scroll, .panel { touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+
+/* aviso de girar el teléfono (el juego es horizontal) */
+#rotate-note { display: none; }
+#app.portrait ~ #rotate-note, body.portrait #rotate-note {
+    display: flex; position: fixed; inset: 0; z-index: 5000; background: #FFF9EC; color: #4A3428;
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px; font: 600 22px/1.3 system-ui, sans-serif; text-align: center; padding: 24px;
+}
+#rotate-note svg { width: 96px; height: 96px; animation: rotateHint 1.6s ease-in-out infinite; }
+@keyframes rotateHint { 0%, 30% { transform: rotate(0); } 70%, 100% { transform: rotate(90deg); } }
+
+/* ---------- barra de arriba ---------- */
+.phone .hud { height: 58px; gap: 12px; padding: 0 16px; }
+.phone .hud-title .logo { display: none; }
+.phone .stage { padding: 12px 16px 12px; }
+.phone .screen-map .stage, .phone .screen-combat .stage { padding: 0; }
+
+/* ---------- menú ---------- */
+.phone .menu-fruits .art-xl { width: 86px; height: 86px; }
+.phone .menu-buttons { gap: 12px; }
+.phone .menu-buttons button { padding-top: 9px; padding-bottom: 9px; }
+.phone .menu-goal { margin-bottom: 6px; }
+
+/* ---------- elegir fruta ---------- */
+.phone .char-select-row { gap: 22px; margin: 8px 0 12px; }
+.phone .polaroid { width: 236px; padding: 10px 10px 12px; }
+.phone .polaroid-photo { height: 132px; }
+.phone .polaroid-photo .art-xxl { width: 118px; height: 118px; }
+.phone .char-detail { padding: 10px 18px; }
+.phone .char-select-buttons { margin-top: 8px; }
+
+/* ---------- mapa: sin leyenda (toca una casilla un momento para ver qué es) ---------- */
+.phone .map-legend { display: none; }
+
+/* ---------- combate ---------- */
+.phone .arena { padding: 4px 60px 0; }
+.phone .arena.multi { padding: 4px 16px 0; }
+.phone .portrait .art-xl { width: 140px; height: 140px; }
+.phone .combatant.boss .portrait .art-xl { width: 160px; height: 160px; }
+.phone .arena.multi .portrait .art-xl { width: 118px; height: 118px; }
+.phone .combat-bottom { height: 296px; }
+.phone .versus { font-size: 2.2em; }
+.phone .intent-bubble { transform: scale(.9); transform-origin: center bottom; }
+
+/* ---------- paneles (eventos, tienda, recompensas…) ---------- */
+.phone .panel { padding: 16px 22px 14px; overflow-y: auto; overflow-x: hidden; transform: none; }
+.phone .panel-art .art-xl { width: 84px; height: 84px; }
+.phone .panel.wide .panel-art .art-xl { width: 64px; height: 64px; }
+.phone .panel.wide.shop .panel-art { display: none; }
+.phone .panel.wide .shop-row { margin: 4px 0 8px; padding-top: 10px; }
+.phone .reward-scroll { max-height: 400px; }
+.phone .event-options { gap: 12px; width: 560px; }
+.phone .act-intro .act-scene .art-xxl { width: 150px; height: 150px; }
+
+/* botones y cosas tocables: mínimo cómodo para el dedo */
+.phone button { min-height: 44px; }
+.phone .status-chip { min-width: 40px; min-height: 36px; }
+.phone #tooltip { width: 320px; font-size: 1.05em; }

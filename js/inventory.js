@@ -40,7 +40,7 @@
             return s ? `<span class="bag-seed">${seedArt(s, 'xs')}</span>` : '<span class="bag-seed empty"></span>';
         }).join('');
         const ready = GAME.screen === 'combat' && seedsReady();
-        const text = `${n ? `Llevas ${n} objeto${n === 1 ? '' : 's'}` : 'Todavía no tienes objetos'} y ${nSeeds} de ${window.SEED_SLOTS} semillas. Toca para ver todo (tecla I).${ready ? ' ¡Puedes usar una semilla ahora!' : ''}`;
+        const text = `${n} objeto${n === 1 ? '' : 's'} · ${nSeeds}/${window.SEED_SLOTS} semillas.${ready ? ' ¡Puedes usar una semilla!' : ''}`;
         return `<button class="hud-bag ${n ? '' : 'empty'} ${ready ? 'seed-ready' : ''}" onclick="openInventory()" ${tip(['Mochila', text])}>
             ${art('ui_bag', '🎒', { size: 'sm' })}
             <span class="bag-count">${n}</span>
@@ -96,7 +96,7 @@
         return `
         <section class="inv-section seeds">
             <h3 class="inv-h hand">Semillas <b>${nSeeds}/${window.SEED_SLOTS}</b>
-                <small>${usable ? '¡Es tu turno: puedes usarlas!' : 'Se usan una vez, en combate y durante tu turno.'}</small></h3>
+                <small>${usable ? '¡Puedes usarlas!' : 'Un uso, en tu turno.'}</small></h3>
             <div class="inv-seeds">${cards}</div>
         </section>`;
     }
@@ -114,7 +114,7 @@
         if (!r) {
             return `<div class="inv-detail empty">${art('ui_bag', '🎒', { size: 'xl' })}
                 <p class="hand">Toca un objeto para verlo en grande.</p>
-                <p class="inv-tip">Los objetos funcionan solos durante toda la partida. Los <b>de jefe</b> son muy fuertes, pero algunos tienen truco.</p></div>`;
+                </div>`;
         }
         const t = TIERS[r.tier] || TIERS.common;
         const status = relicStatus(r, p);
@@ -160,7 +160,7 @@
                 <div class="inv-head">
                     ${art('ui_bag', '🎒', { size: 'lg' })}
                     <h2 class="hand-title">Mochila</h2>
-                    <span class="inv-sub hand">Tus semillas y objetos, todo junto</span>
+                    
                     <button class="inv-close x-btn" onclick="closeInventory()" ${tip(['Cerrar', 'También con Esc.'])}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 L19 19 M19 5 L5 19"/></svg></button>
                 </div>
                 ${seedsSection(p)}

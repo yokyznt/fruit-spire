@@ -246,7 +246,7 @@ function logoHtml(text, cls) {
 // animaciones de "aparecer" (panel, tablero, mochila…). Si la pantalla es la
 // misma, las animaciones de entrada de lo que YA estaba se adelantan al
 // final; solo aparece con animación lo que es nuevo de verdad.
-const ENTRY_ANIMS = new Set(['dcOut', 'dcIn', 'dcBurst', 'dcRemove', 'dcAdd', 'dcLabel', 'lootIn', 'ciIn', 'ciInLeft', 'panelIn', 'pop', 'fadeIn', 'invIn', 'slideUp', 'glowIn', 'popBubble', 'seedMenuIn', 'panelPop', 'mgIn', 'boardIn']);
+const ENTRY_ANIMS = new Set(['dcOut', 'dcIn', 'dcBurst', 'dcRemove', 'dcAdd', 'dcLabel', 'lootIn', 'ciIn', 'ciInLeft', 'panelIn', 'pop', 'fadeIn', 'invIn', 'slideUp', 'glowIn', 'popBubble', 'seedMenuIn', 'panelPop', 'mgIn', 'boardIn', 'mgStamp', 'pcDeal', 'pcFlip', 'mgTableIn']);
 function viewSnapshot(root) {
     const classes = new Map();
     root.querySelectorAll('[class]').forEach((el) => {
@@ -445,21 +445,21 @@ function renderHud() {
     const diff = difficulty();
     return `
     <header class="hud">
-        <div class="hud-title" ${tip(['Volver al menú', 'Tu progreso se guarda al salir del combate.'])} onclick="if(!GAME.anim) showMainMenu();">
+        <div class="hud-title" ${tip(['Menú', 'Se guarda fuera de combate.'])} onclick="if(!GAME.anim) showMainMenu();">
             ${fruitArt(char.id, { size: 'sm' })}
             ${logoHtml('Fruit Spire', 'small')}
         </div>
         <div class="hud-chip act" ${tip([[`${act.castleName} · piso ${act.floor} de ${window.FLOORS_PER_CASTLE}`, '']])}>
             ${art(diff.sprite, '🍎', { size: 'xs' })}<b>Castillo ${act.n}</b><span class="hand">Piso ${act.floor} · ${act.name}</span>
         </div>
-        <div class="hud-chip hp" ${tip(['Vida', `Tienes ${p.hp} de ${p.maxHp} ❤️. Si llega a 0, pierdes la partida.`])}>
+        <div class="hud-chip hp" ${tip(['Vida', 'Si llega a 0, pierdes.'])}>
             ${art('ui_heart', '❤️', { size: 'xs' })}
             <b>${p.hp}/${p.maxHp}</b>
             ${hpBar(p, 'hud', 'juice-bar')}
         </div>
-        <div class="hud-chip gold" ${tip(['Oro', 'Se gana en los combates. Úsalo en la tiendita.'])}>${art('ui_coin', '🪙', { size: 'xs' })}<b>${p.gold}</b></div>
+        <div class="hud-chip gold" ${tip(['Oro', 'Para la tiendita y las apuestas.'])}>${art('ui_coin', '🪙', { size: 'xs' })}<b>${p.gold}</b></div>
         ${hudBagHtml(p)}
-        <div class="hud-deck" onclick="openDeckView()" ${tip(['Tu mazo', 'Mira todas las cartas que tienes.'])}>
+        <div class="hud-deck" onclick="openDeckView()" ${tip(['Mazo', 'Ver tus cartas.'])}>
             <div class="mini-stack"><span class="card-back"></span><span class="card-back"></span></div>
             <b>Mazo</b><span class="count">${p.deck.length}</span>
         </div>
@@ -498,7 +498,7 @@ function seedArt(seed, size) {
 }
 const SEED_RARITY = { common: 'Común', uncommon: 'Poco común', rare: 'Rara' };
 function seedTip(seed) {
-    return explain(seed.name, `${seed.desc} Se usa una vez, en tu turno.`);
+    return explain(seed.name, seed.desc);
 }
 function renderScreen() {
     switch (GAME.screen) {
@@ -728,7 +728,6 @@ function renderMap() {
 
     let html = `<div class="map-layout">
         <div class="map-viewport act-${act.n} theme-${act.id}" id="map-viewport">
-        <div class="map-banner hand"><b>${act.castleName}</b> · Piso ${act.floor}/${window.FLOORS_PER_CASTLE} · ${act.name}</div>
         <div class="map-board" id="map-board" style="width:${w}px;height:${h}px">`;
 
     // adornos del tema (siempre los mismos para un mismo piso: salen de su semilla)
@@ -843,7 +842,7 @@ function renderMap() {
                 <li><span class="swatch visited"></span><span>Ya pisaste</span></li>
                 <li><span class="swatch swatch-wall"></span><span>Muro</span></li>
             </ul>
-            <p class="legend-hint hand">Solo ➜ adelante, ⬆ arriba o ⬇ abajo, y nunca a una casilla ya pisada.</p>
+            <p class="legend-hint hand">➜ ⬆ ⬇ · nunca atrás</p>
         </aside>
     </div>`;
     return html;
@@ -1394,7 +1393,7 @@ function renderWardrobe() {
             <div class="wardrobe-preview">${fruitArt(cid, { size: 'xxl' })}</div>
             <div class="hand ward-name">${ch.name}</div>
             <div class="ward-count">${window.ownedCosmeticCount()} de ${window.COSMETICS.length} conseguidos</div>
-            <p class="ward-hint">Cada mascotita da una pequeña ayuda en los combates y se desbloquea con un reto difícil (pasa el mouse encima para verlo). Los colores y accesorios se ganan en el 🏆 Pase de Batalla: cada enemigo que derrotas te da experiencia.</p>
+            <p class="ward-hint">Mascotitas: se ganan con retos. Colores y accesorios: en el Pase de Batalla.</p>
             <button class="secondary" onclick="backToMenu()">${backLabel()}</button>
         </div>
         <div class="wardrobe-right panel">
@@ -1416,7 +1415,7 @@ function renderWell() {
     const p = GAME.player;
     const cost = wellCost();
     return panel(art('node_well', '🪙', { size: 'xl' }), 'Pozo de los Deseos', `
-        <p>Tira una moneda y pide un deseo. Cada vez cuesta más oro… pero puedes parar cuando quieras.</p>
+        <p>Cada moneda cuesta más. Para cuando quieras.</p>
         ${GAME.wellLastMsg ? `<p class="hand well-msg">${GAME.wellLastMsg}</p>` : ''}
         ${deckChangesHtml()}
         ${lootRowHtml()}
@@ -1428,7 +1427,7 @@ function renderWell() {
 
 function renderKeyFound() {
     return panel(art('node_key', '🗝️', { size: 'xl' }), '¡Llave Dorada!', `
-        <p>Encuentras una llave brillante. Parece saber a dónde ir… más adelante en este nivel debe haber algo que abrir.</p>
+        <p>Abre el Cofre Sellado de este piso.</p>
         <button onclick="closeEventResult()">Continuar</button>`, 'celebrate');
 }
 
@@ -1465,15 +1464,14 @@ function renderDungeon() {
     }
     const corner = (cls, sprite, fb) => `<span class="dg-deco ${cls}">${art(sprite, fb, { size: 'md' })}</span>`;
     return panel(art('dg_skull', '💀', { size: 'xl' }), 'Calabozo de la Trampilla', `
-        <p>Caíste por la trampilla a un calabozo húmedo y oscuro. Algo se arrastra entre las sombras… Ábrete paso a golpes hasta la <b>escalera</b> de arriba.</p>
+        <p>Pelea hasta la <b>escalera</b> de arriba.</p>
         <div class="dg-room">
             ${corner('tl', 'dg_torch', '🔥')}${corner('tr', 'dg_torch', '🔥')}
             ${corner('bl', 'dg_web', '🕸️')}${corner('br', 'dg_web', '🕸️')}
             ${corner('chain-l', 'dg_chain', '⛓️')}${corner('chain-r', 'dg_chain', '⛓️')}
             <div class="dg-grid">${cells}</div>
             <div class="dg-fog"></div>
-        </div>
-        <p class="dg-hint hand">Tú: abajo · Salida: la escalera, arriba</p>`, 'wide dungeon-panel');
+        </div>`, 'wide dungeon-panel');
 }
 
 // ---------- PANELES ----------
@@ -1510,7 +1508,7 @@ function renderReward() {
             ${window.passGainBox ? passGainBox() : ''}
             ${cosmeticBox(GAME.newCosmetic)}
             ${lootRowHtml()}
-            ${GAME.rewardCards.length && !picked ? `<p class="hand reward-pick">Elige una carta para tu mazo:</p><div class="reward-row">${cardsHtml}</div>` : ''}
+            ${GAME.rewardCards.length && !picked ? `<p class="hand reward-pick">Elige una carta</p><div class="reward-row">${cardsHtml}</div>` : ''}
         </div>
         ${!GAME.rewardCards.length || picked ? `<button class="secondary" onclick="skipReward()" ${lootPending() ? 'disabled' : ''}>Continuar</button>` : ''}`, 'celebrate wide');
 }
@@ -1518,7 +1516,7 @@ function renderReward() {
 function renderBossRelic() {
     const choices = GAME.bossRelicChoices;
     return panel(art('semilla_dorada', '✨', { size: 'xl' }), 'Objeto de jefe', `
-        <p>El jefe dejó caer algo brillante. Elige <b>un</b> objeto: son poderosos, pero algunos tienen truco.</p>
+        <p>Elige <b>uno</b>. Son fuertes, pero tienen truco.</p>
         <div class="boss-relic-row">
             ${choices.map((r) => relicCardHtml(r, `pickBossRelic('${r.id}', this)`)).join('') || '<p class="hand empty-note">…no quedan objetos de jefe</p>'}
         </div>
@@ -1537,7 +1535,7 @@ function renderVictory() {
     const boss = window.ENEMY_DB[GAME.lastBossId] || actBossDef();
     return panel(playerArt('happy'), `¡Derrotaste a ${boss.name}!`, `
         <div class="rescue-row">${rescueRowHtml()}</div>
-        <p>Subiste los 3 castillos y liberaste al <b>Rey Fruta</b> y a todas las frutas cautivas. ¡El reino de las frutas vuelve a ser libre!</p>
+        <p>¡Liberaste al <b>Rey Fruta</b> y a todas las frutas!</p>
         ${GAME.unlockMsg ? `<p class="unlock-msg hand">🔓 ${GAME.unlockMsg}</p>` : ''}
         ${petUnlockBox()}
         <p class="hand victory-stats">Grado: <b>${difficulty().name}</b> · ${p.deck.length} cartas · ${p.relics.length} objetos · ${p.hp}/${p.maxHp} ❤️</p>
@@ -1547,7 +1545,7 @@ function renderVictory() {
 function renderGameOver() {
     const p = GAME.player;
     return panel(playerArt('hurt'), 'Game over…', `
-        <p>Tu fruta cayó en el castillo ${p.act}, piso ${currentFloorNo()} (${currentAct().name}) con ${p.relics.length} objetos y ${p.gold} de oro.</p>
+        <p>Caíste en el castillo ${p.act}, piso ${currentFloorNo()}.</p>
         ${window.passGainBox ? passGainBox() : ''}
         <button onclick="showMainMenu()">Volver al menú</button>`, 'sad');
 }
@@ -1574,21 +1572,21 @@ function renderRest() {
     if (mode) {
         const isUp = mode === 'upgrade';
         return panel(art(isUp ? 'rayito_sol' : 'node_rest', '🏕️', { size: 'xl' }), isUp ? 'Madurar una carta' : 'Despegar una carta', `
-            <p>${isUp ? 'Elige qué carta madurar: así se verá después.' : 'Elige qué carta quitar de tu mazo para siempre.'}</p>
+            <p>${isUp ? 'Elige la carta a madurar.' : 'Elige la carta a quitar.'}</p>
             ${deckPicker(mode, isUp ? 'restUpgradeCard' : 'restRemoveCard')}
             <button class="secondary" onclick="setRestMode(null)">Volver</button>`, 'wide');
     }
     return panel(art('node_rest', '🏕️', { size: 'xl' }), 'Campamento', `
-        <p>El fuego chisporrotea. Elige <b>una</b> cosa para hacer antes de seguir.</p>
+        <p>Elige <b>una</b>.</p>
         <div class="rest-options">
             <button class="rest-option" ${rest ? '' : 'disabled'} onclick="restHeal()" ${rest ? '' : tip(['No puedes descansar', 'Tu Corazón de Durián no te deja dormir.'])}>
                 ${art('ui_heal', '❤️', { size: 'lg' })}<b>Descansar</b><span>Recuperas ${heal} ❤️</span>
             </button>
             <button class="rest-option btn-mint" onclick="setRestMode('upgrade')">
-                ${art('rayito_sol', '🌞', { size: 'lg' })}<b>Madurar</b><span>Mejora una carta para siempre</span>
+                ${art('rayito_sol', '🌞', { size: 'lg' })}<b>Madurar</b><span>Mejora una carta</span>
             </button>
             <button class="rest-option btn-grape" onclick="setRestMode('remove')">
-                ${art('compostar', '🪱', { size: 'lg' })}<b>Despegar</b><span>Quita una carta de tu mazo</span>
+                ${art('compostar', '🪱', { size: 'lg' })}<b>Despegar</b><span>Quita una carta</span>
             </button>
         </div>
         <button class="secondary" onclick="leaveRest()">Seguir sin hacer nada</button>`, 'wide');
@@ -1609,7 +1607,7 @@ function renderShop() {
     const gold = GAME.player.gold;
     if (GAME.restMode === 'remove') {
         return panel(art('compostar', '🪱', { size: 'xl' }), 'Quitar una carta', `
-            <p>El tendero se la lleva por ${art('ui_coin', '🪙', { size: 'xs' })} <b>${removalPrice()}</b> de oro. Elige cuál:</p>
+            <p>Quitar una carta: ${art('ui_coin', '🪙', { size: 'xs' })} <b>${removalPrice()}</b></p>
             ${deckPicker('remove', 'shopRemoveCard')}
             <button class="secondary" onclick="closeShopPicker()">Volver</button>`, 'wide');
     }
@@ -1617,7 +1615,6 @@ function renderShop() {
     const empty = !s.cards.length && !s.relics.length && !(s.seeds || []).length;
     const rp = removalPrice();
     return panel(art('node_shop', '🏪', { size: 'xl' }), 'Tiendita', `
-        <p>Tienes ${art('ui_coin', '🪙', { size: 'xs' })} <b>${gold}</b> de oro. Toca lo que quieras comprar.</p>
         <div class="shop-row">
             ${s.cards.map((i, k) => `
             <div class="shop-item ${gold < i.price ? 'pricey' : ''}" data-flip="s-${i.card.id}">
@@ -1644,7 +1641,7 @@ function renderShop() {
                 <div class="relic-card service-card" ${s.removeUsed ? '' : 'onclick="openShopRemoval(this)"'} ${tip(['Quitar una carta', 'Elige una carta de tu mazo y el tendero se la lleva. Cada vez cuesta un poco más.'])}>
                     ${art('compostar', '🪱', { size: 'lg' })}
                     <div class="card-name">Quitar una carta</div>
-                    <div class="relic-desc">${s.removeUsed ? 'Ya usaste este servicio aquí.' : 'Despega una carta de tu mazo.'}</div>
+                    <div class="relic-desc">${s.removeUsed ? 'Ya usado.' : 'De tu mazo, para siempre.'}</div>
                 </div>
                 ${s.removeUsed ? '' : priceTag(rp)}
             </div>

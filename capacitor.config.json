@@ -1,0 +1,6 @@
+{
+  "appId": "com.yokyznt.fruitspire",
+  "appName": "Fruit Spire",
+  "webDir": "www",
+  "android": { "backgroundColor": "#FFF9EC" }
+}

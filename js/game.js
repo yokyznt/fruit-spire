@@ -9,8 +9,12 @@
 // deformar nada). BASE_W / BASE_H son el tamaño actual del lienzo.
 // ============================================================
 
-const DESIGN_W = 1440;
-const DESIGN_H = 810;
+// En teléfono el lienzo es más chico: así todo se ve más grande (css/phone.css lo compacta).
+// ?phone=1 fuerza el modo teléfono para probarlo en la computadora.
+const IS_PHONE = /[?&]phone=1/.test(location.search)
+    || (!!window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 620);
+const DESIGN_W = IS_PHONE ? 1180 : 1440;
+const DESIGN_H = IS_PHONE ? 660 : 810;
 let BASE_W = DESIGN_W;
 let BASE_H = DESIGN_H;
 
@@ -23,25 +27,25 @@ function pickCombatBg(kind) {
 }
 
 const NODE_INFO = {
-    enemy: { sprite: 'node_enemy', icon: '⚔️', label: 'Enemigo', desc: 'Unos bichos te esperan. ¡A pelear!' },
-    elite: { sprite: 'node_elite', icon: '🔥', label: 'Élite', desc: 'Un enemigo durísimo. Si ganas, te llevas un objeto.' },
-    rest: { sprite: 'node_rest', icon: '🏕️', label: 'Campamento', desc: 'Descansa, madura una carta o despega una de tu mazo.' },
+    enemy: { sprite: 'node_enemy', icon: '⚔️', label: 'Enemigo', desc: 'Pelea.' },
+    elite: { sprite: 'node_elite', icon: '🔥', label: 'Élite', desc: 'Pelea dura. Da un objeto.' },
+    rest: { sprite: 'node_rest', icon: '🏕️', label: 'Campamento', desc: 'Cura, madura o quita una carta.' },
     treasure: { sprite: 'node_treasure', icon: '💎', label: 'Tesoro', desc: 'Un objeto gratis.' },
-    shop: { sprite: 'node_shop', icon: '🏪', label: 'Tiendita', desc: 'Cartas, objetos y quitar cartas, a cambio de oro.' },
-    mystery: { sprite: 'node_mystery', icon: '❓', label: 'Misterio', desc: 'Un evento al azar… ¿bueno o malo?' },
+    shop: { sprite: 'node_shop', icon: '🏪', label: 'Tiendita', desc: 'Compra con oro.' },
+    mystery: { sprite: 'node_mystery', icon: '❓', label: 'Misterio', desc: 'Evento al azar.' },
     gift: { sprite: 'node_gift', icon: '🎁', label: 'Regalo', desc: 'Un regalo misterioso.' },
-    game: { sprite: 'node_game', icon: '🎲', label: 'Mesa de Juegos', desc: 'Dados, póker o ajedrez. Apuesta o gana con maña: puedes salir con oro y hasta un objeto.' },
-    key: { sprite: 'node_key', icon: '🗝️', label: 'Llave Dorada', desc: 'Una llave brillante. Te servirá más adelante en este nivel.' },
-    vault: { sprite: 'node_vault', icon: '🔒', label: 'Cofre Sellado', desc: 'Con la Llave Dorada da un premio mucho mejor.' },
+    game: { sprite: 'node_game', icon: '🎲', label: 'Mesa de Juegos', desc: 'Apuesta oro: dados, póker o ajedrez.' },
+    key: { sprite: 'node_key', icon: '🗝️', label: 'Llave Dorada', desc: 'Abre el Cofre Sellado.' },
+    vault: { sprite: 'node_vault', icon: '🔒', label: 'Cofre Sellado', desc: 'Mejor premio con la Llave Dorada.' },
     boss: { sprite: 'node_boss', icon: '🌀', label: 'Jefe', desc: '' }
 };
 
 // Los obstáculos que bloquean una casilla entera cambian de disfraz según
 // el nivel, igual que los jefes (ver actBossDef).
 const BLOCKED_BY_ACT = [
-    { sprite: 'obstaculo_arbol', icon: '🌳', label: 'Árbol Caído', desc: 'Un árbol caído bloquea el camino. Hay que rodearlo.' },
-    { sprite: 'obstaculo_mesa', icon: '🎰', label: 'Mesa Volcada', desc: 'Una mesa de juego volcada bloquea el paso. Hay que rodearla.' },
-    { sprite: 'obstaculo_maquina', icon: '⚙️', label: 'Máquina Averiada', desc: 'Una máquina rota bloquea el paso en la torre.' }
+    { sprite: 'obstaculo_arbol', icon: '🌳', label: 'Árbol Caído', desc: 'Bloquea el paso.' },
+    { sprite: 'obstaculo_mesa', icon: '🎰', label: 'Mesa Volcada', desc: 'Bloquea el paso.' },
+    { sprite: 'obstaculo_maquina', icon: '⚙️', label: 'Máquina Averiada', desc: 'Bloquea el paso.' }
 ];
 
 // ---------------------------------------------------------
@@ -328,7 +332,7 @@ function grantRandomRelic(player) {
     if (!relic) return 'Ya tienes todos los objetos disponibles.';
     giveRelic(player, relic);
     GAME.lastRelic = relic;
-    return `Obtuviste el objeto ${relic.name}: ${relic.description}`;
+    return `${relic.name}: ${relic.description}`;
 }
 
 // ---------------------------------------------------------
@@ -1156,7 +1160,7 @@ function eventHelpers() {
             if (!relic) return 'Ya tienes todos los objetos disponibles.';
             giveRelic(p, relic);
             GAME.lastRelic = relic;
-            return `Obtuviste el objeto ${relic.name}: ${relic.description}`;
+            return `${relic.name}: ${relic.description}`;
         },
         // una semilla al azar en la bolsa (null si está llena)
         grantSeed() {

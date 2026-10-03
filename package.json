@@ -1,0 +1,13 @@
+{
+  "name": "fruit-spire",
+  "version": "2.6.0",
+  "private": true,
+  "description": "Fruit Spire — roguelike de cartas",
+  "scripts": {
+    "test": "node tests/run-all.js",
+    "www": "node scripts/build-www.js",
+    "android:init": "npm install @capacitor/core @capacitor/cli @capacitor/android && npx cap add android",
+    "android:sync": "node scripts/build-www.js && npx cap sync android",
+    "android:open": "npx cap open android"
+  }
+}
