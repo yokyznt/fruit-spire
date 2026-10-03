@@ -67,6 +67,33 @@ function heartifyDom(root) {
         n.replaceWith(...span.childNodes);
     });
 }
+// Color de una palabra clave por su nombre (Madurez → kw-str): los títulos de las
+// explicaciones usan el mismo color que la palabra en la carta.
+function kwClassOf(title) {
+    const t = String(title).replace(/\s+\d+$/, '').toLowerCase();
+    const k = keywords().find((x) => (x.title || x.word).toLowerCase() === t);
+    return k ? `kw-${k.cls}` : '';
+}
+// Pinta las palabras clave que aparecen dentro de un texto (ya en HTML),
+// sin tocar lo que va dentro de las etiquetas
+function colorKeywords(html) {
+    keywords().forEach((k) => {
+        if (k.basic && k.cls !== 'block') return;
+        html = html.replace(new RegExp(`(?<![\\wáéíóúñ"=-])(${k.word}\\w*)(?![^<]*>)`, 'gi'), `<span class="kw-${k.cls}">$1</span>`);
+    });
+    return html;
+}
+// Tono de una opción de evento: good (premio seguro), risk (cuesta algo o es
+// una apuesta), bad (pelea o pura pérdida) o neutral (irse sin hacer nada)
+const LEAVE_RE = /^(seguir|alejar|rechaz|dejar|ignorar|no vale|no molestar|mirar|taparte|pisar con cuidado|tirarle una piedra)/i;
+const RISK_RE = /pierdes|−|pag[au]|apuestas|\d+ de oro\)|50%|gusano|magullada|marcada|máx\. \(|dar \d+/i;
+function optionTone(o) {
+    if (o.tone) return o.tone;
+    if (o.fight) return 'bad';
+    if (o.game || o.well || o.dungeon) return 'risk';
+    if (LEAVE_RE.test(o.text)) return 'neutral';
+    return RISK_RE.test(o.text) ? 'risk' : 'good';
+}
 function highlightDesc(text) {
     let html = esc(text).replace(/(\d+)/g, '<b class="num">$1</b>');
     keywords().forEach((k) => {
@@ -159,7 +186,7 @@ function renderCardHtml(card, opts) {
         : card.rarity === 'uncommon' ? '<span class="rarity-mark">★</span>' : '';
     const cls = [card.type, `rarity-${card.rarity || 'common'}`, card.upgraded ? 'upgraded' : '', opts.disabled ? 'disabled' : '', opts.cls || ''].join(' ');
     return `
-    <div class="card ${cls}" ${clickable ? `onclick="${opts.onclick}"` : ''} ${cardTips(card)}>
+    <div class="card ${cls}" ${clickable ? `onclick="${opts.onclick}"` : ''} ${opts.noTip ? '' : cardTips(card)}>
         ${card.unplayable ? '' : `<div class="card-cost"><span>${card.cost}</span></div>`}
         ${rarityMark}
         ${card.character && window.CHARACTER_DB[card.character] ? `<span class="char-mark">${art(charSprite(window.CHARACTER_DB[card.character]), '', { size: 'xs' })}</span>` : ''}
@@ -652,6 +679,7 @@ function renderActIntro() {
         ${logoHtml(act.name, 'act-logo')}
         ${act.theme.rule ? `<div class="act-rule" ${tip(['Regla del piso', 'Cada piso cambia un poco cómo se juega. Se ve en la esquina de cada combate.'])}>${art(act.theme.rule.sprite, act.theme.rule.icon, { size: 'md' })}<div><b class="hand">${act.theme.rule.name}</b><small>${act.theme.rule.desc}</small></div></div>` : ''}
         ${GAME.actHealed > 0 && (act.n > 1 || act.floor > 1) ? `<div class="act-heal">${art('ui_heal', '❤️', { size: 'xs' })} Recuperaste ${GAME.actHealed} ❤️ en el camino.</div>` : ''}
+        ${GAME.actCurse && window.getCard(GAME.actCurse) ? `<div class="act-heal act-curse" ${cardTipAttr(window.getCard(GAME.actCurse))}>${art(GAME.actCurse, '', { size: 'xs' })} Se coló una maldición: ${window.getCard(GAME.actCurse).name}.</div>` : ''}
         <div class="act-boss" ${tip([boss.name, last ? 'El guardián del Rey Fruta. Vencerlo lo libera.' : guardian ? 'El guardián de este piso. Vencerlo te deja subir al siguiente.' : 'El jefe de este castillo. Vencerlo te lleva al siguiente.'])}>
             ${art(boss.sprite || boss.id, boss.icon, { size: 'md' })}
             <span class="hand">Al final te espera: <b>${boss.name}</b>${last ? ' (¡el último jefe!)' : guardian ? ' (guardián)' : ' (jefe del castillo)'}</span>
@@ -942,53 +970,56 @@ function intentInfo(c, e) {
         if (!cls) { cls = c2; sprite = s2; label = l2; } else if (value != null) extras.push({ sprite: s2, value });
     };
     const noteStatus = (id, n) => { statusAmts[id] = n; };
+    // cada parte de la jugada lleva su etiqueta de color (ataque, cáscara, invocar…)
+    const tag = (kind, word) => `<i class="tip-kind k-${kind}">${word}</i>`;
     if (m.damage) {
         const d = c.previewDamage(e, c.player, m.damage);
         const hits = m.hits || 1;
         set('attack', 'ui_sword', hits > 1 ? `${d}×${hits}` : `${d}`);
-        lines.push(`Va a atacar${hits > 1 ? ` ${hits} veces` : ''}.`);
+        lines.push(`${tag('attack', 'Ataca')} ${d}${hits > 1 ? ` × ${hits}` : ''} de daño`);
     }
     if (m.block) {
         const blk = e.getStatus('frail') ? Math.floor(m.block * 0.75) : m.block;
         set('defend', 'ui_shield', `${blk}`, blk);
-        lines.push('Se pondrá cáscara.');
+        lines.push(`${tag('defend', 'Se cubre')} ${blk} de cáscara`);
     }
-    if (m.allyBlock) lines.push('Dará cáscara a sus aliados.');
+    if (m.allyBlock) lines.push(`${tag('defend', 'Cubre')} ${m.allyBlock} de cáscara a sus aliados`);
     if (m.apply) {
         const ids = Object.keys(m.apply);
-        ids.forEach((id) => { noteStatus(id, m.apply[id]); lines.push(`Te aplicará ${statusInfo(id).name}.`); set('debuff', statusInfo(id).sprite, `${m.apply[id]}`, m.apply[id]); });
+        ids.forEach((id) => { noteStatus(id, m.apply[id]); lines.push(`${tag('debuff', 'Te aplica')} ${m.apply[id]} de ${statusInfo(id).name}`); set('debuff', statusInfo(id).sprite, `${m.apply[id]}`, m.apply[id]); });
     }
     if (m.self) {
         const ids = Object.keys(m.self);
-        ids.forEach((id) => { noteStatus(id, m.self[id]); lines.push(`Ganará ${statusInfo(id).name}.`); set('buff', statusInfo(id).sprite, `${m.self[id]}`, m.self[id]); });
+        ids.forEach((id) => { noteStatus(id, m.self[id]); lines.push(`${tag('buff', 'Gana')} ${m.self[id]} de ${statusInfo(id).name}`); set('buff', statusInfo(id).sprite, `${m.self[id]}`, m.self[id]); });
     }
     if (m.allies) {
-        Object.keys(m.allies).forEach((id) => { noteStatus(id, m.allies[id]); lines.push(`Todos los enemigos ganarán ${statusInfo(id).name}.`); set('buff', statusInfo(id).sprite, `${m.allies[id]}`, m.allies[id]); });
+        Object.keys(m.allies).forEach((id) => { noteStatus(id, m.allies[id]); lines.push(`${tag('buff', 'Todos ganan')} ${m.allies[id]} de ${statusInfo(id).name}`); set('buff', statusInfo(id).sprite, `${m.allies[id]}`, m.allies[id]); });
     }
-    if (m.heal) { set('heal', 'ui_heal', `+${m.heal}`, m.heal); lines.push('Recuperará vida.'); }
+    if (m.heal) { set('heal', 'ui_heal', `+${m.heal}`, m.heal); lines.push(`${tag('heal', 'Se cura')} ${m.heal} ❤️`); }
+    if (m.healAll) lines.push(`${tag('heal', 'Cura')} ${m.healAll} ❤️ a todos`);
+    if (m.drain) lines.push(`${tag('heal', 'Vampírico')} se cura con el daño`);
     if (m.stealGold) {
         set('debuff', 'ui_coin', `${m.stealGold}`, m.stealGold);
-        lines.push('Te robará oro. Si lo derrotas, lo recuperas.');
+        lines.push(`${tag('steal', 'Roba')} ${m.stealGold} de oro (vuelve si lo derrotas)`);
     }
     if (m.stealCard) {
         set('debuff', 'st_thief', `${m.stealCard}`, m.stealCard);
-        lines.push(`Te robará ${m.stealCard === 1 ? 'una carta' : `${m.stealCard} cartas`} de tu pila de robo. Si lo derrotas, las recuperas.`);
+        lines.push(`${tag('steal', 'Roba')} ${m.stealCard === 1 ? '1 carta' : `${m.stealCard} cartas`} (vuelve si lo derrotas)`);
     }
     let addCardShown = null;
     if (m.addCard) {
         const card = window.getCard(m.addCard.id);
         const name = card ? card.name : 'una maldición';
         set('debuff', m.addCard.id, '', '');
-        lines.push(`Meterá ${name} en tu mazo.`);
+        lines.push(`${tag('debuff', 'Mete')} ${name} en tu mazo`);
         addCardShown = card;
     }
     if (m.summon) {
         const names = m.summon.map((id) => (window.ENEMY_DB[id] || {}).name).filter(Boolean);
         set('summon', 'node_mystery', '', '');
-        lines.push(`Llamará refuerzos: ${names.join(' y ')}.`);
+        lines.push(`${tag('summon', 'Invoca')} ${names.join(' y ')}`);
     }
-    const tips = [[m.name || 'Intención', lines.join(' ') || 'No se sabe qué hará.']];
-    if (m.block || m.allyBlock) tips.push(...keywordTips('cáscara'));
+    const tips = [[m.name || 'Intención', lines.join('<br>') || `${tag('summon', '¿?')} Nadie sabe qué hará`]];
     tips.push(...statusTipsFull(Object.keys(statusAmts).map((id) => [id, statusAmts[id]])));
     if (addCardShown) tips.push([addCardShown.name, `@card:${addCardShown.id}`]);
     return { label, cls: cls || 'buff', sprite: sprite || 'ui_up', extras: extras.slice(0, 3), tips };
@@ -1127,7 +1158,6 @@ function cardInfoHtml(card, prev, id) {
     const rows = [];
     const seen = new Set();
     const add = (sprite, title, text) => { if (seen.has(title)) return; seen.add(title); rows.push({ sprite, title, text }); };
-    if (/\bdaño\b/.test(low)) add('ui_sword', 'Daño', 'Le quita vida al enemigo. Primero se gasta su cáscara.');
     keywords().forEach((k) => {
         if (!low.includes(k.word)) return;
         if (k.statusId) {
@@ -1135,18 +1165,11 @@ function cardInfoHtml(card, prev, id) {
             const [title, text] = statusTip(k.statusId);
             add(s.sprite, title, text);
         } else if (k.basic) {
-            const key = k.cls === 'block' ? 'block' : k.cls === 'energy' ? 'energy' : k.word === 'roba' ? 'roba' : k.word === 'recupera' ? 'recupera' : 'garden';
-            const [sprite, title, text] = BASIC_KW_TEXT[key];
-            add(sprite, title, text);
+            // lo básico (cáscara, energía, robar…) no se explica; el viñedo sí
+            if (k.cls === 'heal' && k.word !== 'recupera') add(...BASIC_KW_TEXT.garden);
         } else add('ui_up', k.title, k.text);
     });
     // términos que aparecen dentro de otras explicaciones
-    keywordTips(card.description, [...seen]).forEach(([title, text]) => add('ui_up', title, text));
-    if (card.type === 'power') add('ui_up', 'Poder', 'Se juega una vez y dura todo el combate.');
-    if (card.upgraded) {
-        const base = window.getCard(card.baseId);
-        if (base) add('ui_up', 'Madurada', `Versión mejorada. La normal dice: «${base.description}»`);
-    }
     return `<div class="card-info type-${card.type}" ${id ? `id="${id}"` : ''}>
         <div class="ci-head">
             <span class="ci-cost">${card.cost < 0 ? '–' : card.cost}</span>
@@ -1154,7 +1177,7 @@ function cardInfoHtml(card, prev, id) {
             <span class="ci-type">${TYPE_LABELS[card.type] || card.type}</span>
         </div>
         <p class="ci-desc">${prev ? previewDescHtml(card, prev) : highlightDesc(card.description)}</p>
-        ${rows.length ? `<ul class="ci-list">${rows.map((r) => `<li>${art(r.sprite, '', { size: 'xs' })}<div><b>${r.title}</b><span>${r.text}</span></div></li>`).join('')}</ul>` : ''}
+        ${rows.length ? `<ul class="ci-list">${rows.map((r) => `<li>${art(r.sprite, '', { size: 'xs' })}<div><b class="${kwClassOf(r.title)}">${r.title}</b><span>${colorKeywords(r.text)}</span></div></li>`).join('')}</ul>` : ''}
     </div>`;
 }
 
@@ -1177,7 +1200,7 @@ function renderCombat() {
         const disabled = card.unplayable || card.cost > p.energy || !playerTurn;
         const off = i - (n - 1) / 2;
         return `<div class="fan-slot ${GAME.dealIn ? 'deal-in' : ''} ${GAME.selectedCard === i ? 'selected' : ''}" data-flip="h${i}" ${card.retain ? 'data-retain="1"' : ''} style="--r:${(off * 3.5).toFixed(1)}deg;--y:${(off * off * 3.5).toFixed(1)}px;--i:${i};--ov:${overlap.toFixed(0)}px">
-            ${renderCardHtml(card, { onclick: `selectCard(${i})`, disabled, alwaysClick: playerTurn, preview: card.unplayable ? null : c.previewCard(card, null) })}
+            ${renderCardHtml(card, { onclick: `selectCard(${i})`, disabled, alwaysClick: playerTurn, noTip: true, preview: card.unplayable ? null : c.previewCard(card, null) })}
         </div>`;
     }).join('');
 
@@ -1640,7 +1663,7 @@ function renderEvent() {
             ${ev.options.map((o, i) => {
                 const locked = o.locked ? o.locked(p) : '';
                 const kw = keywordTips(o.text);
-                return `<button class="${i % 2 ? 'btn-mint' : ''}" ${locked ? 'disabled' : ''} ${kw.length ? tip(kw) : ''} onclick="resolveEventOption(${i})">${o.text}${locked ? ` <small>(${locked})</small>` : ''}</button>`;
+                return `<button class="opt-${optionTone(o)}" ${locked ? 'disabled' : ''} ${kw.length ? tip(kw) : ''} onclick="resolveEventOption(${i})">${o.text}${locked ? ` <small>(${locked})</small>` : ''}</button>`;
             }).join('')}
         </div>`);
 }

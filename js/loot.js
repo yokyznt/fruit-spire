@@ -189,7 +189,6 @@
         const list = GAME.loot || [];
         if (!list.some((it) => !it.dropped)) return '';
         const full = GAME.player && GAME.player.seeds.indexOf(null) < 0;
-        const pending = window.lootPending();
         return `
         <div class="loot-row">
             ${list.map((it, i) => (it.dropped ? '' : `
@@ -201,8 +200,7 @@
                 </button>
                 ${it.k === 'seed' && isOpen(it) && full ? `<button class="secondary loot-drop" onclick="dropLoot(${i})">Dejarla</button>` : ''}
             </div>`)).join('')}
-        </div>
-        ${pending ? '<p class="loot-hint hand">Toca cada premio para guardarlo.</p>' : ''}`;
+        </div>`;
     };
 
     // ---------- la barra de arriba reacciona a lo que ganas ----------

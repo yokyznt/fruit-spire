@@ -150,16 +150,14 @@ function fillContent(grid, opts, COLS, ROWS) {
     // 1) antes del jefe: una fila de campamentos y una tiendita
     range(0, ROWS - 1).forEach((y) => { grid[y][preBoss] = y % 2 === 0 ? T.REST : T.EMPTY; });
     grid[1 + rnd(ROWS - 2)][preBoss] = T.SHOP;
-    // 2) a mitad de camino: tesoros, repartidos en varias columnas (no
-    // apilados en una sola) para que se mezclen mejor con lo demás
-    place(T.TREASURE, count(3, 2), range(Math.max(1, mid - 1), mid + 1), 2);
+    // 2) a mitad de camino: uno o dos tesoros (pocos: los objetos se ganan peleando)
+    place(T.TREASURE, count(1.5, 1), range(Math.max(1, mid - 1), mid + 1), 1);
     // 3) cupos repartidos: bastantes misterios y menos enemigos de relleno
     const eliteScale = Math.max(0.7, Math.min(1.4, scale));
     place(T.ELITE, Math.max(2, Math.round(opts.elites * eliteScale)), range(4, preBoss - 1), 1);
     place(T.SHOP, count(2), range(3, preBoss - 2), 1);
     place(T.REST, count(3, 2), range(3, preBoss - 1), 1);
     place(T.MYSTERY, count(15, 8), range(1, preBoss - 1), 2);
-    place(T.TREASURE, count(1), range(3, preBoss - 1), 1);
     place(T.GAME, opts.games, range(2, preBoss - 1), 1);
     // la llave siempre en la primera mitad del camino, el cofre en la
     // segunda: para cuando la encuentres, tenga sentido que sirva más adelante

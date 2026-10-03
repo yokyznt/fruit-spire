@@ -84,7 +84,7 @@
             desc: 'Una ruleta gigante gira sola, chirriando. Cada gajo tiene un premio… o un castigo.',
             options: [
                 {
-                    text: 'Girarla (gratis)',
+                    text: 'Girarla (gratis)', tone: 'risk',
                     effect: (p, g) => {
                         const r = rnd(6);
                         if (r === 0) { const gold = 60 + rnd(40); p.gold += gold; return `¡Cae en el dorado! +${gold} de oro.`; }
@@ -131,7 +131,7 @@
             id: 'moneda_suerte', title: 'Moneda de la Suerte', icon: '🪙', w: 1,
             desc: 'Una moneda gira en el suelo, sin caer nunca. Dicen que si la atrapas, la suerte te sigue… o te evita.',
             options: [
-                { text: 'Atraparla al vuelo', effect: (p) => { if (Math.random() < 0.5) { p.gold += 75; return '¡La atrapas! Resulta que era oro de verdad: +75.'; } p.hp = Math.max(1, p.hp - 6); return 'Estaba caliente como un horno. Pierdes 6 ❤️.'; } },
+                { text: 'Atraparla al vuelo', tone: 'risk', effect: (p) => { if (Math.random() < 0.5) { p.gold += 75; return '¡La atrapas! Resulta que era oro de verdad: +75.'; } p.hp = Math.max(1, p.hp - 6); return 'Estaba caliente como un horno. Pierdes 6 ❤️.'; } },
                 { text: 'Dejarla girar', effect: () => 'La moneda sigue girando por los siglos de los siglos.' }
             ]
         },
@@ -142,7 +142,7 @@
             desc: 'Un muro con una cara de piedra bosteza. "Puedo cambiarte… si quieres".',
             options: [
                 { text: 'Olvidar (quita una carta al azar de tu mazo)', effect: (p, g) => { const n = g.removeRandom(false); return n ? `El muro se traga ${n}.` : 'El muro no encontró nada que tragar.'; } },
-                { text: 'Cambiar (transforma una carta al azar)', effect: (p, g) => { const n = g.transformRandom(); return n || 'El muro no encontró qué cambiar.'; } },
+                { text: 'Cambiar (transforma una carta al azar)', tone: 'risk', effect: (p, g) => { const n = g.transformRandom(); return n || 'El muro no encontró qué cambiar.'; } },
                 { text: 'Crecer (madura una carta al azar)', effect: (p, g) => { const n = g.upgradeRandom(1); return n.length ? `${n[0]} se endurece como piedra.` : 'Nada que madurar.'; } }
             ]
         },
@@ -160,7 +160,7 @@
             desc: 'Un cofre en medio del camino, demasiado brillante y demasiado tranquilo. Parece que respira.',
             options: [
                 {
-                    text: 'Abrirlo',
+                    text: 'Abrirlo', tone: 'risk',
                     effect: (p, g) => {
                         if (Math.random() < 0.55) return g.grantRelicTier(['common', 'uncommon', 'rare']);
                         return { fight: true, msg: '¡ERA UN MÍMICO! Te salta encima.' };
@@ -211,7 +211,7 @@
             id: 'piedra_papel_tijera', title: 'Duelo del Gnomo', icon: '✊', w: 1,
             desc: 'Un gnomo de jardín te reta a piedra, papel o tijera. "¡Si ganas, te doy oro! ¡Si pierdes, te pellizco!"',
             options: [['Piedra', '✊'], ['Papel', '✋'], ['Tijera', '✌️']].map(([name, ico], me) => ({
-                text: `${ico} ${name}`,
+                text: `${ico} ${name}`, tone: 'risk',
                 effect: (p) => {
                     const gn = rnd(3), icons = ['✊', '✋', '✌️'];
                     const res = (me - gn + 3) % 3; // 0 empate, 1 gano, 2 pierdo

@@ -91,7 +91,7 @@
         if (m.heal) parts.push(`se cura <b>${m.heal}</b> ❤️`);
         if (m.healAll) parts.push(`cura <b>${m.healAll}</b> ❤️ a todos`);
         if (m.stealGold) parts.push(`te roba <b>${m.stealGold}</b> de oro (lo recuperas si lo derrotas)`);
-        if (m.stealCard) parts.push(`te roba <b>${m.stealCard}</b> carta${m.stealCard > 1 ? 's' : ''} de la mano (las recuperas si lo derrotas)`);
+        if (m.stealCard) parts.push(`te roba <b>${m.stealCard}</b> carta${m.stealCard > 1 ? 's' : ''} de tu pila de robo (las recuperas si lo derrotas)`);
         if (m.special) parts.push('algo al azar: ¡nunca se sabe qué saldrá!');
         if (m.addCard) {
             const card = window.getCard(m.addCard.id);

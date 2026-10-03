@@ -912,7 +912,7 @@ function showTip(el) {
             const relic = window.RELIC_DB[text.slice(5)];
             return relic && window.refBoxHtml ? `<div class="tip-box tip-ref">${refBoxHtml(relic, 'sm')}</div>` : '';
         }
-        return `<div class="tip-box"><b>${title}</b>${text ? `<span>${text}</span>` : ''}</div>`;
+        return `<div class="tip-box"><b class="${kwClassOf(title)}">${title}</b>${text ? `<span>${colorKeywords(text)}</span>` : ''}</div>`;
     }).join('');
     heartifyDom(t);
     t.classList.add('show');

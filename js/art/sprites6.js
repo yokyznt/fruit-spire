@@ -9,7 +9,7 @@
 
 (function () {
     const S = window.SPRITES;
-    const { INK, st, svg, shine, leaf, sparkle, face } = window.SPRITE_KIT;
+    const { INK, st, svg, shine, leaf, sparkle, face, fangMouth } = window.SPRITE_KIT;
     const hurtOr = (o, m) => (o && o.mood === 'hurt' ? 'hurt' : m || 'angry');
     const isHurt = (o) => !!(o && o.mood === 'hurt');
     const legs = (d, w) => `<path d="${d}" ${st(w || 3)} fill="none"/>`;
@@ -201,7 +201,7 @@
         <path d="M16 48 L14 64 M26 44 L24 66 M36 42 L36 64" stroke="${INK}" stroke-width="5"/>
         <circle cx="64" cy="46" r="17" fill="#C9D3DC" ${st()}/>
         <path d="M79 52 L99 64" ${st(3.5)} fill="none"/>
-        ${face(63, 46, hurtOr(o), 0.52)}${shine(56, 38, 2.5, 5)}`);
+        ${face(63, 46, hurtOr(o), 0.52, 'eyes')}${shine(56, 38, 2.5, 5)}`);
 
     S.pez_globo = (o) => svg(`
         <path d="M20 52 L2 38 L7 52 L2 66 Z" fill="#FFB347" ${st(3)}/>
@@ -342,8 +342,7 @@
         <path d="M38 36 L34 18 L46 30 Z M62 36 L66 18 L54 30 Z" fill="#8C78C0" ${st(2.5)}/>
         <ellipse cx="50" cy="54" rx="18" ry="22" fill="#8C78C0" ${st()}/>
         <ellipse cx="50" cy="64" rx="10" ry="9" fill="#B7A6E0"/>
-        ${face(50, 50, hurtOr(o), 0.62)}
-        <path d="M45 58 L47 63 L49 58 M51 58 L53 63 L55 58" fill="#fff" ${st(1.4)}/>`);
+        ${face(50, 49, hurtOr(o), 0.62, 'eyes')}${fangMouth(50, 56, 0.85)}`);
 
     S.arana_bodeguera = (o) => svg(`
         <path d="M50 0 L50 28" ${st(2)} fill="none"/>
@@ -386,7 +385,7 @@
         <path d="M84 22 Q84 38 90 40 Q96 38 96 22 Z" fill="#fff" ${st(2.5)}/><path d="M85 28 Q90 32 95 28 L95 24 L85 24 Z" fill="#C8374F"/>
         <path d="M90 40 L90 50 M84 50 L96 50" ${st(2.5)} fill="none"/>
         <path d="M38 64 L50 70 L62 64 L62 74 L50 68 L38 74 Z" fill="#C8374F" ${st(2)}/><circle cx="50" cy="69" r="3" fill="#9B2B3D"/>
-        ${face(50, 40, hurtOr(o), 0.8)}
+        ${face(50, 40, hurtOr(o, 'eyes'), 0.8)}
         <path d="M40 50 Q34 48 32 52 Q38 52 44 50 Q50 54 56 50 Q62 52 68 52 Q66 48 60 50" fill="#6E4A3A" ${st(1.5)}/>
         ${shine(32, 28, 4, 9)}`);
 
@@ -522,7 +521,7 @@
         <circle cx="50" cy="38" r="22" fill="#FFD2B0" ${st()}/>
         <path d="M24 26 Q50 10 76 26 L82 32 L18 32 Z" fill="#5CC9A7" ${st(2.8)}/>
         <path d="M22 32 Q50 40 78 32" fill="none" ${st(2.5)}/>
-        ${face(50, 42, hurtOr(o), 0.7)}
+        ${face(50, 42, hurtOr(o, 'eyes'), 0.7)}
         <path d="M38 52 Q44 48 50 52 Q56 48 62 52 Q56 56 50 54 Q44 56 38 52 Z" fill="#6E4A3A" ${st(1.6)}/>`);
 
     // =========================================================
@@ -587,7 +586,7 @@
         <path d="M24 46 Q50 38 76 46" ${st(2.5)} fill="none" opacity=".4"/>
         <ellipse cx="50" cy="30" rx="18" ry="5" fill="#E3DCF5" ${st(2.5)}/><circle cx="50" cy="22" r="5" fill="#9B7FD4" ${st(2.2)}/>
         <path d="M40 74 L50 80 L60 74 L60 84 L50 78 L40 84 Z" fill="#4F4A66" ${st(1.8)}/>
-        ${face(50, 56, hurtOr(o), 0.8)}
+        ${face(50, 56, hurtOr(o, 'eyes'), 0.8)}
         <path d="M40 66 Q45 62 50 66 Q55 62 60 66" ${st(2.2)} fill="none"/>
         <path d="M86 88 L96 70" ${st(3)} fill="none"/><path d="M92 62 Q86 70 92 76 Q100 76 100 68 Q98 60 92 62 Z" fill="none" ${st(2)}/>
         ${shine(28, 50, 3.5, 8)}`);
@@ -623,7 +622,7 @@
         <circle cx="50" cy="42" r="22" fill="#FFD2B0" ${st()}/>
         <path d="M26 40 Q24 14 50 14 Q76 14 74 40 L66 40 Q66 26 50 26 Q34 26 34 40 Z" fill="#C9D3DC" ${st()}/>
         <path d="M50 14 Q56 0 70 4 Q62 8 60 16" fill="#F2667A" ${st(2.5)}/>
-        ${face(50, 46, hurtOr(o), 0.66)}
+        ${face(50, 46, hurtOr(o, 'eyes'), 0.66)}
         <path d="M38 55 Q44 51 50 55 Q56 51 62 55 Q56 59 50 57 Q44 59 38 55 Z" fill="#6E4A3A" ${st(1.6)}/>`);
 
     S.verdugo_jugo = (o) => svg(`

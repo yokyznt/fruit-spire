@@ -58,7 +58,8 @@
     }
 
     // Carita kawaii. mood: happy | angry | hurt | sleepy | sour | wink
-    function face(x, y, mood, s) {
+    // part: 'eyes' → sin boca (para los que ya tienen pico, colmillos o trompa)
+    function face(x, y, mood, s, part) {
         mood = mood || 'happy';
         const eye = (ex) => `<ellipse cx="${ex}" cy="0" rx="3.4" ry="4.3" fill="${INK}"/><circle cx="${ex + 1.1}" cy="-1.6" r="1.3" fill="#fff"/>`;
         let eyes = eye(-9) + eye(9);
@@ -81,8 +82,13 @@
         } else if (mood === 'wink') {
             eyes = eye(-9) + `<path d="M6 0 Q9 -3.5 12 0" ${st(2.4)} fill="none"/>`;
         }
+        if (part === 'eyes') mouth = '';
         return `<g transform="translate(${x} ${y}) scale(${s || 1})">${blush}<g class="eyes">${eyes}</g>${mouth}${extra}</g>`;
     }
+    // Boca abierta con dos colmillos (vampiros): una sola boca, con los dientes dentro
+    const fangMouth = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s || 1})">
+        <path d="M-7 0 Q0 8 7 0 Z" fill="#7A2A3A" ${st(2.2)}/>
+        <path d="M-5.2 .6 L-3.6 5.4 L-2 .9 Z M5.2 .6 L3.6 5.4 L2 .9 Z" fill="#fff" ${st(1.1)}/></g>`;
 
     const S = {};
 
@@ -539,7 +545,7 @@
     // =========================================================
     window.SPRITES = S;
     // ayudantes compartidos para js/art/sprites2.js (mismo estilo)
-    window.SPRITE_KIT = { INK, BLUSH, st, svg, shine, leaf, sparkle, face, bruises };
+    window.SPRITE_KIT = { INK, BLUSH, st, svg, shine, leaf, sparkle, face, fangMouth, bruises };
 
     // Devuelve el sprite como HTML, o el emoji de respaldo dentro
     // de un circulito sticker si ese id no tiene dibujo.

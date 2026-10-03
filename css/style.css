@@ -1939,3 +1939,27 @@ button.x-btn { transition: transform .2s var(--ease-out), background .15s; }
 .relic-card > .art { flex: none; }
 .relic-card .card-name { flex: none; max-height: 2.3em; overflow: hidden; line-height: 1.1; text-align: center; }
 .relic-card .relic-desc { flex: 1 1 auto; min-height: 0; overflow: hidden; text-align: center; }
+
+/* ---------- opciones de evento por tono: premio / riesgo / malo / irse ---------- */
+.event-options button.opt-good { background: #8FD0F0; }
+.event-options button.opt-good:hover { background: #A9DDF5; }
+.event-options button.opt-risk { background: var(--banana); }
+.event-options button.opt-risk:hover { background: #FFDB70; }
+.event-options button.opt-bad { background: #FF9DAE; }
+.event-options button.opt-bad:hover { background: #FFB4C1; }
+.event-options button.opt-neutral { background: #EFE6D6; }
+.event-options button.opt-neutral:hover { background: #F6EFE2; }
+
+/* ---------- etiquetas de color en las intenciones enemigas ---------- */
+.tip-kind.k-attack { background: #FFD6DC; color: #B8324A; }
+.tip-kind.k-defend { background: var(--mint-soft); color: #23705A; }
+.tip-kind.k-buff { background: #FFE3C4; color: #B85A1E; }
+.tip-kind.k-debuff { background: var(--grape-soft); color: #6A4BB0; }
+.tip-kind.k-heal { background: var(--leaf-soft); color: #3E7A2A; }
+.tip-kind.k-summon { background: #CFE8FA; color: #2E5E9A; }
+.tip-kind.k-steal { background: #FFF0B8; color: #9A6A12; }
+.tip-box span br { display: block; content: ''; margin-top: 4px; }
+.intent-bubble.summon { background: #CFE8FA; }
+/* los títulos de las explicaciones usan el color de su palabra clave */
+.tip-box b[class^="kw-"], .ci-list li b[class^="kw-"] { font-weight: 700; }
+.act-heal.act-curse { color: #7A5BC4; }

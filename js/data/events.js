@@ -49,7 +49,7 @@ window.EVENT_DB = [
         id: 'trampa_espinas', title: 'Zarzamora Espinosa', icon: '🌵',
         desc: 'Te enredas en una zarzamora. Hay moras jugosas… y espinas por todos lados.',
         options: [
-            { text: 'Forcejear (pierdes 8 ❤️)', effect: (p) => { p.hp = Math.max(1, p.hp - 8); return 'Te liberas, pero te costó 8 ❤️.'; } },
+            { text: 'Forcejear (pierdes 8 ❤️)', tone: 'bad', effect: (p) => { p.hp = Math.max(1, p.hp - 8); return 'Te liberas, pero te costó 8 ❤️.'; } },
             {
                 text: 'Comerte las moras (+6 ❤️ máx. y un Gusano Interior)',
                 effect: (p, g) => { p.maxHp += 6; p.hp += 6; g.addCard('gusano_interior'); return 'Deliciosas… pero algo se movió dentro de una. +6 ❤️ máx.'; }
@@ -82,7 +82,7 @@ window.EVENT_DB = [
         desc: 'Detrás de unas hojas grandes hay un baúl semienterrado. Algo tintinea adentro.',
         options: [
             {
-                text: 'Abrirlo con cuidado',
+                text: 'Abrirlo con cuidado', tone: 'risk',
                 effect: (p, g) => {
                     if (Math.random() < 0.25) { p.hp = Math.max(1, p.hp - 6); return '¡Era una trampa para ratones! Pierdes 6 ❤️.'; }
                     const gold = (20 + Math.floor(Math.random() * 25)) * g.act;
@@ -159,7 +159,7 @@ window.EVENT_DB = [
         options: [
             { text: 'Enfrentarla (te espera una pelea)', fight: true },
             {
-                text: 'Ofrecerle 15 de oro para que se vaya',
+                text: 'Ofrecerle 15 de oro para que se vaya', tone: 'risk',
                 locked: (p) => (p.gold < 15 ? 'No te alcanza el oro' : ''),
                 effect: (p) => { p.gold -= 15; return 'La sombra toma el oro y desaparece entre los arbustos.'; }
             }

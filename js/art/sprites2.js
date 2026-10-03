@@ -7,7 +7,7 @@
 
 (function () {
     const S = window.SPRITES;
-    const { INK, BLUSH, st, svg, shine, leaf, sparkle, face } = window.SPRITE_KIT;
+    const { INK, BLUSH, st, svg, shine, leaf, sparkle, face, fangMouth } = window.SPRITE_KIT;
     const hurtOr = (o, m) => (o && o.mood === 'hurt' ? 'hurt' : m || 'angry');
     const drop = (x, y, s, color) =>
         `<path transform="translate(${x} ${y}) scale(${s || 1})" d="M0 -12 C5 -4 9 1 9 5 C9 10 5 13 0 13 C-5 13 -9 10 -9 5 C-9 1 -5 -4 0 -12 Z" fill="${color}" ${st(2.5)}/>`;
@@ -237,10 +237,9 @@
         <path d="M78 52 L97 58 L78 65 Z" fill="#FFCF4D" ${st(3)}/>
         <path d="M30 52 Q10 58 14 82 Q32 82 46 68 Z" fill="#3E3A4F" ${st()}/>
         <path d="M34 48 Q56 40 80 48 L78 60 Q56 54 36 60 Z" fill="#2B2838" ${st(2.5)}/>
-        ${o && o.mood === 'hurt' ? face(58, 56, 'hurt', 0.75) : `
+        ${o && o.mood === 'hurt' ? face(60, 55, 'hurt', 0.75, 'eyes') : `
         <ellipse cx="50" cy="53" rx="5" ry="4.5" fill="#fff"/><ellipse cx="68" cy="53" rx="5" ry="4.5" fill="#fff"/>
-        <g class="eyes"><circle cx="51" cy="54" r="2.4" fill="${INK}"/><circle cx="69" cy="54" r="2.4" fill="${INK}"/></g>
-        <path d="M56 70 Q62 66 68 70" ${st(2.5)} fill="none"/>`}
+        <g class="eyes"><circle cx="51" cy="54" r="2.4" fill="${INK}"/><circle cx="69" cy="54" r="2.4" fill="${INK}"/></g>`}
         <circle cx="26" cy="88" r="8" fill="#FFCF4D" ${st(2.5)}/><ellipse cx="26" cy="88" rx="2.5" ry="4" fill="#E0A92E"/>
         ${shine(40, 72, 3, 6)}`);
     S.topo_excavador = (o) => svg(`
@@ -357,8 +356,7 @@
         <path d="M62 34 L62 8 L84 8" ${st(2)} fill="none"/>
         <path d="M57 26 L67 26 M57 16 L67 16 M72 3 L72 13" stroke="#F2667A" stroke-width="4"/>
         <circle cx="50" cy="60" r="26" fill="#F2667A" ${st()}/>
-        <path d="M44 72 L46 79 L49 72 M53 72 L56 79 L58 72" fill="#fff" ${st(1.5)}/>
-        ${shine(38, 48, 3.5, 7)}${face(50, 58, hurtOr(o), 0.7)}`);
+        ${shine(38, 48, 3.5, 7)}${face(50, 56, hurtOr(o), 0.7, 'eyes')}${fangMouth(50, 65, 1.15)}`);
     S.cortadora_industrial = (o) => svg(`
         ${spikes(50, 50, 44, 12, '#C9D3DC')}
         <circle cx="50" cy="50" r="30" fill="#8C857C" ${st()}/>

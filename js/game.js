@@ -51,10 +51,10 @@ const BLOCKED_BY_ACT = [
 const WELL_OUTCOMES = [
     { w: 22, run: (p) => { const n = Math.max(4, Math.ceil(p.maxHp * 0.2)); p.heal(n); return `El pozo brilla dorado. Recuperas ${n} ${'❤️'}.`; } },
     { w: 16, run: (p) => { const gold = 25 + Math.floor(Math.random() * 20); p.gold += gold; return `Sacas ${gold} de oro empapado del fondo.`; } },
-    { w: 9, run: (p, g) => g.grantRandomRelic(p) },
+    { w: 5, run: (p, g) => g.grantRandomRelic(p) },
     { w: 14, run: (p, g) => { const n = g.upgradeRandom(1); return n.length ? `El agua madura tu ${n[0]}.` : 'No tenías nada que madurar.'; } },
     { w: 12, run: (p) => { p.maxHp += 4; p.hp += 4; return '+4 de vida máxima. Te sientes con más jugo.'; } },
-    { w: 15, run: () => 'El pozo burbujea… y no pasa nada.' },
+    { w: 19, run: () => 'El pozo burbujea… y no pasa nada.' },
     { w: 12, run: (p, g) => { g.addCard('fruta_magullada'); return '¡Splash! Una Fruta Magullada te cae encima y se cuela en tu mazo.'; } }
 ];
 function wellCost() { return 15 + (GAME.wellSpins || 0) * 12; }
@@ -76,7 +76,7 @@ function tossWellCoin() {
 }
 function leaveWell() { if (lootNudge()) return; GAME.loot = []; GAME.screen = 'map'; saveGame(); render(); }
 
-const RESUMABLE_SCREENS = ['act-intro', 'dungeon', 'well', 'reward'];
+const RESUMABLE_SCREENS = ['act-intro', 'dungeon', 'well', 'reward', 'boss-relic'];
 const SAVE_KEY = 'fruitSpireSave_v3';      // v3: niveles, dificultad, cartas maduradas
 const OLD_SAVE_KEY = 'fruitSpireSave_v2';
 const DISCOVERED_KEY = 'fruitSpireDiscovered_v1';
@@ -236,6 +236,13 @@ function loadGame() {
             } else GAME.screen = 'map';
         }
         if (GAME.screen === 'dungeon' && !GAME.dungeon) GAME.screen = 'map';
+        // al continuar en el objeto de jefe se vuelven a sortear las opciones
+        if (GAME.screen === 'boss-relic') {
+            const owned = new Set(p.relics);
+            const pool = Object.values(window.RELIC_DB).filter((r) => r.tier === 'boss' && !owned.has(r.id));
+            GAME.bossRelicChoices = [];
+            while (GAME.bossRelicChoices.length < 3 && pool.length) GAME.bossRelicChoices.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+        }
         // fuera de las recompensas, lo que quedó sin recoger se da solo
         if (GAME.screen !== 'reward' && window.grantAllLoot) grantAllLoot(savedLoot);
         GAME.combat = null;
@@ -327,8 +334,8 @@ function grantRandomRelic(player) {
 // ---------------------------------------------------------
 // MENÚ / SELECCIÓN DE PERSONAJE Y DIFICULTAD
 // ---------------------------------------------------------
-function showMainMenu() { GAME.returnTo = null; GAME.inventory = null; exitTutorial(); GAME.screen = 'menu'; GAME.modal = null; render(); }
-function goToCharacterSelect() { GAME.screen = 'character-select'; render(); }
+function showMainMenu() { GAME.returnTo = null; GAME.inventory = null; GAME.mg = null; exitTutorial(); GAME.screen = 'menu'; GAME.modal = null; render(); }
+function goToCharacterSelect() { exitTutorial(); GAME.screen = 'character-select'; render(); }
 // Pantallas "de lado" (pase, vestidor, álbum, notas): si se abren en plena
 // partida (p. ej. desde las recompensas), Volver regresa justo ahí.
 const SIDE_SCREENS = ['pass', 'wardrobe', 'collection', 'bestiary', 'notes'];
@@ -443,6 +450,7 @@ function startNewGameWithCharacter(id) {
     GAME.combat = null;
     GAME.anim = false;
     GAME.actHealed = 0;
+    GAME.actCurse = null;
     GAME.dungeon = null;
     newActMap();
     markDiscovered(p.deck);
@@ -792,7 +800,7 @@ function onCombatEnd(result, kind) {
         const relic = randomRelic(['common', 'uncommon', 'rare']);
         if (relic) queueLoot({ k: 'relic', id: relic.id });
     }
-    const seedChance = GAME.tutorial ? 1 : kind === 'boss' ? 1 : kind === 'elite' ? 0.55 : 0.35;
+    const seedChance = GAME.tutorial ? 1 : kind === 'boss' ? 1 : kind === 'elite' ? 0.45 : 0.25;
     const seedId = GAME.tutorial ? 'semilla_chile' : Math.random() < seedChance ? window.rollSeed().id : null;
     if (seedId) queueLoot({ k: 'seed', id: seedId });
     GAME.newCosmetic = null; // los accesorios ahora se ganan en el Pase de Batalla
@@ -918,6 +926,7 @@ function openBossRelics() {
     while (choices.length < 3 && pool.length) choices.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     GAME.bossRelicChoices = choices;
     GAME.screen = 'boss-relic';
+    saveGame();
     render();
 }
 function pickBossRelic(id, el) {
@@ -944,6 +953,9 @@ function startNextAct() {
     const frac = newCastle ? difficulty().actHeal : (difficulty().floorHeal != null ? difficulty().floorHeal : difficulty().actHeal / 2);
     p.heal(Math.ceil((p.maxHp - p.hp) * frac));
     GAME.actHealed = p.hp - before;
+    // cada castillo nuevo pesa: una maldición se cuela en tu mazo
+    GAME.actCurse = newCastle ? (p.act === 2 ? 'dado_trucado' : 'gusano_interior') : null;
+    if (GAME.actCurse) { p.deck.push(GAME.actCurse); markDiscovered([GAME.actCurse]); }
     GAME.dungeon = null;
     newActMap();
     showActIntro();
@@ -995,7 +1007,7 @@ function restRemoveCard(deckIndex, el) { removeDeckCard(deckIndex, el, leaveRest
 // TIENDA — se compra tocando la carta o el objeto
 // ---------------------------------------------------------
 const CARD_PRICES = { common: [30, 38], uncommon: [45, 55], rare: [75, 90] };
-const RELIC_PRICES = { common: [70, 80], uncommon: [90, 105], rare: [120, 140] };
+const RELIC_PRICES = { common: [85, 100], uncommon: [110, 130], rare: [150, 175] };
 const priceIn = ([a, b]) => a + Math.floor(Math.random() * (b - a + 1));
 function openShop() {
     const cards = [

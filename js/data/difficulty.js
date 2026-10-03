@@ -20,12 +20,12 @@ window.DIFFICULTIES = [
     {
         id: 'madura', name: 'Normal', sprite: 'dif_madura',
         desc: 'La experiencia de siempre: justa y equilibrada.',
-        mods: { hpMult: 1, dmgBonus: 0 }, gold: 99, restHeal: 0.3, actHeal: 0.6, floorHeal: 0.3, elites: 3
+        mods: { hpMult: 1, dmgBonus: 0 }, gold: 80, restHeal: 0.25, actHeal: 0.5, floorHeal: 0.2, elites: 3
     },
     {
         id: 'pasada', name: 'Difícil', sprite: 'dif_pasada',
         desc: 'Enemigos con 20% más de vida y +1 de daño por golpe. Más élites y menos curación.',
-        mods: { hpMult: 1.2, dmgBonus: 1 }, gold: 80, restHeal: 0.25, actHeal: 0.4, floorHeal: 0.15, elites: 4
+        mods: { hpMult: 1.2, dmgBonus: 1 }, gold: 70, restHeal: 0.22, actHeal: 0.35, floorHeal: 0.12, elites: 4
     },
     {
         id: 'podrida', name: 'Desafiante', sprite: 'dif_podrida',
@@ -48,9 +48,9 @@ window.getDifficulty = function (id) {
 // 3 pisos). Además del grado elegido, cada piso suma vida y daño a los
 // enemigos, así que cada uno es más difícil que el anterior.
 window.FLOOR_SCALING = [
-    { hpMult: 1.00, dmgBonus: 0 }, { hpMult: 1.05, dmgBonus: 0 }, { hpMult: 1.10, dmgBonus: 0 },
-    { hpMult: 1.16, dmgBonus: 1 }, { hpMult: 1.22, dmgBonus: 1 }, { hpMult: 1.28, dmgBonus: 1 },
-    { hpMult: 1.36, dmgBonus: 2 }, { hpMult: 1.43, dmgBonus: 2 }, { hpMult: 1.50, dmgBonus: 3 }
+    { hpMult: 1.00, dmgBonus: 0 }, { hpMult: 1.08, dmgBonus: 0 }, { hpMult: 1.16, dmgBonus: 1 },
+    { hpMult: 1.24, dmgBonus: 1 }, { hpMult: 1.32, dmgBonus: 1 }, { hpMult: 1.40, dmgBonus: 2 },
+    { hpMult: 1.48, dmgBonus: 2 }, { hpMult: 1.56, dmgBonus: 2 }, { hpMult: 1.64, dmgBonus: 3 }
 ];
 // castle: 1-3, floor: 1-3
 window.scaledMods = function (baseMods, castle, floor) {

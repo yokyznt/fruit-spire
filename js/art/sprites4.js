@@ -6,7 +6,7 @@
 
 (function () {
     const S = window.SPRITES;
-    const { INK, st, svg, shine, leaf, sparkle, face } = window.SPRITE_KIT;
+    const { INK, st, svg, shine, leaf, sparkle, face, fangMouth } = window.SPRITE_KIT;
     const hurtOr = (o, m) => (o && o.mood === 'hurt' ? 'hurt' : m || 'angry');
     const legs = (d) => `<path d="${d}" ${st(3)} fill="none"/>`;
     const spikes = (cx, cy, r, n, color) => {
@@ -238,8 +238,7 @@
         <path d="M50 14 C74 14 88 38 82 62 C76 88 60 96 50 96 C40 96 24 88 18 62 C12 38 26 14 50 14 Z" fill="#F2A33C" ${st()}/>
         <path d="M50 14 C60 10 66 14 66 20" ${st(2.5)} fill="none"/>
         ${shine(32, 42, 4, 8)}
-        ${face(50, 60, hurtOr(o, 'angry'), 0.85)}
-        <path d="M42 70 L40 78 L45 74 Z M58 70 L60 78 L55 74 Z" fill="#fff" ${st(1.6)}/>`);
+        ${face(50, 58, hurtOr(o, 'angry'), 0.85, 'eyes')}${fangMouth(50, 68, 1.3)}`);
     S.fresa_vengativa = (o) => svg(`
         ${leaf(38, 16, -25, 0.9)}${leaf(50, 10, 0, 0.9)}${leaf(62, 16, 25, 0.9)}
         <path d="M50 24 C78 24 88 54 76 76 C68 92 60 96 50 96 C40 96 32 92 24 76 C12 54 22 24 50 24 Z" fill="#F2667A" ${st()}/>

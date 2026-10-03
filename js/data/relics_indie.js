@@ -13,13 +13,13 @@
     // ---------- comunes ----------
     relic({
         id: 'fichas_casino', name: 'Fichas de Casino', icon: '🎰', tier: 'common', ref: 'Guiño a Balatro',
-        description: 'Al ganar un combate, ganas 10 de oro extra.',
-        onCombatEnd: (player) => { player.gold += 10; }
+        description: 'Al ganar un combate, ganas 6 de oro extra.',
+        onCombatEnd: (player) => { player.gold += 6; }
     });
     relic({
         id: 'estrella_guardado', name: 'Estrella de Guardado', icon: '⭐', tier: 'common', ref: 'Guiño a Undertale',
-        description: 'Descansar cura 10 ❤️ extra. Te llenas de determinación.',
-        onRest: () => 10
+        description: 'Descansar cura 6 ❤️ extra.',
+        onRest: () => 6
     });
     relic({
         id: 'penique_suerte', name: 'Penique de la Suerte', icon: '🪙', tier: 'common', ref: 'Guiño a The Binding of Isaac',
@@ -28,8 +28,8 @@
     });
     relic({
         id: 'nectar_olimpo', name: 'Néctar del Olimpo', icon: '🍯', tier: 'common', ref: 'Guiño a Hades',
-        description: 'Al empezar cada combate, recuperas 3 ❤️.',
-        onCombatStart: (ctx) => { ctx.heal(3); ctx.flash(); }
+        description: 'Al empezar cada combate, recuperas 2 ❤️.',
+        onCombatStart: (ctx) => { ctx.heal(2); ctx.flash(); }
     });
     relic({
         id: 'cuchillo_juguete', name: 'Cuchillo de Juguete', icon: '🔪', tier: 'common', ref: 'Guiño a Undertale',
@@ -43,13 +43,13 @@
     });
     relic({
         id: 'corazon_alma', name: 'Corazón de Alma', icon: '🩵', tier: 'common', ref: 'Guiño a The Binding of Isaac',
-        description: 'Si empiezas un combate con la mitad de vida o menos, ganas 12 de cáscara.',
-        onCombatStart: (ctx) => { if (ctx.player.hp <= ctx.player.maxHp / 2) { ctx.combat.gainBlock(ctx.player, 12, false); ctx.flash(); } }
+        description: 'Si empiezas un combate con la mitad de vida o menos, ganas 8 de cáscara.',
+        onCombatStart: (ctx) => { if (ctx.player.hp <= ctx.player.maxHp / 2) { ctx.combat.gainBlock(ctx.player, 8, false); ctx.flash(); } }
     });
     relic({
         id: 'pico_diamante', name: 'Pico de Diamante', icon: '⛏️', tier: 'common', ref: 'Guiño a Minecraft',
-        description: 'Cada vez que se consume una carta, ganas 2 de oro.',
-        onExhaust: (ctx) => { ctx.player.gold += 2; ctx.flash(); }
+        description: 'Cada vez que se consume una carta, ganas 1 de oro.',
+        onExhaust: (ctx) => { ctx.player.gold += 1; ctx.flash(); }
     });
 
     // ---------- poco comunes ----------
@@ -60,8 +60,8 @@
     });
     relic({
         id: 'alcancia_interes', name: 'Alcancía de Interés', icon: '🐷', tier: 'uncommon', ref: 'Guiño a Balatro',
-        description: 'Al ganar un combate, ganas 1 de oro por cada 10 que tengas (máx. 5).',
-        onCombatEnd: (player) => { player.gold += Math.min(5, Math.floor(player.gold / 10)); }
+        description: 'Al ganar un combate, ganas 1 de oro por cada 10 que tengas (máx. 3).',
+        onCombatEnd: (player) => { player.gold += Math.min(3, Math.floor(player.gold / 10)); }
     });
     relic({
         id: 'tarot_luna', name: 'Carta de Tarot: La Luna', icon: '🌙', tier: 'uncommon', ref: 'Guiño a Balatro',
@@ -97,33 +97,33 @@
     });
     relic({
         id: 'pentagrama', name: 'Pentagrama de Fruta', icon: '⛧', tier: 'uncommon', ref: 'Guiño a The Binding of Isaac',
-        description: 'Si no perdiste vida desde tu último turno, ganas 1 de Madurez al terminarlo (máx. 4 por combate).',
+        description: 'Si no perdiste vida desde tu último turno, ganas 1 de Madurez al terminarlo (máx. 3 por combate).',
         onHpLoss: (ctx) => { ctx.state.hurt = true; },
         onTurnEnd: (ctx) => {
-            if (!ctx.state.hurt && (ctx.state.gained || 0) < 4) { ctx.buff('strength', 1); ctx.state.gained = (ctx.state.gained || 0) + 1; ctx.flash(); }
+            if (!ctx.state.hurt && (ctx.state.gained || 0) < 3) { ctx.buff('strength', 1); ctx.state.gained = (ctx.state.gained || 0) + 1; ctx.flash(); }
             ctx.state.hurt = false;
         }
     });
     relic({
         id: 'frasco_salud', name: 'Frasco de Salud', icon: '🧪', tier: 'uncommon', ref: 'Guiño a Dead Cells',
-        description: 'Una vez por combate, al bajar a un tercio de tu vida o menos, recuperas 12 ❤️.',
+        description: 'Una vez por combate, al bajar a un tercio de tu vida o menos, recuperas 8 ❤️.',
         onHpLoss: (ctx) => {
             if (ctx.state.used || ctx.player.hp <= 0 || ctx.player.hp > ctx.player.maxHp / 3) return;
             ctx.state.used = true;
-            ctx.heal(12);
+            ctx.heal(8);
             ctx.flash();
         }
     });
     relic({
         id: 'mascara_extra', name: 'Máscara Extra', icon: '🎭', tier: 'uncommon', ref: 'Guiño a Hollow Knight',
-        description: '+10 de vida máxima. Empiezas cada combate con 4 de cáscara.',
-        onPickup: (player) => { player.maxHp += 10; player.hp += 10; },
-        onCombatStart: (ctx) => { ctx.combat.gainBlock(ctx.player, 4, false); ctx.flash(); }
+        description: '+6 de vida máxima. Empiezas cada combate con 3 de cáscara.',
+        onPickup: (player) => { player.maxHp += 6; player.hp += 6; },
+        onCombatStart: (ctx) => { ctx.combat.gainBlock(ctx.player, 3, false); ctx.flash(); }
     });
     relic({
         id: 'cristal_vida', name: 'Cristal de Vida', icon: '💎', tier: 'uncommon', ref: 'Guiño a Terraria',
-        description: '+15 de vida máxima.',
-        onPickup: (player) => { player.maxHp += 15; player.hp += 15; }
+        description: '+10 de vida máxima.',
+        onPickup: (player) => { player.maxHp += 10; player.hp += 10; }
     });
     relic({
         id: 'aura_ajo', name: 'Aura de Ajo', icon: '🧄', tier: 'uncommon', ref: 'Guiño a Vampire Survivors',
@@ -149,8 +149,8 @@
     // ---------- raras ----------
     relic({
         id: 'lagrima_sagrada', name: 'Lágrima Sagrada', icon: '😭', tier: 'rare', ref: 'Guiño a The Binding of Isaac',
-        description: 'Al empezar cada turno, disparas una lágrima: 4 de daño a un enemigo al azar.',
-        onTurnStart: (ctx) => { ctx.attackRandom(4); ctx.combat.checkEnd(); ctx.flash(); }
+        description: 'Al empezar cada turno, disparas una lágrima: 3 de daño a un enemigo al azar.',
+        onTurnStart: (ctx) => { ctx.attackRandom(3); ctx.combat.checkEnd(); ctx.flash(); }
     });
     relic({
         id: 'mano_color', name: 'Mano de Color', icon: '🎴', tier: 'rare', ref: 'Guiño a Balatro',

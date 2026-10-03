@@ -39,8 +39,8 @@ registerRelic({
 });
 registerRelic({
     id: 'diente_ajo', name: 'Diente de Ajo', icon: '🧄', tier: 'common',
-    description: 'Empiezas cada combate con 6 de cáscara.',
-    onCombatStart: (ctx) => { ctx.combat.gainBlock(ctx.player, 6, false); ctx.flash(); }
+    description: 'Empiezas cada combate con 4 de cáscara.',
+    onCombatStart: (ctx) => { ctx.combat.gainBlock(ctx.player, 4, false); ctx.flash(); }
 });
 registerRelic({
     id: 'cascara_platano', name: 'Cáscara de Plátano', icon: '🍌', tier: 'common',
@@ -49,8 +49,8 @@ registerRelic({
 });
 registerRelic({
     id: 'miel_curativa', name: 'Frasco de Miel', icon: '🍯', tier: 'common',
-    description: 'Al ganar un combate, recuperas 5 ❤️.',
-    onCombatEnd: (player) => player.heal(5)
+    description: 'Al ganar un combate, recuperas 3 ❤️.',
+    onCombatEnd: (player) => player.heal(3)
 });
 registerRelic({
     id: 'tijeras_poda', name: 'Tijeras de Podar', icon: '✂️', tier: 'common',
@@ -59,8 +59,8 @@ registerRelic({
 });
 registerRelic({
     id: 'corona_pina', name: 'Corona de Piña', icon: '🍍', tier: 'common',
-    description: 'Empiezas cada combate con 3 de Pinchos.',
-    onCombatStart: (ctx) => { ctx.buff('thorns', 3); ctx.flash(); }
+    description: 'Empiezas cada combate con 2 de Pinchos.',
+    onCombatStart: (ctx) => { ctx.buff('thorns', 2); ctx.flash(); }
 });
 registerRelic({
     id: 'saco_abono', name: 'Saco de Abono', icon: '🌱', tier: 'common',
@@ -69,8 +69,8 @@ registerRelic({
 });
 registerRelic({
     id: 'regadera', name: 'Regadera', icon: '🚿', tier: 'common',
-    description: 'Descansar cura 12 ❤️ extra.',
-    onRest: () => 12
+    description: 'Descansar cura 8 ❤️ extra.',
+    onRest: () => 8
 });
 
 // ---------- poco comunes ----------
@@ -86,8 +86,8 @@ registerRelic({
 });
 registerRelic({
     id: 'compostera', name: 'Compostera', icon: '🪱', tier: 'uncommon',
-    description: 'Cada vez que se consume una carta, gana 3 de cáscara.',
-    onExhaust: (ctx) => { ctx.combat.gainBlock(ctx.player, 3, false); ctx.flash(); }
+    description: 'Cada vez que se consume una carta, gana 2 de cáscara.',
+    onExhaust: (ctx) => { ctx.combat.gainBlock(ctx.player, 2, false); ctx.flash(); }
 });
 registerRelic({
     id: 'limon_contagioso', name: 'Limón Contagioso', icon: '🍋', tier: 'uncommon',
@@ -102,13 +102,13 @@ registerRelic({
 });
 registerRelic({
     id: 'hueso_mango', name: 'Hueso de Mango', icon: '🥭', tier: 'uncommon',
-    description: 'Si terminas tu turno sin cáscara, ganas 6 de cáscara.',
-    onTurnEnd: (ctx) => { if (ctx.player.block === 0) { ctx.combat.gainBlock(ctx.player, 6, false); ctx.flash(); } }
+    description: 'Si terminas tu turno sin cáscara, ganas 4 de cáscara.',
+    onTurnEnd: (ctx) => { if (ctx.player.block === 0) { ctx.combat.gainBlock(ctx.player, 4, false); ctx.flash(); } }
 });
 registerRelic({
     id: 'caparazon_caracol', name: 'Caparazón de Caracol', icon: '🐌', tier: 'uncommon',
-    description: 'Empiezas cada combate con 4 de Corteza.',
-    onCombatStart: (ctx) => { ctx.buff('plated', 4); ctx.flash(); }
+    description: 'Empiezas cada combate con 3 de Corteza.',
+    onCombatStart: (ctx) => { ctx.buff('plated', 3); ctx.flash(); }
 });
 registerRelic({
     id: 'nuez_dura', name: 'Nuez Dura', icon: '🌰', tier: 'uncommon',
@@ -122,12 +122,12 @@ registerRelic({
 // ---------- raras ----------
 registerRelic({
     id: 'brote_eterno', name: 'Brote Eterno', icon: '🌿', tier: 'rare',
-    description: 'La primera vez por combate que bajas de la mitad de tu vida, ganas 3 de Madurez y 10 de cáscara.',
+    description: 'La primera vez por combate que bajas de la mitad de tu vida, ganas 2 de Madurez y 8 de cáscara.',
     onHpLoss: (ctx) => {
         if (ctx.state.done || ctx.player.hp > ctx.player.maxHp / 2 || ctx.player.hp <= 0) return;
         ctx.state.done = true;
-        ctx.buff('strength', 3);
-        ctx.combat.gainBlock(ctx.player, 10, false);
+        ctx.buff('strength', 2);
+        ctx.combat.gainBlock(ctx.player, 8, false);
         ctx.flash();
     }
 });
@@ -155,13 +155,15 @@ registerRelic({
 // ---------- de jefe (con truco) ----------
 registerRelic({
     id: 'semilla_dorada', name: 'Pepita Dorada', icon: '✨', tier: 'boss',
-    description: '+1 de energía cada turno.',
+    description: '+1 de energía cada turno. Los enemigos empiezan con 1 de Madurez.',
+    onCombatStart: (ctx) => { ctx.applyAll('strength', 1); },
     onTurnStart: (ctx) => { ctx.gainEnergy(1); }
 });
 registerRelic({
     id: 'reloj_frutal', name: 'Reloj Frutal', icon: '⏰', tier: 'boss',
-    description: 'Robas 1 carta extra cada turno.',
-    drawBonus: 1
+    description: 'Robas 1 carta extra cada turno. −8 de vida máxima.',
+    drawBonus: 1,
+    onPickup: (player) => { player.maxHp = Math.max(10, player.maxHp - 8); player.hp = Math.min(player.hp, player.maxHp); }
 });
 registerRelic({
     id: 'exprimidor_dorado', name: 'Exprimidor Dorado', icon: '🏆', tier: 'boss',
@@ -183,7 +185,8 @@ registerRelic({
 });
 registerRelic({
     id: 'savia_arce', name: 'Savia de Arce', icon: '🍁', tier: 'boss',
-    description: 'La energía que no gastes pasa a tu siguiente turno.',
+    description: 'La energía que no gastes pasa a tu siguiente turno. −6 de vida máxima.',
+    onPickup: (player) => { player.maxHp = Math.max(10, player.maxHp - 6); player.hp = Math.min(player.hp, player.maxHp); },
     onTurnEnd: (ctx) => { ctx.state.carry = ctx.player.energy; },
     onTurnStart: (ctx) => { if (ctx.state.carry) { ctx.gainEnergy(ctx.state.carry); ctx.state.carry = 0; ctx.flash(); } }
 });

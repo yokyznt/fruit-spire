@@ -77,7 +77,7 @@
         <path d="M14 70 Q10 40 36 34 Q62 28 76 44 Q92 62 82 80 Q60 92 36 86 Q18 82 14 70 Z" fill="#6E5A7A" ${st()}/>
         <path d="M24 54 Q48 46 72 54 M22 68 Q48 60 78 68" ${st(2)} fill="none" opacity=".35"/>
         <circle cx="84" cy="56" r="10" fill="#8C6E9A" ${st(3)}/><circle cx="84" cy="56" r="5" fill="#C8374F" ${st(1.8)}/>
-        ${face(46, 62, hurtOr(o), 0.72)}${shine(30, 46, 3, 6)}`);
+        ${face(60, 52, hurtOr(o), 0.6, 'eyes')}${shine(30, 46, 3, 6)}`);
 
     S.caracolito = (o) => svg(`
         <path d="M14 84 Q14 66 30 62 L72 62 Q84 64 88 84 Z" fill="#FFD2B0" ${st()}/>

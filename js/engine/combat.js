@@ -116,6 +116,7 @@ class Combat {
         p.statuses = {};
         this.lastEvents = [];
         p.garden = [];
+        p.dmgBonus = 0; // bono de la regla del piso: nunca pasa de un combate a otro
         if (p.permanentStrength) p.addStatus('strength', p.permanentStrength);
         const char = window.CHARACTER_DB[p.characterId];
         if (char && char.onCombatStart) char.onCombatStart(this);
@@ -141,7 +142,7 @@ class Combat {
         const fire = p.getStatus('inner_fire');
         if (fire) {
             const lost = p.loseHp(1);
-            if (lost) this.pushEvent('damage', p, lost, { poison: true });
+            if (lost) { this.pushEvent('damage', p, lost, { poison: true }); this.relicHook('onHpLoss', lost); }
             this.applyStatus(p, 'strength', fire);
         }
         const sticky = p.getStatus('sticky');
@@ -152,6 +153,7 @@ class Combat {
         for (let k = 0; k < p.getStatus('vine'); k++) this.plant('agria');
         this.relicHook('onTurnStart');
         this.ruleHook('onTurnStart', this.turnNumber);
+        this.checkEnd();
         this.onUpdate();
     }
 
@@ -353,6 +355,7 @@ class Combat {
                 e._fled = true;
                 e._deathHandled = true;
                 this.returnStolenCards(e);
+                if (e.stolenGold) { this.player.gold += e.stolenGold; this.pushEvent('gold', this.player, e.stolenGold); e.stolenGold = 0; }
                 e.hp = 0;
                 this.pushEvent('flee', e, 0);
             });
@@ -498,7 +501,7 @@ class Combat {
             get(o, k) { const v = o[k]; if (typeof v === 'function') return allow && allow[k] ? allow[k] : (allow ? noop : v.bind(o)); return v; },
             set() { return true; }
         });
-        const combatRO = ro(this, { gainBlock: (e, n, fromCard) => { if (e === P) blockOf(n, fromCard); }, previewDamage: this.previewDamage.bind(this), aliveEnemies: this.aliveEnemies.bind(this), hasRelic: this.hasRelic.bind(this) });
+        const combatRO = ro(this, { gainBlock: (e, n, fromCard) => { if (e === P || e === ctx.player) blockOf(n, fromCard); }, previewDamage: this.previewDamage.bind(this), aliveEnemies: this.aliveEnemies.bind(this), hasRelic: this.hasRelic.bind(this) });
         const ctx = {
             combat: combatRO, player: ro(P, { getStatus: P.getStatus.bind(P), isAlive: P.isAlive.bind(P) }), card, enemy: tgt || this.enemy, enemies: this.aliveEnemies(),
             cardsPlayed: this.turnState.cardsPlayed,
@@ -653,6 +656,7 @@ class Combat {
             if (card && card.endTurnDamage) {
                 const lost = p.loseHp(card.endTurnDamage);
                 this.pushEvent('damage', p, lost, { poison: true });
+                if (lost) this.relicHook('onHpLoss', lost);
             }
         });
         // Efímeras: si siguen en la mano, se consumen
@@ -682,7 +686,12 @@ class Combat {
         p.hand = keep;
         this.endOfTurnStatuses(p);
         this.checkEnd();
-        if (!this.ended) this.turn = 'enemy';
+        if (!this.ended) {
+            this.turn = 'enemy';
+            // la cáscara de los enemigos se va al empezar SU turno, toda a la vez: así la
+            // que un enemigo le da a sus aliados les dura hasta el siguiente turno
+            this.enemies.forEach((e) => { if (!e.getStatus('shell')) e.block = 0; });
+        }
         this.onUpdate();
     }
 
@@ -691,7 +700,6 @@ class Combat {
         if (this.ended || this.turn !== 'enemy') return null;
         const enemy = this.enemies[index];
         if (!enemy || !enemy.isAlive()) return null;
-        if (!enemy.getStatus('shell')) enemy.block = 0; // Caparazón: su cáscara se acumula
         this.lastEvents = [];
         if (enemy.getStatus('frozen')) {
             delete enemy.statuses.frozen;

@@ -210,7 +210,7 @@
         },
         chess: {
             name: 'Torre de Ajedrez', icon: '♟️', sprite: 'act_ajedrez',
-            rules: 'Tablero chiquito de 5 columnas. No hay jaque: gana quien se COMA TODAS las piezas del rival (¡incluido el rey!). Los peones avanzan 1 casilla, comen en diagonal y se coronan reinas. Si ganas, te llevas un objeto y oro; si pierdes, sales lastimado.'
+            rules: 'Tablero chiquito de 5 columnas. No hay jaque: gana quien se COMA TODAS las piezas del rival (¡incluido el rey!). Los peones avanzan 1 casilla, comen en diagonal y se coronan reinas. Si ganas te llevas oro (y a veces un objeto); si pierdes, sales lastimado.'
         }
     };
     const mg = () => GAME.mg;
@@ -633,7 +633,8 @@
     }
     function chessWin(m, why) {
         const act = GAME.player.act;
-        finish('win', `${why}`, { gold: 35 + 10 * act, relic: true });
+        // el objeto no está asegurado: 2 de cada 5 victorias
+        finish('win', `${why}`, { gold: 35 + 10 * act, relic: Math.random() < 0.4 });
     }
     function chessLose(m, why) {
         finish('lose', why, { hp: 6 + 2 * GAME.player.act });
