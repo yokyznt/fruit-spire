@@ -48,22 +48,7 @@
             id: 'tragamonedas', title: 'Máquina Tragamonedas', icon: '🎰', themes: CASINO.concat(['mercado', 'fabrica']), w: 2,
             desc: 'Una máquina de luces intermitentes. Tres rodillos, una palanca y un cartel: «¡Hoy sí!».',
             options: [
-                {
-                    text: 'Jalar la palanca (20 de oro)', locked: noGold(20),
-                    effect: (p) => {
-                        const S = ['🍒', '🍋', '🔔', '⭐', '7️⃣', '🃏'];
-                        const r = [0, 1, 2].map(() => pick(S));
-                        p.gold -= 20;
-                        const line = r.join(' ');
-                        if (r[0] === r[1] && r[1] === r[2]) {
-                            const win = r[0] === '7️⃣' ? 220 : 110;
-                            p.gold += win;
-                            return `${line} — ¡JACKPOT! Te llueven ${win} de oro.`;
-                        }
-                        if (new Set(r).size === 2) { p.gold += 35; return `${line} — Dos iguales: recuperas 35 de oro.`; }
-                        return `${line} — Nada esta vez. La máquina se ríe.`;
-                    }
-                },
+                { text: 'Jugar a la tragamonedas', game: 'slots' },
                 { text: 'Alejarte de la máquina', effect: () => 'Las luces parpadean, decepcionadas.' }
             ]
         },
@@ -83,6 +68,7 @@
             id: 'ruleta_fortuna', title: 'Ruleta de la Fortuna', icon: '🎡', w: 1,
             desc: 'Una ruleta gigante gira sola, chirriando. Cada gajo tiene un premio… o un castigo.',
             options: [
+                { text: 'Apostar en la ruleta de casino', game: 'roulette' },
                 {
                     text: 'Girarla (gratis)', tone: 'risk',
                     effect: (p, g) => {

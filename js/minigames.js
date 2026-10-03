@@ -193,6 +193,20 @@
         return bestMoves[rnd(bestMoves.length)];
     };
 
+    // =========================================================
+    // TRAGAMONEDAS y RULETA — reglas de pago
+    // =========================================================
+    MG.SLOT_SYMBOLS = ['manzana', 'platanin', 'kiwi', 'uva', 'ui_coin', 'rey_fruta'];
+    // multiplicador de la apuesta: 3 iguales ×5 (3 Reyes ×10), 2 iguales ×1.5, nada ×0
+    MG.slotPayout = function (r) {
+        if (r[0] === r[1] && r[1] === r[2]) return r[0] === 'rey_fruta' ? 10 : 5;
+        return (r[0] === r[1] || r[1] === r[2] || r[0] === r[2]) ? 1.5 : 0;
+    };
+    MG.ROULETTE_N = 13; // 0 verde, 1–12 rojo/negro alternados
+    MG.rouletteColor = (n) => (n === 0 ? 'green' : n % 2 ? 'red' : 'black');
+    // pick: 'red' | 'black' (×2) o un número (×10)
+    MG.roulettePayout = (pick, n) => (typeof pick === 'number' ? (pick === n ? 10 : 0) : (MG.rouletteColor(n) === pick ? 2 : 0));
+
     window.MG = MG;
 
     // =========================================================
@@ -211,11 +225,19 @@
         chess: {
             name: 'Torre de Ajedrez', icon: '♟️', sprite: 'act_ajedrez',
             rules: 'Sin jaque: cómete TODAS las piezas rivales. Ganas oro (a veces un objeto); si pierdes, pierdes vida.'
+        },
+        slots: {
+            name: 'Tragamonedas', icon: '🎰', sprite: 'tragamonedas',
+            rules: '3 iguales pagan ×5 (3 Reyes ×10). 2 iguales, ×1.5.'
+        },
+        roulette: {
+            name: 'Ruleta', icon: '🎡', sprite: 'ruleta_fortuna',
+            rules: 'Rojo o negro paga ×2. Un número exacto, ×10. El 0 es de la casa.'
         }
     };
     const mg = () => GAME.mg;
     // ---------- la mesa de casino: tapete, crupier que reacciona y fichas apostadas ----------
-    const DEALER = { dice: 'cubilete_maldito', poker: 'crupier_marcado', chess: 'gran_maestro' };
+    const DEALER = { dice: 'cubilete_maldito', poker: 'crupier_marcado', chess: 'gran_maestro', slots: 'rey_azar', roulette: 'dama_suerte' };
     const STAMP = { win: '¡GANAS!', lose: 'PIERDES', draw: 'EMPATE' };
     const LINES = {
         start: ['¿Te atreves?', 'Hagan sus apuestas.', 'A ver esa suerte.'],
@@ -260,7 +282,9 @@
     };
     window.openGameTable = function () {
         const theme = currentTheme();
-        window.openMinigame(theme.gameKind || pickOne(['dice', 'poker', 'chess']));
+        // 1 de cada 3 mesas es una máquina: tragamonedas o ruleta
+        const machine = Math.random() < 0.34 ? pickOne(['slots', 'roulette']) : null;
+        window.openMinigame(machine || theme.gameKind || pickOne(['dice', 'poker', 'chess']));
     };
     window.mgLeave = function () {
         if (GAME.mg && GAME.mg.busy) return;
@@ -323,6 +347,8 @@
         say(m, 'start');
         if (m.kind === 'dice') { m.phase = 'play'; m.player = []; m.house = []; m.rolling = null; render(); }
         else if (m.kind === 'poker') startPoker(m);
+        else if (m.kind === 'slots') { m.phase = 'play'; m.reels = [0, 1, 2].map(() => MG.SLOT_SYMBOLS[rnd(MG.SLOT_SYMBOLS.length)]); m.spin = [false, false, false]; render(); }
+        else if (m.kind === 'roulette') { m.phase = 'play'; m.pick = null; m.angle = 0; render(); }
         else startChess(m);
     };
 
@@ -398,6 +424,91 @@
         else finish('lose', `La casa gana con ${hs} contra tus ${ps}.`);
     }
 
+    // ---------- TRAGAMONEDAS ----------
+    const resultHtml = (m) => `<p class="mg-result ${m.outcome}">${m.text}</p>${lootRowHtml()}<button class="btn-mint" onclick="mgLeave()" ${lootPending() ? 'disabled' : ''}>Continuar</button>`;
+    function renderSlots(m, info) {
+        return tableHtml(m, info, `
+            <div class="slot-machine">
+                ${m.reels.map((s, k) => `<div class="slot-reel ${m.spin[k] ? 'spin' : ''}">${art(s, '', { size: 'lg' })}</div>`).join('')}
+            </div>
+            ${m.phase === 'result' ? resultHtml(m)
+                : `<div class="controls-row"><button class="btn-banana slot-lever" ${m.busy ? 'disabled' : ''} onclick="mgSlotsPull()">¡Jalar!</button></div>`}`, 'mg-slots');
+    }
+    window.mgSlotsPull = async function () {
+        const m = mg();
+        if (!m || m.kind !== 'slots' || m.phase !== 'play' || m.busy) return;
+        m.busy = true;
+        m.spin = [true, true, true];
+        const N = MG.SLOT_SYMBOLS.length;
+        const final = [0, 1, 2].map(() => MG.SLOT_SYMBOLS[rnd(N)]);
+        for (let t = 0; t < 24; t++) {
+            for (let k = 0; k < 3; k++) if (m.spin[k]) m.reels[k] = MG.SLOT_SYMBOLS[rnd(N)];
+            const stop = t === 9 ? 0 : t === 16 ? 1 : t === 23 ? 2 : -1;
+            if (stop >= 0) { m.spin[stop] = false; m.reels[stop] = final[stop]; if (window.Sfx) Sfx.hit(); } else if (window.Sfx) Sfx.tap();
+            render();
+            await wait(80);
+            if (GAME.mg !== m) return;
+        }
+        m.busy = false;
+        const mult = MG.slotPayout(m.reels);
+        if (mult >= 5) finish('win', mult === 10 ? '¡JACKPOT REAL! ×10' : '¡Tres iguales! ×5', { gold: betPayout(m, mult) });
+        else if (mult > 0) finish('win', 'Dos iguales: ×1.5', { gold: Math.floor(betPayout(m, mult)) });
+        else finish('lose', 'Nada esta vez.');
+    };
+
+    // ---------- RULETA ----------
+    const RL_COLORS = { red: '#E0455E', black: '#3A2A3E', green: '#3E9A5A' };
+    function wheelSvg() {
+        const n = MG.ROULETTE_N, step = 360 / n;
+        const pt = (deg, r) => [(100 + r * Math.sin(deg * Math.PI / 180)).toFixed(1), (100 - r * Math.cos(deg * Math.PI / 180)).toFixed(1)];
+        let s = '';
+        for (let i = 0; i < n; i++) {
+            const [x0, y0] = pt((i - 0.5) * step, 92), [x1, y1] = pt((i + 0.5) * step, 92), [tx, ty] = pt(i * step, 74);
+            s += `<path d="M100 100 L${x0} ${y0} A92 92 0 0 1 ${x1} ${y1} Z" fill="${RL_COLORS[MG.rouletteColor(i)]}" stroke="#FFE9A8" stroke-width="1.5"/>
+                <text x="${tx}" y="${ty}" transform="rotate(${(i * step).toFixed(1)} ${tx} ${ty})" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="#FFF6E0">${i}</text>`;
+        }
+        return `<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="98" fill="#8C5A2E" stroke="#4A3428" stroke-width="4"/>${s}<circle cx="100" cy="100" r="30" fill="#E9C46A" stroke="#4A3428" stroke-width="4"/><circle cx="100" cy="100" r="9" fill="#4A3428"/></svg>`;
+    }
+    function renderRoulette(m, info) {
+        const res = m.phase === 'result';
+        const btn = (p, label, cls) => `<button class="rl-pick ${cls} ${m.pick === p ? 'on' : ''}" ${m.busy || res ? 'disabled' : ''} onclick="mgRoulettePick(${typeof p === 'number' ? p : `'${p}'`})">${label}</button>`;
+        const nums = Array.from({ length: MG.ROULETTE_N - 1 }, (_, i) => btn(i + 1, i + 1, MG.rouletteColor(i + 1))).join('');
+        return tableHtml(m, info, `
+            <div class="rl-layout">
+                <div class="rl-wheel-wrap"><i class="rl-ball"></i><div class="rl-wheel" style="transform:rotate(${m.angle}deg)">${wheelSvg()}</div></div>
+                <div class="rl-board">
+                    <div class="rl-row">${btn('red', 'Rojo ×2', 'red')}${btn('black', 'Negro ×2', 'black')}</div>
+                    <div class="rl-nums">${nums}</div>
+                    ${res ? resultHtml(m)
+                        : `<button class="btn-banana" ${m.pick == null || m.busy ? 'disabled' : ''} onclick="mgRouletteSpin()">¡Girar!</button>`}
+                </div>
+            </div>`, 'mg-roulette');
+    }
+    window.mgRoulettePick = function (p) {
+        const m = mg();
+        if (!m || m.kind !== 'roulette' || m.phase !== 'play' || m.busy) return;
+        m.pick = p;
+        if (window.Sfx) Sfx.select();
+        render();
+    };
+    window.mgRouletteSpin = async function () {
+        const m = mg();
+        if (!m || m.kind !== 'roulette' || m.phase !== 'play' || m.busy || m.pick == null) return;
+        m.busy = true;
+        render();
+        const n = rnd(MG.ROULETTE_N);
+        // la rueda da 5 vueltas y deja el número que salió bajo la bolita (arriba)
+        m.angle = 1800 - n * (360 / MG.ROULETTE_N);
+        const wheel = document.querySelector('.rl-wheel');
+        if (wheel) requestAnimationFrame(() => { wheel.classList.add('spinning'); wheel.style.transform = `rotate(${m.angle}deg)`; });
+        for (let i = 0; i < 9; i++) { if (window.Sfx) Sfx.tap(); await wait(300); if (GAME.mg !== m) return; }
+        m.busy = false;
+        const mult = MG.roulettePayout(m.pick, n);
+        const what = `Salió el ${n} (${{ red: 'rojo', black: 'negro', green: 'verde' }[MG.rouletteColor(n)]}).`;
+        if (mult > 0) finish('win', `${what} ×${mult}`, { gold: betPayout(m, mult) });
+        else finish('lose', what);
+    };
+
     // ---------- PÓKER ----------
     const cardHtml = (c, opts) => {
         opts = opts || {};
@@ -421,7 +532,7 @@
         return tableHtml(m, info, `
             <div class="mg-row"><b class="hand">La casa</b><div class="poker-row">${houseCards}</div>${reveal ? `<span class="mg-hand">${HAND_NAMES[MG.evalHand(m.house).rank]}</span>` : ''}</div>
             <div class="mg-row"><b class="hand">Tú</b>
-                <div class="poker-row">${m.player.map((c, i) => cardHtml(c, { k: i, sel: m.selected.includes(i), click: m.phase === 'play' ? `mgPokerToggle(${i})` : '' })).join('')}</div>
+                <div class="poker-row">${m.player.map((c, i) => cardHtml(c, { k: i, cls: c.fresh ? 'deal new' : '', sel: m.selected.includes(i), click: m.phase === 'play' ? `mgPokerToggle(${i})` : '' })).join('')}</div>
                 <span class="mg-hand">${HAND_NAMES[ph.rank]}</span></div>
             ${m.phase === 'result' ? `<p class="mg-result ${m.outcome}">${m.text}</p>${deckChangesHtml()}${lootRowHtml()}<button class="btn-mint" onclick="mgLeave()" ${lootPending() ? 'disabled' : ''}>Continuar</button>` : `
             <div class="controls-row"><button class="btn-mint" onclick="mgPokerShow()">${m.selected.length ? `Cambiar ${m.selected.length} y mostrar` : 'Plantarme'}</button></div>`}`);
@@ -437,7 +548,9 @@
     window.mgPokerShow = function () {
         const m = mg();
         if (!m || m.kind !== 'poker' || m.phase !== 'play') return;
-        m.selected.forEach((i) => { m.player[i] = m.deck.shift(); });
+        // las cartas nuevas se marcan; la selección se vacía (al reordenar, sus posiciones ya no valen)
+        m.selected.forEach((i) => { m.player[i] = Object.assign(m.deck.shift(), { fresh: true }); });
+        m.selected = [];
         m.player.sort((a, b) => a.r - b.r);
         MG.houseDiscards(m.house).forEach((i) => { m.house[i] = m.deck.shift(); });
         const a = MG.evalHand(m.player), h = MG.evalHand(m.house);
@@ -692,6 +805,8 @@
         const info = KINDS[m.kind];
         if (m.phase === 'intro') return renderIntro(m, info);
         if (m.kind === 'dice') return renderDice(m, info);
+        if (m.kind === 'slots') return renderSlots(m, info);
+        if (m.kind === 'roulette') return renderRoulette(m, info);
         if (m.kind === 'poker') return renderPoker(m, info);
         return renderChess(m, info);
     };

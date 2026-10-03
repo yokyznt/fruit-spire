@@ -6,9 +6,19 @@
 // ============================================================
 
 window.CREATOR = { handle: '@yokyznt', url: 'https://www.instagram.com/yokyznt/' };
-window.GAME_VERSION = '2.6';
+window.GAME_VERSION = '2.7';
 
 window.PATCH_NOTES = [
+    {
+        version: '2.7', date: '3 oct 2026', title: 'Más azar',
+        items: [
+            'Tragamonedas con rodillos y Ruleta de casino: dos mesas de juego nuevas.',
+            'Dado del destino: antes de cada jefe tiras un d20. Del 1 (pifia) al 20 (crítico).',
+            'La ficha de la carta sale al lado, solo con su descripción; toca fuera para soltarla.',
+            'Todas las pantallas ocupan la pantalla completa y el texto ya no se ve borroso.'
+        ],
+        fixes: ['Póker: al mostrar, ya no se marcan cartas que no cambiaste.']
+    },
     {
         version: '2.6', date: '3 oct 2026', title: 'Más reto y listo para celular',
         items: [

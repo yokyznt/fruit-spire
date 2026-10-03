@@ -105,6 +105,14 @@ for (let g = 0; g < 30; g++) {
 console.log('partidas contra un jugador al azar: rival gana', enemyWins, 'azar gana', playerWins, 'terminadas', ended, 'de 30 en', Date.now() - t0, 'ms');
 check(enemyWins >= 24, 'el rival debería ganar casi siempre contra movimientos al azar');
 // velocidad de la IA a profundidad 3 en el tablero inicial
+// tragamonedas y ruleta
+check(MG.slotPayout(['kiwi', 'kiwi', 'kiwi']) === 5, 'tres iguales ×5');
+check(MG.slotPayout(['rey_fruta', 'rey_fruta', 'rey_fruta']) === 10, 'tres reyes ×10');
+check(MG.slotPayout(['kiwi', 'uva', 'kiwi']) === 1.5, 'dos iguales ×1.5');
+check(MG.slotPayout(['kiwi', 'uva', 'manzana']) === 0, 'nada');
+check(MG.rouletteColor(0) === 'green' && MG.rouletteColor(1) === 'red' && MG.rouletteColor(2) === 'black', 'colores de la ruleta');
+check(MG.roulettePayout('red', 3) === 2 && MG.roulettePayout('red', 4) === 0 && MG.roulettePayout('black', 0) === 0, 'rojo/negro');
+check(MG.roulettePayout(7, 7) === 10 && MG.roulettePayout(7, 8) === 0, 'número exacto');
 const tt = Date.now();
 MG.chooseEnemyMove(MG.newBoard(), 3, 0);
 console.log('IA profundidad 3:', Date.now() - tt, 'ms');

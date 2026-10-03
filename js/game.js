@@ -563,6 +563,13 @@ function enterNode(type) {
     const { cols } = window.mapDims(GAME.walls, GAME.map);
     if (type === T.ENEMY || type === T.ELITE || type === T.BOSS) {
         const kind = type === T.ELITE ? 'elite' : type === T.BOSS ? 'boss' : 'enemy';
+        // antes de cada jefe se tira el dado del destino (una sola vez por piso)
+        if (kind === 'boss' && !GAME.tutorial && GAME.walls.fate == null) {
+            GAME.fate = { roll: null, shown: null, rolling: false };
+            GAME.screen = 'fate';
+            render();
+            return;
+        }
         playCombatIntro(encounterFor(kind, GAME.playerPos.x / (cols - 1)), kind);
         return;
     }
@@ -660,6 +667,51 @@ function playCombatIntro(enemyIds, kind) {
     }, 1650);
 }
 
+// ---------- dado del destino ----------
+// 1 pifia · 2–7 mala suerte · 8–13 nada · 14–19 buena suerte · 20 crítico
+function fateTier(roll) {
+    if (roll <= 1) return { id: 'fumble', name: 'Pifia', text: 'El jefe empieza con 2 de Madurez.' };
+    if (roll <= 7) return { id: 'bad', name: 'Mala suerte', text: 'El jefe empieza con 10 de cáscara.' };
+    if (roll <= 13) return { id: 'none', name: 'Sin cambios', text: 'El destino no se mete.' };
+    if (roll <= 19) return { id: 'good', name: 'Buena suerte', text: 'Empiezas con 8 de cáscara y 1 de energía extra.' };
+    return { id: 'crit', name: '¡Crítico!', text: 'Empiezas con 12 de cáscara, 2 de energía extra y 2 de Madurez.' };
+}
+async function fateRoll() {
+    const f = GAME.fate;
+    if (!f || f.rolling || f.roll != null) return;
+    f.rolling = true;
+    for (let i = 0; i < 16; i++) {
+        f.shown = 1 + Math.floor(Math.random() * 20);
+        if (window.Sfx) Sfx.tap();
+        render();
+        await wait(60 + i * 8);
+        if (GAME.fate !== f || GAME.screen !== 'fate') return;
+    }
+    f.roll = 1 + Math.floor(Math.random() * 20);
+    f.rolling = false;
+    GAME.walls.fate = f.roll;
+    // la casilla del jefe no cuenta como pisada: si sales y vuelves, puedes entrar otra vez (sin volver a tirar)
+    const here = `${GAME.playerPos.x},${GAME.playerPos.y}`;
+    GAME.visited = GAME.visited.filter((v) => v !== here);
+    if (window.Sfx) (f.roll >= 14 ? Sfx.win : f.roll <= 7 ? Sfx.denied : Sfx.pop)();
+    saveGame();
+    render();
+}
+function fateFight() {
+    if (GAME.anim || !GAME.fate || GAME.fate.roll == null) return;
+    GAME.fate = null;
+    playCombatIntro(encounterFor('boss', 1), 'boss');
+}
+function applyFate(c, roll) {
+    const id = fateTier(roll).id, p = c.player, boss = c.enemies[0];
+    if (id === 'fumble') c.applyStatus(boss, 'strength', 2);
+    else if (id === 'bad') c.gainBlock(boss, 10, false);
+    else if (id === 'good') { c.gainBlock(p, 8, false); p.energy += 1; }
+    else if (id === 'crit') { c.gainBlock(p, 12, false); p.energy += 2; c.applyStatus(p, 'strength', 2); }
+}
+window.fateRoll = fateRoll;
+window.fateFight = fateFight;
+
 function startCombat(enemyIds, kind) {
     GAME.inventory = null;
     // tutorial: el primer combate es siempre contra un solo enemigo que solo ataca
@@ -700,6 +752,7 @@ function startCombat(enemyIds, kind) {
         }
         setTimeout(() => onCombatEnd(result, kind), 1500);
     }, { mods: window.scaledMods(difficulty().mods, GAME.player.act, currentFloorNo()), rule: GAME.tutorial ? (kind === 'boss' ? window.FLOOR_THEMES.huerto.rule : null) : currentTheme().rule });
+    if (kind === 'boss' && !GAME.tutorial && GAME.walls && GAME.walls.fate) applyFate(GAME.combat, GAME.walls.fate);
     if (GAME.tutorial && GAME.tutorial.firstFight) {
         GAME.tutorial.firstFight = false;
         const hand = GAME.combat.player.hand;

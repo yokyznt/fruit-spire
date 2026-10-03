@@ -485,10 +485,12 @@ function placeCardInfo(info, slot) {
     const s = stage.getBoundingClientRect(), c = (slot.querySelector('.card') || slot).getBoundingClientRect();
     const k = s.width / stage.offsetWidth || 1; // escala del lienzo
     const w = info.offsetWidth, h = info.offsetHeight;
-    let left = (c.left + c.width / 2 - s.left) / k - w / 2;
-    let top = (c.top - s.top) / k - h - 14;
-    left = Math.max(10, Math.min(stage.offsetWidth - w - 10, left));
-    top = Math.max(8, top);
+    // al lado de la carta (a la derecha; si no cabe, a la izquierda)
+    let left = (c.right - s.left) / k + 14;
+    if (left + w > stage.offsetWidth - 10) left = (c.left - s.left) / k - w - 14;
+    left = Math.max(10, left);
+    let top = (c.top - s.top) / k + 8;
+    top = Math.max(8, Math.min(stage.offsetHeight - h - 8, top));
     info.style.left = left + 'px';
     info.style.top = top + 'px';
 }
@@ -500,6 +502,13 @@ function setupCardDrag() {
         if (el.classList && el.classList.contains('fan-slot') && (e.animationName === 'dealIn' || e.animationName === 'nope')) {
             el.classList.remove('deal-in', 'nope');
         }
+    });
+    // tocar cualquier otro lado deselecciona la carta
+    document.addEventListener('click', (e) => {
+        if (GAME.screen !== 'combat' || GAME.selectedCard == null || GAME.anim) return;
+        if (e.target.closest && e.target.closest('.hand-row .fan-slot, .card-info')) return;
+        GAME.selectedCard = null;
+        render();
     });
     document.addEventListener('pointerdown', onCardPointerDown);
     window.addEventListener('pointermove', onCardPointerMove, { passive: true });

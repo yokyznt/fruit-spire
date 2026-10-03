@@ -517,6 +517,7 @@ function renderScreen() {
         case 'vault': return renderVault();
         case 'dungeon': return renderDungeon();
         case 'minigame': return renderMinigame();
+        case 'fate': return renderFate();
         case 'tutorial-end': return renderTutorialEnd();
         case 'act-intro': return renderActIntro();
         case 'map': return renderMap();
@@ -1170,11 +1171,6 @@ function cardInfoHtml(card, prev, id) {
     });
     // términos que aparecen dentro de otras explicaciones
     return `<div class="card-info type-${card.type}" ${id ? `id="${id}"` : ''}>
-        <div class="ci-head">
-            <span class="ci-cost">${card.cost < 0 ? '–' : card.cost}</span>
-            <b class="hand">${card.name}</b>
-            <span class="ci-type">${TYPE_LABELS[card.type] || card.type}</span>
-        </div>
         <p class="ci-desc">${prev ? previewDescHtml(card, prev) : highlightDesc(card.description)}</p>
         ${rows.length ? `<ul class="ci-list">${rows.map((r) => `<li>${art(r.sprite, '', { size: 'xs' })}<div><b class="${kwClassOf(r.title)}">${r.title}</b><span>${colorKeywords(r.text)}</span></div></li>`).join('')}</ul>` : ''}
     </div>`;
@@ -1264,6 +1260,7 @@ function renderCombat() {
     <div class="combat-stage act-${act.n} bg-${GAME.combatBg || 'kitchen'} ${GAME.combatEnter ? 'entering' : ''} ${playerTurn ? 'is-player-turn' : 'is-enemy-turn'} ${ruleFx.cls}">
         ${ruleFx.html}
         ${GAME.seedTargeting != null && window.SEED_DB[p.seeds[GAME.seedTargeting]] ? `<div class="seed-aim-banner">${seedArt(window.SEED_DB[p.seeds[GAME.seedTargeting]], 'sm')}<span class="hand">Toca al enemigo para usar <b>${window.SEED_DB[p.seeds[GAME.seedTargeting]].name}</b></span><button class="secondary" onclick="event.stopPropagation(); cancelSeedAim()">Cancelar</button></div>` : ''}
+        ${GAME.combatKind === 'boss' && !GAME.tutorial && GAME.walls && GAME.walls.fate ? `<div class="rule-chip fate-chip ${c.rule ? '' : 'solo'}" ${tip([`Dado del destino: ${GAME.walls.fate}`, fateTier(GAME.walls.fate).text])}>${d20Svg(GAME.walls.fate, 'sm')} ${fateTier(GAME.walls.fate).name}</div>` : ''}
         ${c.rule ? `<div class="rule-chip" ${tip([`Regla del piso: ${c.rule.name}`, c.rule.desc])}>${art(c.rule.sprite, c.rule.icon, { size: 'sm' })} ${c.rule.name}</div>` : ''}
         <div class="arena ${multi ? 'multi' : ''}">
             <div class="combatant player" style="--blink:2.3s">
@@ -1472,6 +1469,22 @@ function renderDungeon() {
             <div class="dg-grid">${cells}</div>
             <div class="dg-fog"></div>
         </div>`, 'wide dungeon-panel');
+}
+
+// ---------- DADO DEL DESTINO (antes de cada jefe) ----------
+function d20Svg(n, size) {
+    return `<span class="d20 d20-${size || 'lg'}"><svg viewBox="0 0 100 100"><path d="M50 4 L91 27 L91 73 L50 96 L9 73 L9 27 Z" fill="#9B7FD4" stroke="#4A3428" stroke-width="5" stroke-linejoin="round"/><path d="M50 4 L27 62 L73 62 Z M9 27 L27 62 M91 27 L73 62 M27 62 L50 96 L73 62 M9 73 L27 62 M91 73 L73 62" fill="#B7A0E6" stroke="#4A3428" stroke-width="3" stroke-linejoin="round"/><path d="M50 4 L27 62 L73 62 Z" fill="#D9CCF5" stroke="#4A3428" stroke-width="3" stroke-linejoin="round"/></svg><b>${n == null ? '?' : n}</b></span>`;
+}
+function renderFate() {
+    const f = GAME.fate || {};
+    const boss = actBossDef();
+    const done = f.roll != null;
+    const tier = done ? fateTier(f.roll) : null;
+    return panel(art(boss.sprite || boss.id, boss.icon, { size: 'xl' }), 'Dado del destino', `
+        <div class="fate-die ${f.rolling ? 'rolling' : ''} ${done ? `fate-${tier.id}` : ''}">${d20Svg(done ? f.roll : f.shown, 'lg')}</div>
+        ${done ? `<p class="fate-result hand"><b>${tier.name}</b> · ${tier.text}</p>` : '<p>Tira antes de pelear.</p>'}
+        ${done ? '<button class="btn-mint" onclick="fateFight()">¡A pelear!</button>'
+            : `<button class="btn-banana" ${f.rolling ? 'disabled' : ''} onclick="fateRoll()">Tirar</button>`}`, 'fate-panel');
 }
 
 // ---------- PANELES ----------
