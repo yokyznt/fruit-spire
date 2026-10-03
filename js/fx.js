@@ -35,6 +35,12 @@ function toCanvas(e) {
     const a = document.getElementById('app').getBoundingClientRect();
     return { x: (e.clientX - a.left) / SCALE, y: (e.clientY - a.top) / SCALE };
 }
+// Zoom propio de un elemento respecto al lienzo: en teléfono los paneles (fitPanels) y el
+// mapa van agrandados. Una distancia en px del lienzo se divide entre esto antes de
+// aplicarla (transform, left/top) a algo que está dentro.
+function localZoom(el) {
+    return el && el.currentCSSZoom ? el.currentCSSZoom / SCALE : 1;
+}
 // Mueve un elemento hacia otro vía variables CSS --fx/--fy
 function aimAt(el, targetId) {
     const target = document.getElementById(targetId);
@@ -532,10 +538,13 @@ function flyGhost(el, targetSelector, onArrive) {
     const ghost = document.createElement('div');
     ghost.className = 'fly-ghost';
     ghost.innerHTML = el.outerHTML;
-    ghost.style.left = `${a.x - el.offsetWidth / 2}px`;
-    ghost.style.top = `${a.y - el.offsetHeight / 2}px`;
+    // la copia sale del mismo tamaño que el original (que puede ir agrandado)
+    const z = localZoom(el);
+    if (z !== 1) ghost.style.zoom = z;
+    ghost.style.left = `${a.x / z - el.offsetWidth / 2}px`;
+    ghost.style.top = `${a.y / z - el.offsetHeight / 2}px`;
     overlay.appendChild(ghost);
-    const dx = b.x - a.x, dy = b.y - a.y;
+    const dx = (b.x - a.x) / z, dy = (b.y - a.y) / z;
     ghost.animate([
         { transform: 'translate(0, 0) rotate(0) scale(1)', opacity: 1 },
         { transform: `translate(${dx * 0.3}px, ${dy * 0.3 - 90}px) rotate(-8deg) scale(.8)`, opacity: 1, offset: 0.4 },
@@ -983,12 +992,58 @@ function setupUiClicks() {
     }, true);
 }
 
+// ---------- parpadeo de las caritas ----------
+// Cada pocos segundos <body> lleva .blink-on un momento y cada carita parpadea
+// una vez (ver css/style.css). Así no hay una animación corriendo todo el tiempo.
+function setupBlink() {
+    const tick = () => {
+        if (!document.hidden) {
+            document.body.classList.add('blink-on');
+            setTimeout(() => document.body.classList.remove('blink-on'), 1900);
+        }
+        setTimeout(tick, 3800 + Math.random() * 2600);
+    };
+    setTimeout(tick, 2200);
+}
+
+// ---------- teléfono: los paneles crecen hasta llenar la pantalla ----------
+// Eventos, campamento, tesoro, recompensas…: el panel se agranda (zoom) lo más
+// que quepa sin tener que desplazarse. Si su contenido ya no cabía, se queda igual.
+const PANEL_ZOOM_MAX = 1.9;
+function fitPanels() {
+    if (!IS_PHONE) return;
+    document.querySelectorAll('#screen > .stage > .panel, #screen > .stage > .fit-zoom').forEach((panel) => {
+        const stage = panel.parentElement;
+        panel.style.zoom = '';
+        const cs = getComputedStyle(panel);
+        const fixed = parseFloat(cs.getPropertyValue('--phone-zoom'));
+        if (fixed) { panel.style.zoom = fixed; return; }
+        // alto que ocupa lo que hay dentro (sin lo que flota en posición absoluta)
+        const kids = [...panel.children].filter((el) => el.offsetWidth && !['absolute', 'fixed'].includes(getComputedStyle(el).position));
+        if (!kids.length) return;
+        const top = Math.min(...kids.map((el) => el.offsetTop));
+        const bottom = Math.max(...kids.map((el) => el.offsetTop + el.offsetHeight));
+        const need = bottom - top + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 10;
+        const scs = getComputedStyle(stage);
+        const room = stage.clientHeight - parseFloat(scs.paddingTop) - parseFloat(scs.paddingBottom);
+        const fits = () => stage.scrollHeight <= stage.clientHeight + 1 && stage.scrollWidth <= stage.clientWidth + 1
+            && (cs.overflowY === 'visible' || panel.scrollHeight <= panel.clientHeight + 1);
+        // las pantallas que no se desplazan (.fit-zoom) también se achican un poco si no caben
+        const shrink = panel.classList.contains('fit-zoom');
+        const min = shrink ? 0.72 : 1.04;
+        let z = Math.min(PANEL_ZOOM_MAX, room / need);
+        if (z > 0.985 && z < 1.04) return;
+        for (let guard = 0; guard < 7 && z >= min; guard++) {
+            panel.style.zoom = z.toFixed(3);
+            if (fits()) return;
+            z *= 0.94;
+        }
+        panel.style.zoom = '';
+    });
+}
+
 // ---------- pantalla completa del navegador ----------
 function isFullscreen() { return !!document.fullscreenElement; }
-function toggleGameSound() {
-    if (window.toggleMute) toggleMute();
-    render();
-}
 function toggleFullscreen() {
     try {
         if (isFullscreen()) document.exitFullscreen();

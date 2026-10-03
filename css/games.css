@@ -32,7 +32,8 @@
 .dg-cell.locked .art { opacity: .9; animation: dgFlicker 2.6s steps(1) infinite; }
 .dg-cell.cleared { background: linear-gradient(145deg, #4A5A4B, #37443A); }
 .dg-cell.cleared .dg-bones { font-size: 2.2em; opacity: .7; }
-.dg-cell.reachable { cursor: pointer; box-shadow: inset 0 3px 0 rgba(255,255,255,.12), 0 0 0 3px #FF6B6B, 0 0 22px 4px rgba(255, 90, 90, .55); animation: dgPulse 1.4s ease-in-out infinite; }
+.dg-cell.reachable { cursor: pointer; box-shadow: inset 0 3px 0 rgba(255,255,255,.12), 0 0 0 3px #FF6B6B, 0 0 22px 4px rgba(255, 90, 90, .55); }
+.dg-cell.reachable::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: rgba(255, 255, 255, .2); opacity: 0; animation: softGlow 1.4s ease-in-out infinite; }
 .dg-cell.reachable:hover { transform: translateY(-4px) scale(1.06); }
 .dg-cell.here { background: linear-gradient(145deg, #7C6A3A, #5C4E2A); box-shadow: 0 0 0 3px #FFCF4D, 0 0 26px 6px rgba(255, 207, 77, .55); }
 .dg-cell.here .art { animation: breathe 2.2s ease-in-out infinite; }
@@ -41,10 +42,10 @@
 .dg-cell.exit.reachable { box-shadow: 0 0 0 3px #FF6B6B, 0 0 26px 6px rgba(255, 90, 90, .6); }
 .dg-guard { position: absolute; right: -8px; top: -10px; background: #1B1424; border-radius: 50%; padding: 3px; box-shadow: 0 0 0 2px #FF6B6B; }
 .dg-guard .art { width: 24px; height: 24px; }
-@keyframes dgPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
 @keyframes dgFlicker { 0%, 88%, 100% { opacity: .92; } 90% { opacity: .5; } 94% { opacity: 1; } }
 .dg-deco { position: absolute; z-index: 1; pointer-events: none; }
 .dg-deco .art { width: 84px; height: 84px; }
+.dg-deco.tl, .dg-deco.tr { filter: drop-shadow(0 0 14px rgba(255, 175, 70, .9)); }
 .dg-deco.tl { left: 6px; top: 4px; animation: torchFlicker .5s ease-in-out infinite alternate; }
 .dg-deco.tr { right: 6px; top: 4px; animation: torchFlicker .55s ease-in-out infinite alternate-reverse; }
 .dg-deco.bl { left: 0; bottom: 0; opacity: .7; transform: scaleY(-1); }
@@ -53,7 +54,7 @@
 .dg-deco.chain-l { left: 28px; top: -26px; opacity: .55; }
 .dg-deco.chain-r { right: 28px; top: -26px; opacity: .55; }
 .dg-deco.chain-l .art, .dg-deco.chain-r .art { width: 44px; height: 100px; }
-@keyframes torchFlicker { from { transform: scale(1) rotate(-3deg); filter: drop-shadow(0 0 10px rgba(255,160,60,.85)); } to { transform: scale(1.08) rotate(3deg); filter: drop-shadow(0 0 20px rgba(255,190,80,1)); } }
+@keyframes torchFlicker { from { transform: scale(1) rotate(-3deg); } to { transform: scale(1.08) rotate(3deg); } }
 .dg-fog { position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: 18px; background: radial-gradient(ellipse at 20% 80%, rgba(190,170,230,.13), transparent 55%), radial-gradient(ellipse at 80% 20%, rgba(190,170,230,.1), transparent 50%); animation: fogDrift 9s ease-in-out infinite alternate; }
 @keyframes fogDrift { from { transform: translateX(-12px); opacity: .7; } to { transform: translateX(14px); opacity: 1; } }
 

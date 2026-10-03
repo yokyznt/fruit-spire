@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Chewy&family=Fredoka:wght@400;500;600;700&family=Patrick+Hand&display=swap');
+/* fuentes dentro del juego (sin internet): ver fonts/ */
+@font-face { font-family: 'Chewy'; font-weight: 400; font-display: swap; src: url('../fonts/chewy.woff2') format('woff2'); }
+@font-face { font-family: 'Fredoka'; font-weight: 400 700; font-display: swap; src: url('../fonts/fredoka.woff2') format('woff2'); }
+@font-face { font-family: 'Patrick Hand'; font-weight: 400; font-display: swap; src: url('../fonts/patrick-hand.woff2') format('woff2'); }
 
 /* ============================================================
    FRUIT SPIRE — estilo "libro de stickers"
@@ -192,13 +195,16 @@ ul { margin: 0; padding: 0; list-style: none; }
 .juice-bar, .combat-hp-bar { position: relative; border-radius: 99px; background: var(--strawberry-soft); box-shadow: inset 0 0 0 2.5px var(--ink); overflow: hidden; }
 .juice-bar { width: 110px; height: 14px; }
 .juice-bar .hp-text { display: none; }
-.hp-ghost, .hp-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; }
-.hp-ghost { background: #FFF6F7; transition: width .8s var(--ease-in-out) .4s; }
+/* el relleno mide toda la barra y se desliza (transform) por debajo del borde: animar el
+   ancho obligaba a repintar en cada cuadro */
+.hp-ghost, .hp-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 99px; }
+.juice-bar::after, .combat-hp-bar::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 2.5px var(--ink); pointer-events: none; }
+.hp-ghost { background: #FFF6F7; transition: transform .8s var(--ease-in-out) .4s; }
 .hp-fill {
     background: repeating-linear-gradient(-45deg, var(--strawberry) 0 8px, #F58296 8px 16px);
-    box-shadow: inset 0 0 0 2.5px var(--ink); transition: width .5s var(--ease-out);
+    box-shadow: inset 0 0 0 2.5px var(--ink); transition: transform .5s var(--ease-out);
 }
-.hp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .95em; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; }
+.hp-text { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .95em; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; }
 
 /* ============================================================
    LOGO de letras recortadas
@@ -341,8 +347,8 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .card .card-desc { font-size: .86em; text-align: center; line-height: 1.3; margin: 0 6px 6px; color: var(--ink); }
 .card.rarity-rare::after {
     content: ''; position: absolute; inset: -5px; border-radius: 16px; pointer-events: none;
-    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.7) 45%, rgba(255,207,77,.35) 50%, rgba(155,127,212,.3) 55%, transparent 70%);
-    background-size: 250% 100%; animation: holo 3.2s linear infinite; mix-blend-mode: soft-light;
+    background: linear-gradient(115deg, transparent 28%, rgba(255,255,255,.42) 44%, rgba(255,207,77,.26) 50%, rgba(155,127,212,.22) 56%, transparent 72%);
+    animation: holo 3.2s ease-in-out infinite;
 }
 /* palabras clave dentro de las descripciones */
 .num { font-family: var(--f-display); font-size: 1.15em; font-weight: normal; }
@@ -415,6 +421,8 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
     border-radius: 6px;
     box-shadow: 0 0 0 2px #E6D6BC, 6px 10px 0 rgba(74,52,40,.12);
 }
+/* capa propia: arrastrar el mapa solo mueve la capa, no se vuelve a pintar */
+.map-board { will-change: transform; }
 .map-board.gliding { transition: transform .5s var(--ease-out); }
 
 .node {
@@ -428,10 +436,14 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .node.reachable {
     cursor: pointer; background: #F2FAEA;
     box-shadow: 0 0 0 3px var(--leaf), var(--lift);
-    outline: 3px dashed var(--leaf); outline-offset: 5px;
-    animation: breatheOutline 1.6s ease-in-out infinite;
 }
-.node.reachable:hover { animation: none; transform: rotate(0) scale(1.08); box-shadow: 0 0 0 3px var(--leaf), var(--lift-hi); }
+/* el contorno que "respira" es un marco aparte que solo cambia de tamaño (no repinta el mapa) */
+.node.reachable::before {
+    content: ''; position: absolute; inset: -8px; border-radius: 30px; pointer-events: none;
+    border: 3px dashed var(--leaf); animation: ringBreathe 1.6s ease-in-out infinite;
+}
+.node.reachable:hover { transform: rotate(0) scale(1.08); box-shadow: 0 0 0 3px var(--leaf), var(--lift-hi); }
+.node.reachable:hover::before { animation: none; }
 .node.reachable .art { animation: nodeBob 1.6s ease-in-out infinite; }
 .node.current { background: var(--banana-soft); box-shadow: 0 0 0 3px var(--ink), var(--lift-hi); transform: rotate(0); }
 .node.boss { background: var(--strawberry-soft); box-shadow: 0 0 0 3px var(--strawberry), var(--lift); }
@@ -457,7 +469,8 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .player-token {
     position: absolute; z-index: 6; pointer-events: none;
     display: flex; align-items: center; justify-content: center;
-    transition: left .44s cubic-bezier(.45, 0, .3, 1), top .44s cubic-bezier(.45, 0, .3, 1);
+    /* camina con transform (ver movePlayer): lo mueve la tarjeta gráfica sin repintar el mapa */
+    transition: transform .44s cubic-bezier(.45, 0, .3, 1); will-change: transform;
 }
 .player-token .art { position: relative; z-index: 1; animation: breathe 2.2s ease-in-out infinite; transform-origin: 50% 100%; }
 .token-shadow { position: absolute; bottom: 14px; left: 50%; width: 70px; height: 14px; margin-left: -35px; border-radius: 50%; background: rgba(74,52,40,.2); animation: shadowPulse 2.2s ease-in-out infinite; }
@@ -549,10 +562,12 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 }
 .combatant.enemy .portrait::before { animation: idleShadowFloat 3.2s ease-in-out infinite; animation-delay: calc(var(--now, 0s) + var(--off, 0s)); }
 .combatant.boss .portrait::before { animation-duration: 2.6s; }
-/* parpadeo de los ojos de las caritas */
+/* parpadeo de los ojos de las caritas: cada pocos segundos JS pone .blink-on en
+   <body> (ver setupBlink en js/fx.js) y cada carita parpadea una vez. Una animación
+   infinita aquí obligaría a recalcular la pantalla en cada cuadro. */
 .sprite .eyes { transform-box: fill-box; transform-origin: center; }
-.idle .eyes, .player-token .eyes, .polaroid .eyes, .menu-fruit .eyes, .panel-art .eyes {
-    animation: blink 4.8s infinite; animation-delay: calc(var(--now, 0s) + var(--blink, 0s));
+body.blink-on .idle .eyes, body.blink-on .player-token .eyes, body.blink-on .polaroid .eyes, body.blink-on .menu-fruit .eyes, body.blink-on .panel-art .eyes {
+    animation: blink .24s ease-in-out both; animation-delay: calc(var(--blink, 0s) * .35);
 }
 /* ---------- acciones de ataque ----------
    Van en .portrait. Cada una es completa: prepara → golpea → vuelve.
@@ -713,7 +728,7 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 .fan-slot .card { -webkit-user-drag: none; }
 .is-player-turn .fan-slot { cursor: grab; }
 /* carta agarrada: la mueve JS con transform, sin transición */
-.fan-slot.dragging { transition: none; z-index: 60; pointer-events: none; transform-origin: 50% 50%; }
+.fan-slot.dragging { transition: none; z-index: 60; pointer-events: none; transform-origin: 50% 50%; will-change: transform; }
 .fan-slot.dragging .card { box-shadow: 0 0 0 2px var(--ink), 8px 22px 0 rgba(74, 52, 40, .2); }
 .fan-slot.ready .card { box-shadow: 0 0 0 2px var(--ink), 0 0 0 8px rgba(255, 207, 77, .85), 8px 22px 0 rgba(74, 52, 40, .2); }
 .fan-slot.deal-in { animation: dealIn .6s var(--ease-out) both; animation-delay: calc(var(--i) * 70ms); }
@@ -899,7 +914,8 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 @keyframes walkShadow { 45% { transform: scaleX(.6); opacity: .5; } }
 @keyframes puff { 0% { transform: scale(.4); opacity: .9; } 100% { transform: scale(1.8) translateY(-8px); opacity: 0; } }
 @keyframes jiggle { 0%, 100% { transform: rotate(var(--r)); } 50% { transform: rotate(calc(var(--r) * -1.5)) translateY(-3px); } }
-@keyframes breatheOutline { 0%, 100% { outline-offset: 5px; } 50% { outline-offset: 9px; } }
+@keyframes ringBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+@keyframes softGlow { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
 @keyframes bob { 0%, 100% { transform: translateY(0) rotate(2deg); } 50% { transform: translateY(-5px) rotate(-1deg); } }
 @keyframes intentPulse { from { transform: scale(1); } to { transform: scale(1.15) rotate(-3deg); } }
 @keyframes pop { 0% { transform: scale(.3) rotate(-20deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
@@ -959,7 +975,7 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 }
 @keyframes idleShadow { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(.86); opacity: .75; } }
 @keyframes idleShadowFloat { 0%, 100% { transform: scaleX(1); opacity: 1; } 55% { transform: scaleX(.75); opacity: .6; } }
-@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 95.5% { transform: scaleY(.1); } }
+@keyframes blink { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.1); } }
 /* tienda / mazo */
 @keyframes cardIn { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes soldOut {
@@ -977,7 +993,7 @@ button.secondary:active { transform: translateY(1px); box-shadow: none; }
 @keyframes shuffle { 0%, 100% { transform: none; } 25% { transform: translateX(-12px) rotate(-8deg); } 50% { transform: translateX(12px) rotate(8deg); } 75% { transform: translateX(-6px) rotate(-4deg); } }
 @keyframes wedgeSpend { 0% { fill: #FFA64D; transform: scale(1); } 40% { fill: #FFC37D; transform: scale(1.18); } 100% { fill: #D9D2C7; transform: scale(1); } }
 @keyframes wedgeFill { from { transform: scale(.2); } to { transform: scale(1); } }
-@keyframes holo { 0% { background-position: 150% 0; } 100% { background-position: -100% 0; } }
+@keyframes holo { 0%, 100% { opacity: .15; } 50% { opacity: .85; } }
 @keyframes fxRise {
     0% { opacity: 0; transform: translate(-50%, -30%) scale(.5) rotate(-10deg); }
     20% { opacity: 1; transform: translate(-50%, -60%) scale(1.25) rotate(4deg); }
@@ -1564,7 +1580,8 @@ button.btn-grape:hover { background: #D6C8F5; }
     font-size: .95em; line-height: 20px; text-align: center;
 }
 .garden-slot.fresh .art { animation: sproutIn .55s var(--ease-back); }
-.garden-slot.ready { box-shadow: inset 0 3px 0 rgba(0,0,0,.2), 0 0 0 3px #9BD66A; animation: readyGlow 1.2s ease-in-out infinite; }
+.garden-slot.ready { box-shadow: inset 0 3px 0 rgba(0,0,0,.2), 0 0 0 3px #9BD66A; }
+.garden-slot.ready::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: 0 0 0 5px #C9EF9A; opacity: 0; animation: softGlow 1.2s ease-in-out infinite; }
 .hit-harvest span {
     position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px; border-radius: 50%;
     background: #9B7FD4; box-shadow: 0 0 0 2px var(--ink); animation: splatOut .6s var(--ease-out) forwards;
@@ -1573,7 +1590,6 @@ button.btn-grape:hover { background: #D6C8F5; }
 .hit-harvest span:nth-child(3) { --sx: 56px; --sy: 10px; } .hit-harvest span:nth-child(4) { --sx: -40px; --sy: 20px; background: #9BD66A; }
 .hit-harvest span:nth-child(5) { --sx: 0px; --sy: -60px; }
 @keyframes sproutIn { from { transform: translateY(16px) scale(.2); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes readyGlow { 0%, 100% { box-shadow: inset 0 3px 0 rgba(0,0,0,.2), 0 0 0 3px #9BD66A; } 50% { box-shadow: inset 0 3px 0 rgba(0,0,0,.2), 0 0 0 5px #C9EF9A; } }
 
 /* el lienzo cubre toda la ventana (JS fija su ancho/alto) */
 #app { width: 100vw; height: 100vh; }
@@ -1690,7 +1706,7 @@ button.btn-banana:hover { background: #FFDB70; }
 .guide-bubble b { font-size: 1.4em; font-weight: normal; color: #C9A21F; }
 .guide-bubble p { margin: 2px 0 10px; font-size: 1.05em; line-height: 1.38; }
 /* lo que explica Profe Limón brilla */
-.tut-spot { position: relative; z-index: 60; animation: tutGlow 1.2s ease-in-out infinite !important; border-radius: 16px; }
+.tut-spot { position: relative; z-index: 60; animation: tutGlow 1.2s steps(1) infinite !important; border-radius: 16px; }
 .hand-row.tut-spot, .rest-options.tut-spot, .shop-row.tut-spot, .reward-row.tut-spot, .event-options.tut-spot { border-radius: 24px; }
 @keyframes tutGlow { 0%, 100% { box-shadow: 0 0 0 4px rgba(255,207,77,.9), 0 0 18px 6px rgba(255,207,77,.55); } 50% { box-shadow: 0 0 0 7px rgba(255,207,77,.6), 0 0 30px 12px rgba(255,207,77,.35); } }
 /* paso de tutorial que pide una acción concreta: se apaga todo lo que no
@@ -1701,7 +1717,7 @@ button.btn-banana:hover { background: #FFDB70; }
 #screen.tut-lockdown .tut-spot * { pointer-events: auto; }
 /* un solo elemento resaltado: la sombra oscura sale de su borde hacia afuera
    (así no oscurece su propio fondo); con varios, solo brillan */
-#screen.tut-lockdown.tut-solo .tut-spot { animation: tutGlowSolo 1.2s ease-in-out infinite !important; }
+#screen.tut-lockdown.tut-solo .tut-spot { animation: tutGlowSolo 1.2s steps(1) infinite !important; }
 @keyframes tutGlowSolo { 0%, 100% { box-shadow: 0 0 0 4px rgba(255,207,77,.9), 0 0 18px 6px rgba(255,207,77,.55), 0 0 0 9999px rgba(20,14,10,.58); } 50% { box-shadow: 0 0 0 7px rgba(255,207,77,.6), 0 0 30px 12px rgba(255,207,77,.35), 0 0 0 9999px rgba(20,14,10,.58); } }
 @keyframes guideIn { from { transform: translateY(40px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
 
@@ -1763,8 +1779,7 @@ button.btn-banana:hover { background: #FFDB70; }
 .seed-box.taken { opacity: .8; }
 .seed-card { cursor: pointer; }
 .combatant.enemy.seed-aim { cursor: crosshair; }
-.combatant.enemy.seed-aim .portrait { filter: drop-shadow(0 0 10px #ffe27a); animation: seedAim 1s ease-in-out infinite; }
-@keyframes seedAim { 50% { filter: drop-shadow(0 0 18px #ffb347); } }
+.combatant.enemy.seed-aim .portrait { filter: drop-shadow(0 0 12px #ffcf5a); }
 
 /* corazoncito en lugar de "PV" */
 .heart-ico { display: inline-flex; vertical-align: -0.2em; margin: 0 1px; }

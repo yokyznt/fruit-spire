@@ -12,8 +12,17 @@
 // ============================================================
 (function () {
     let ctx = null, master = null, dry = null, wet = null, unlocked = false;
-    const MUTE_KEY = 'fruitSpireMuted';
-    let muted = localStorage.getItem(MUTE_KEY) === '1';
+    // Dos volúmenes (0 a 1, ver Ajustes): la música va por musicBus y los efectos
+    // por sfxBus. `dest` es por dónde sale lo que se esté tocando en ese momento.
+    let musicBus = null, sfxBus = null, dest = null;
+    const vol = { music: 0.7, sfx: 1 };
+    const curve = (v) => Math.pow(Math.max(0, Math.min(1, v)), 1.7);
+    function readVolumes() {
+        const s = window.SETTINGS;
+        if (!s) return;
+        vol.music = s.music / 100; vol.sfx = s.sfx / 100;
+    }
+    readVolumes();
 
     // Respuesta de un cuartito pequeño: ruido que decae rápido. Nada de
     // archivos, se genera una sola vez al arrancar el audio.
@@ -33,7 +42,10 @@
         if (!ctx) {
             ctx = new AC();
             master = ctx.createGain();
-            master.gain.value = muted ? 0 : 0.55;
+            master.gain.value = 0.55;
+            musicBus = ctx.createGain(); musicBus.gain.value = curve(vol.music); musicBus.connect(master);
+            sfxBus = ctx.createGain(); sfxBus.gain.value = curve(vol.sfx); sfxBus.connect(master);
+            dest = sfxBus;
             // dry: pasa por un filtro suave para limar lo chillón
             dry = ctx.createBiquadFilter();
             dry.type = 'lowpass'; dry.frequency.value = 3400; dry.Q.value = 0.3;
@@ -45,7 +57,8 @@
             wet.gain.value = 0.16;
             master.connect(wet).connect(convolver).connect(ctx.destination);
         }
-        if (ctx.state === 'suspended') ctx.resume();
+        // con la app en segundo plano el audio se queda en pausa (ver visibilitychange abajo)
+        if (ctx.state === 'suspended' && !document.hidden) ctx.resume();
         return ctx;
     }
     const rnd = (a, b) => a + Math.random() * (b - a);
@@ -72,7 +85,7 @@
             f.type = 'lowpass'; f.frequency.value = Math.max(700, freq * 3); f.Q.value = 0.6;
             osc.connect(f); out = f;
         }
-        out.connect(gain).connect(master);
+        out.connect(gain).connect(dest);
         osc.start(t0);
         osc.stop(t0 + rel + 0.05);
     }
@@ -98,7 +111,7 @@
         const gain = c.createGain();
         gain.gain.setValueAtTime(vol, t0);
         gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-        src.connect(filter).connect(gain).connect(master);
+        src.connect(filter).connect(gain).connect(dest);
         src.start(t0);
     }
 
@@ -363,14 +376,19 @@
             const delay = Math.max(0, seq.nextTime - c.currentTime + swing);
             const bar = bars[seq.bar % bars.length];
             const next = bars[(seq.bar + 1) % bars.length];
-            playBass(song, bar.root, next.root, i, stepDur, delay);
-            playDrums(song, i, delay);
-            if (song.pad && i === 0) chordTones(bar.root).forEach((d) => tone(degToFreq(song, d, -1), { dur: stepDur * 7, type: 'sine', vol: 0.025, attack: 0.08, delay }));
-            const d = bar.notes[i];
-            if (typeof d === 'number') {
-                let len = 1;
-                while (i + len < 8 && bar.notes[i + len] === null) len++;
-                (LEADS[song.lead] || LEADS.mallet)(degToFreq(song, d), stepDur * Math.min(len, 3), delay);
+            // con la música en 0 no se fabrica ninguna nota (solo corre el compás)
+            if (vol.music > 0) {
+                dest = musicBus;
+                playBass(song, bar.root, next.root, i, stepDur, delay);
+                playDrums(song, i, delay);
+                if (song.pad && i === 0) chordTones(bar.root).forEach((d) => tone(degToFreq(song, d, -1), { dur: stepDur * 7, type: 'sine', vol: 0.025, attack: 0.08, delay }));
+                const d = bar.notes[i];
+                if (typeof d === 'number') {
+                    let len = 1;
+                    while (i + len < 8 && bar.notes[i + len] === null) len++;
+                    (LEADS[song.lead] || LEADS.mallet)(degToFreq(song, d), stepDur * Math.min(len, 3), delay);
+                }
+                dest = sfxBus;
             }
             seq.nextTime += stepDur;
             seq.step++;
@@ -390,13 +408,35 @@
     window.MUSIC_PLAYLISTS = PLAYLISTS;
     window.nowPlaying = () => (seq && seq.song ? SONGS[seq.song].name : null);
 
-    function applyMute() { if (master) master.gain.value = muted ? 0 : 0.55; }
-    function toggleMute() {
-        muted = !muted;
-        localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
-        applyMute();
-        return muted;
+    // Ajustes → volúmenes (0 a 100 en SETTINGS)
+    function applyVolumes() {
+        readVolumes();
+        if (!ctx) return;
+        musicBus.gain.value = curve(vol.music);
+        sfxBus.gain.value = curve(vol.sfx);
     }
+    // App en segundo plano o pantalla apagada: se pausa el audio y el compás
+    document.addEventListener('visibilitychange', () => {
+        if (!ctx) return;
+        if (document.hidden) {
+            if (seq) clearTimeout(seq.timer);
+            ctx.suspend();
+        } else {
+            ctx.resume();
+            if (seq) { clearTimeout(seq.timer); seq.nextTime = ctx.currentTime + 0.15; schedulerTick(); }
+        }
+    });
+    // Vibración corta con algunos efectos (solo si está activada en Ajustes)
+    const BUZZ = { hit: 16, block: 8, denied: 22, enemyDeath: 28, lose: 90, win: [14, 50, 14], coin: 6, relicGet: 12, chestOpen: 12, upgrade: 10, removeCard: 12 };
+    function buzz(pattern) {
+        const s = window.SETTINGS;
+        if (!s || !s.vibrate || !navigator.vibrate || document.hidden) return;
+        try { navigator.vibrate(pattern); } catch (e) { /* sin permiso */ }
+    }
+    Object.keys(BUZZ).forEach((k) => {
+        const play = Sfx[k];
+        if (play) Sfx[k] = function () { buzz(BUZZ[k]); return play.apply(this, arguments); };
+    });
     function unlock() {
         if (unlocked) return;
         unlocked = true;
@@ -407,6 +447,6 @@
 
     window.Sfx = Sfx;
     window.setAmbientMood = setAmbientMood;
-    window.toggleMute = toggleMute;
-    window.isMuted = () => muted;
+    window.applyVolumes = applyVolumes;
+    window.buzz = buzz;
 })();

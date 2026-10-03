@@ -6,9 +6,23 @@
 // ============================================================
 
 window.CREATOR = { handle: '@yokyznt', url: 'https://www.instagram.com/yokyznt/' };
-window.GAME_VERSION = '2.7';
+window.GAME_VERSION = '2.8';
 
 window.PATCH_NOTES = [
+    {
+        version: '2.8', date: '3 oct 2026', title: 'Ajustes y más fluido',
+        items: [
+            'Ajustes (el engrane): volumen de música y de efectos, vibración, zoom del mapa, gráficos rápidos, menos animaciones y pantalla siempre encendida.',
+            'En teléfono todo es más grande fuera del combate: mapa, recompensas, tienda, eventos, mochila y mazo.',
+            'La barra de arriba ya no tiene fondo: se ve más de cada pantalla.',
+            'En combate la mano y los personajes van más abajo: más espacio para ellos y para las descripciones.',
+            'Mucho más fluido: el mapa, los premios y los brillos ya no repintan la pantalla en cada cuadro.'
+        ],
+        fixes: [
+            'Las letras del juego ya no necesitan internet.',
+            'La música se pausa al salir de la app o apagar la pantalla.'
+        ]
+    },
     {
         version: '2.7', date: '3 oct 2026', title: 'Más azar',
         items: [

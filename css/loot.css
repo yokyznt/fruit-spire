@@ -10,11 +10,12 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
     background: radial-gradient(circle at 50% 38%, #FFF6D2, #FFE9A8 70%); color: var(--ink);
     box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px rgba(74, 52, 40, .25);
-    animation: lootGlow 1.6s ease-in-out infinite;
     transition: transform .2s var(--ease-out);
 }
 .loot-item:hover { transform: translateY(-6px) rotate(-2deg); }
-@keyframes lootGlow { 0%, 100% { box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px rgba(74, 52, 40, .25), 0 0 0 0 rgba(255, 207, 77, 0); } 50% { box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px rgba(74, 52, 40, .25), 0 0 22px 6px rgba(255, 207, 77, .75); } }
+/* el brillo es una capa aparte que solo se transparenta (no repinta la pantalla) */
+.loot-item::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: 0 0 22px 6px rgba(255, 207, 77, .75); opacity: 0; animation: softGlow 1.6s ease-in-out infinite; }
+.loot-item.flying::after, .loot-item.taken::after { animation: none; }
 .loot-item.k-heal, .loot-item.k-maxhp { background: radial-gradient(circle at 50% 38%, #FFE6EA, #FFC7D0 70%); }
 .loot-item.k-relic { background: radial-gradient(circle at 50% 38%, #F3EDFF, #DCCBFF 70%); }
 .loot-item.k-seed { background: radial-gradient(circle at 50% 38%, #EAF8EE, #C6EBD2 70%); }
@@ -30,8 +31,8 @@
 .loot-card { display: block; width: 88px; height: 118px; position: relative; }
 .loot-card .card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.5); pointer-events: none; }
 .loot-label { font-family: var(--f-display); font-size: 1.05em; line-height: 1.1; text-align: center; }
-.loot-item.flying { opacity: .25; pointer-events: none; animation: none; }
-.loot-item.taken { cursor: default; animation: none; background: #EFE6D6; box-shadow: 0 0 0 3px #CBB89A; }
+.loot-item.flying { opacity: .25; pointer-events: none; }
+.loot-item.taken { cursor: default; background: #EFE6D6; box-shadow: 0 0 0 3px #CBB89A; }
 .loot-item.taken .loot-art, .loot-item.taken .loot-label { opacity: .35; filter: grayscale(.7); }
 .loot-item.taken:hover { transform: none; }
 .loot-check { position: absolute; right: -10px; top: -10px; width: 36px; height: 36px; border-radius: 50%; background: var(--mint, #5CC9A7); box-shadow: 0 0 0 3px var(--ink); display: grid; place-items: center; animation: pop .35s var(--ease-back); }

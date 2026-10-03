@@ -180,8 +180,8 @@
 
 /* ---------- escena 4: la Torre del Rey ---------- */
 .cine .rain { position: absolute; left: -600px; right: -600px; top: -200px; bottom: 0; background: repeating-linear-gradient(105deg, transparent 0 18px, rgba(200, 210, 255, .28) 18px 20px); background-size: 100% 90px; }
-.cine.scene-4 .rain { animation: rain .5s linear infinite; }
-@keyframes rain { to { background-position: -24px 90px; } }
+.cine.scene-4 .rain { top: -290px; animation: rain .5s linear infinite; }
+@keyframes rain { to { transform: translate(-24px, 90px); } }
 .cine .tower-wrap { position: absolute; inset: 0; transform-origin: 720px 420px; }
 .cine.scene-4 .tower-wrap { animation: towerZoom 7s ease-out forwards; }
 @keyframes towerZoom { from { transform: scale(.84) translateY(60px); } to { transform: scale(1.06) translateY(0); } }

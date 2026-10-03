@@ -218,8 +218,8 @@ function hpBar(entity, key, cls) {
     GAME.lastBars[key] = pct;
     return `
     <div class="${cls || 'combat-hp-bar'}" data-side="${key === 'hud' ? 'player' : key}">
-        <div class="hp-ghost" style="width:${prev}%" data-to="${pct}%"></div>
-        <div class="hp-fill" style="width:${prev}%" data-to="${pct}%"></div>
+        <div class="hp-ghost" style="transform:translateX(${(prev - 100).toFixed(2)}%)" data-to="${(pct - 100).toFixed(2)}"></div>
+        <div class="hp-fill" style="transform:translateX(${(prev - 100).toFixed(2)}%)" data-to="${(pct - 100).toFixed(2)}"></div>
         <div class="hp-text">${entity.hp}/${entity.maxHp}</div>
     </div>`;
 }
@@ -324,7 +324,7 @@ function render() {
     // las animaciones de reposo usan esta fase como retraso negativo, así
     // siguen justo donde iban aunque se redibuje la pantalla
     screen.style.setProperty('--now', `${(-performance.now() / 1000).toFixed(3)}s`);
-    screen.innerHTML = renderHud() + `<main class="stage">${renderScreen()}</main>` + renderModal() + (window.renderInventory ? renderInventory() : '');
+    screen.innerHTML = renderHud() + `<main class="stage">${renderScreen()}</main>` + renderModal() + (window.renderInventory ? renderInventory() : '') + (window.renderSettings ? renderSettings() : '');
     heartifyDom(document.getElementById('screen'));
     settleEntryAnims(prevView, screen);
     restoreScroll(prevScroll, screen);
@@ -366,8 +366,9 @@ function playFlip(before) {
             return;
         }
         const now = el.getBoundingClientRect();
-        const dx = (old.left + old.width / 2 - now.left - now.width / 2) / SCALE;
-        const dy = (old.top + old.height / 2 - now.top - now.height / 2) / SCALE;
+        const k = SCALE * localZoom(el);
+        const dx = (old.left + old.width / 2 - now.left - now.width / 2) / k;
+        const dy = (old.top + old.height / 2 - now.top - now.height / 2) / k;
         if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
         el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
             { duration: 460, easing: 'cubic-bezier(.22, 1, .36, 1)', composite: 'add' });
@@ -409,6 +410,8 @@ function drainBlockBadge(badge) {
 }
 
 function afterRender() {
+    fitPanels();
+    if (GAME.settingsOpen) fitSettings();
     fitCardText(document.getElementById('screen'));
     if (GAME.screen === 'map') setupMapDrag();
     if (GAME.screen === 'combat') Object.keys(GAME.pAnims).forEach(applyPortraitAnim);
@@ -418,13 +421,14 @@ function afterRender() {
     if (GAME.combat) (GAME.combat.lastEvents || []).forEach((ev) => blockFxSeen.add(ev));
     document.querySelectorAll('.combat-block-badge[data-from]').forEach(drainBlockBadge);
     const bars = document.querySelectorAll('[data-to]');
+    const slide = (b) => { b.style.transform = `translateX(${b.dataset.to}%)`; };
     if (bars.length) {
         requestAnimationFrame(() => requestAnimationFrame(() => {
             bars.forEach((b) => {
                 const wrap = b.closest('[data-side]');
                 const late = wrap && hits[wrap.dataset.side];
-                if (late) setTimeout(() => { b.style.width = b.dataset.to; }, BLOCK_FIRST_MS);
-                else b.style.width = b.dataset.to;
+                if (late) setTimeout(() => slide(b), BLOCK_FIRST_MS);
+                else slide(b);
             });
         }));
     }
@@ -463,7 +467,7 @@ function renderHud() {
             <div class="mini-stack"><span class="card-back"></span><span class="card-back"></span></div>
             <b>Mazo</b><span class="count">${p.deck.length}</span>
         </div>
-        <button class="fullscreen-btn hud sound-btn" onclick="toggleGameSound()" ${tip(['Sonido', 'Silenciar o activar los efectos y el ambiente.'])}>${window.isMuted && window.isMuted() ? '🔇' : '🔊'}</button>
+        <button class="fullscreen-btn hud gear-btn" onclick="openSettings()" ${tip(['Ajustes', 'Sonido, pantalla y partida.'])}>${gearArt('sm')}</button>
     </header>`;
 }
 
@@ -565,7 +569,7 @@ function renderMainMenu() {
     const fruits = Object.values(window.CHARACTER_DB)
         .map((c, i) => `<span class="menu-fruit" style="--d:${i * 0.35}s;--blink:${i * 1.3}s">${fruitArt(c.id, { size: 'xl' })}</span>`).join('');
     return `
-    <div class="menu-screen">
+    <div class="menu-screen fit-zoom">
         <div class="menu-fruits">${fruits}</div>
         ${logoHtml('Fruit Spire', 'big')}
         <div class="menu-goal hand">Sube la torre y rescata al Rey Fruta</div>
@@ -578,8 +582,8 @@ function renderMainMenu() {
             <button class="secondary" onclick="openCollection()">Colección</button>
         </div>
         <button class="notes-btn" onclick="openNotes()" ${tip(['Notas de la versión', 'Las novedades y arreglos del juego, y el Instagram del creador.'])}>${art('ui_notes', '', { size: 'sm' })} Notas${window.notesAreNew && notesAreNew() ? '<i class="new-dot"></i>' : ''}</button>
-        <button class="fullscreen-btn" onclick="toggleFullscreen()" ${tip(['Pantalla completa', 'Entrar o salir de la pantalla completa (también con F11).'])}>⛶</button>
-        <button class="fullscreen-btn sound-btn" onclick="toggleGameSound()" ${tip(['Sonido', 'Silenciar o activar los efectos y el ambiente.'])}>${window.isMuted && window.isMuted() ? '🔇' : '🔊'}</button>
+        ${isNativeApp() ? '' : `<button class="fullscreen-btn" onclick="toggleFullscreen()" ${tip(['Pantalla completa', 'Entrar o salir de la pantalla completa (también con F11).'])}>⛶</button>`}
+        <button class="fullscreen-btn gear-btn${isNativeApp() ? ' solo' : ''}" onclick="openSettings()" ${tip(['Ajustes', 'Sonido, pantalla y partida.'])}>${gearArt('sm')}</button>
     </div>`;
 }
 
@@ -673,7 +677,7 @@ function renderActIntro() {
     const last = act.n === window.CASTLES.length && act.floor === window.FLOORS_PER_CASTLE;
     const guardian = act.floor < window.FLOORS_PER_CASTLE;
     return `
-    <div class="act-intro act-${act.n} theme-${act.id}">
+    <div class="act-intro fit-zoom act-${act.n} theme-${act.id}">
         <div class="act-number hand">${act.castleName} · Piso ${act.floor} de ${window.FLOORS_PER_CASTLE}</div>
         ${castleRowHtml(act.n)}
         <div class="act-scene">${art(`act_${act.id}`, act.icon, { size: 'xxl' })}</div>
@@ -729,7 +733,7 @@ function renderMap() {
 
     let html = `<div class="map-layout">
         <div class="map-viewport act-${act.n} theme-${act.id}" id="map-viewport">
-        <div class="map-board" id="map-board" style="width:${w}px;height:${h}px">`;
+        <div class="map-board" id="map-board" style="width:${w}px;height:${h}px;zoom:${mapZoom()}">`;
 
     // adornos del tema (siempre los mismos para un mismo piso: salen de su semilla)
     let seed = (GAME.walls.seed || 1234567) >>> 0;
@@ -849,24 +853,29 @@ function renderMap() {
     return html;
 }
 
+// El tablero lleva zoom (Ajustes → Zoom del mapa): GAME.mapPan y la vista van en px del
+// lienzo; las casillas (cellPos, MAP_CELL) en px del tablero, que valen mapZoom() del lienzo.
 function clampMapPan(pan, vp) {
     const { w, h } = mapBoardSize();
+    const z = mapZoom();
     const clampAxis = (v, view, size) => size <= view ? (view - size) / 2 : Math.min(0, Math.max(view - size, v));
-    return { x: clampAxis(pan.x, vp.clientWidth, w), y: clampAxis(pan.y, vp.clientHeight, h) };
+    return { x: clampAxis(pan.x, vp.clientWidth, w * z), y: clampAxis(pan.y, vp.clientHeight, h * z) };
 }
 function applyMapPan() {
     const vp = document.getElementById('map-viewport');
     const board = document.getElementById('map-board');
     if (!vp || !board) return;
     GAME.mapPan = clampMapPan(GAME.mapPan, vp);
-    board.style.transform = `translate(${GAME.mapPan.x}px, ${GAME.mapPan.y}px)`;
+    const z = mapZoom();
+    board.style.transform = `translate(${GAME.mapPan.x / z}px, ${GAME.mapPan.y / z}px)`;
 }
 function centerMapOnPlayer() {
     const vp = document.getElementById('map-viewport');
     if (!vp) return;
+    const z = mapZoom();
     GAME.mapPan = {
-        x: vp.clientWidth / 2 - (cellPos(GAME.playerPos.x) + MAP_CELL / 2),
-        y: vp.clientHeight / 2 - (cellPos(GAME.playerPos.y) + MAP_CELL / 2)
+        x: vp.clientWidth / 2 - (cellPos(GAME.playerPos.x) + MAP_CELL / 2) * z,
+        y: vp.clientHeight / 2 - (cellPos(GAME.playerPos.y) + MAP_CELL / 2) * z
     };
     applyMapPan();
 }
@@ -876,13 +885,17 @@ function keepPlayerInView() {
     const vp = document.getElementById('map-viewport');
     if (!vp || !GAME.mapPan) return;
     const margin = 40;
-    const cx = cellPos(GAME.playerPos.x) + GAME.mapPan.x, cy = cellPos(GAME.playerPos.y) + GAME.mapPan.y;
+    const z = mapZoom(), cell = MAP_CELL * z, gap = MAP_GAP * z;
+    // arriba la barra flota sobre el mapa: la ficha no debe quedar debajo
+    const hud = document.querySelector('#screen > .hud');
+    const topMargin = margin + (hud ? hud.offsetHeight : 0);
+    const cx = cellPos(GAME.playerPos.x) * z + GAME.mapPan.x, cy = cellPos(GAME.playerPos.y) * z + GAME.mapPan.y;
     let { x, y } = GAME.mapPan;
     // se deja ver también la columna siguiente
-    if (cx + MAP_CELL * 2 + MAP_GAP > vp.clientWidth - margin) x -= cx + MAP_CELL * 2 + MAP_GAP - (vp.clientWidth - margin);
+    if (cx + cell * 2 + gap > vp.clientWidth - margin) x -= cx + cell * 2 + gap - (vp.clientWidth - margin);
     if (cx < margin) x += margin - cx;
-    if (cy + MAP_CELL > vp.clientHeight - margin) y -= cy + MAP_CELL - (vp.clientHeight - margin);
-    if (cy < margin) y += margin - cy;
+    if (cy + cell > vp.clientHeight - margin) y -= cy + cell - (vp.clientHeight - margin);
+    if (cy < topMargin) y += topMargin - cy;
     if (x !== GAME.mapPan.x || y !== GAME.mapPan.y) {
         GAME.mapPan = { x, y };
         const board = document.getElementById('map-board');
@@ -1700,6 +1713,7 @@ window.addEventListener('DOMContentLoaded', () => {
     setupCardDrag();
     setupFullscreen();
     setupUiClicks();
+    setupBlink();
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         if (GAME.seedMenu != null || GAME.seedTargeting != null) { GAME.seedMenu = null; GAME.seedTargeting = null; render(); return; }

@@ -4,12 +4,15 @@ El juego es una página web; se empaqueta con Capacitor.
 
 ## Una sola vez
 1. Instala Node.js y Android Studio (trae el SDK y el JDK).
-2. En esta carpeta: `npm run android:init` (instala Capacitor y crea `android/`).
-3. En `android/app/src/main/AndroidManifest.xml`, dentro de `<activity ...>`, agrega
-   `android:screenOrientation="sensorLandscape"` para que siempre sea horizontal.
+2. En esta carpeta: `npm install`.
+
+El proyecto Android ya viene en `android/` (horizontal, pantalla completa, permiso de
+vibración y el puente `FruitNativePlugin` que usa Ajustes → Pantalla encendida). Lo que
+copia `android:sync` (el juego dentro de `assets/public`) no se guarda en el repositorio.
 
 ## Cada vez que cambie el juego
-Rápido: `npm run android:apk` deja `FruitSpire-debug.apk` en esta carpeta (pásalo al teléfono e instálalo).
+Rápido: `npm run android:apk` deja `FruitSpire-debug.apk` en esta carpeta (pásalo al teléfono e instálalo,
+o con el teléfono conectado: `adb install -r FruitSpire-debug.apk`).
 Necesita un JDK 17 o 21 en `~/.jdks` (Gradle 8 no corre con el Java 25 de Android Studio).
 
 Con Android Studio:

@@ -98,7 +98,7 @@
 .rf-heat { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(255,120,60,.5) 35%, transparent 75%); opacity: .3; transition: opacity .6s; }
 .rule-cocina.rs-hot1 .rf-heat { opacity: .65; }
 .rule-cocina.rs-hot2 .rf-heat { opacity: 1; animation: heatPulse 1.2s ease-in-out infinite; }
-@keyframes heatPulse { 50% { filter: brightness(1.25); } }
+@keyframes heatPulse { 50% { opacity: .72; } }
 .rf-flames i { bottom: 270px; left: calc(var(--i) * 7.2%); width: 60px; height: 70px; border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%; background: radial-gradient(ellipse at 50% 80%, #FFE14D, #FF8A3B 55%, #E0455E); opacity: .55; transform-origin: 50% 100%; transform: scaleY(.5); transition: transform .6s; animation: flameLick .9s ease-in-out infinite alternate; }
 .rule-cocina.rs-hot1 .rf-flames i { transform: scaleY(.9); }
 .rule-cocina.rs-hot2 .rf-flames i { transform: scaleY(1.5); opacity: .75; }

@@ -115,6 +115,7 @@ const GAME = {
     actHealed: 0,
     // --- solo interfaz ---
     modal: null,          // { title, note, ids } — visor de cartas
+    settingsOpen: false,  // ventana de ajustes abierta (js/settings.js)
     anim: false,          // bloquea clics mientras corre una animación
     dealIn: false,        // la próxima mano entra con animación de reparto
     lastBars: {},         // % de vida anterior, para animar las barras
@@ -533,8 +534,8 @@ function movePlayer(x, y) {
     const token = document.getElementById('player-token');
     if (token) {
         token.classList.add('walking', x > from.x ? 'dir-right' : y < from.y ? 'dir-up' : 'dir-down');
-        token.style.left = cellPos(x) + 'px';
-        token.style.top = cellPos(y) + 'px';
+        // se desliza con transform (lo mueve la tarjeta gráfica, sin repintar el mapa)
+        token.style.transform = `translate(${cellPos(x) - cellPos(from.x)}px, ${cellPos(y) - cellPos(from.y)}px)`;
         const board = document.getElementById('map-board');
         if (board) {
             const puff = document.createElement('div');

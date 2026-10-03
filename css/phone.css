@@ -16,8 +16,16 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 #rotate-note svg { width: 96px; height: 96px; animation: rotateHint 1.6s ease-in-out infinite; }
 @keyframes rotateHint { 0%, 30% { transform: rotate(0); } 70%, 100% { transform: rotate(90deg); } }
 
-/* ---------- barra de arriba ---------- */
-.phone .hud { height: 58px; gap: 12px; padding: 0 16px; }
+/* ---------- barra de arriba ----------
+   Fuera del combate va más grande. A los lados deja libre la esquina redonda
+   de la pantalla y, si la hay, la cámara. */
+.phone #screen { --hud-h: 58px; }
+.phone #screen:not(.screen-combat) { --hud-h: 68px; }
+.phone .hud {
+    height: 58px; gap: 12px;
+    padding: 0 max(22px, calc(env(safe-area-inset-right, 0px) / var(--s, 1))) 0 max(22px, calc(env(safe-area-inset-left, 0px) / var(--s, 1)));
+}
+.phone #screen:not(.screen-combat) > .hud { zoom: 1.17; }
 .phone .hud-title .logo { display: none; }
 .phone .stage { padding: 12px 16px 12px; }
 .phone .screen-map .stage, .phone .screen-combat .stage { padding: 0; }
@@ -45,7 +53,17 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .phone .portrait .art-xl { width: 140px; height: 140px; }
 .phone .combatant.boss .portrait .art-xl { width: 160px; height: 160px; }
 .phone .arena.multi .portrait .art-xl { width: 118px; height: 118px; }
-.phone .combat-bottom { height: 296px; }
+/* la mano va más abajo (asoma desde el borde y la carta sube entera al tocarla) y los
+   personajes bajan con ella: queda más aire arriba para ellos y para las descripciones */
+.phone .combat-bottom { height: 236px; }
+.phone .hand-row { padding-bottom: 0; position: relative; top: 56px; }
+.phone .is-player-turn .fan-slot:hover .card,
+.phone .fan-slot.selected .card { transform: translateY(calc(var(--y) * -1)) rotate(calc(var(--r) * -1)) translateY(-94px) scale(1.08); }
+.phone .bottom-side { gap: 6px; padding-bottom: 4px; }
+.phone .bottom-side.right { gap: 8px; }
+.phone .energy-orange { width: 124px; height: 124px; }
+.phone .pile { zoom: .86; }
+.phone .turn-note { margin-top: -4px; }
 .phone .versus { font-size: 2.2em; }
 .phone .intent-bubble { transform: scale(.9); transform-origin: center bottom; }
 
@@ -87,3 +105,54 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .stage > .panel.dungeon-panel .dg-room { zoom: 1.35; }
 .phone .stage > .panel.dungeon-panel .dg-room { zoom: 1.1; }
 .phone .stage > .panel.dungeon-panel .panel-art { display: none; }
+
+/* ============================================================
+   TELÉFONO: TODO MÁS GRANDE FUERA DEL COMBATE (v2.8)
+   fitPanels() (js/fx.js) agranda cada panel hasta llenar la pantalla.
+   Aquí se acomodan a lo ancho para que quepan más grandes. Un panel
+   con --phone-zoom usa ese zoom fijo: son los que se desplazan
+   (tienda, elegir una carta del mazo).
+   ============================================================ */
+.phone .stage > .panel { padding-left: 24px; padding-right: 24px; padding-bottom: 12px; }
+.phone .stage > .panel > .hand-title { margin-bottom: 4px; }
+
+/* menú principal: botones en dos columnas */
+.phone .menu-screen:not(.wide) .menu-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; max-width: 640px; }
+.phone .menu-screen:not(.wide) .menu-buttons button { padding: 10px 16px; }
+/* Notas sube a la esquina de arriba: abajo taparía los botones */
+.phone .notes-btn { top: 12px; bottom: auto; left: 14px; }
+
+/* portada de piso: textos más grandes */
+.phone .act-intro { gap: 4px; }
+.phone .act-intro .act-scene .art-xxl { width: 120px; height: 120px; }
+.phone .act-intro .act-number { font-size: 1.9em; }
+.phone .act-intro .act-rule, .phone .act-intro .act-boss, .phone .act-intro .act-heal { font-size: 1.2em; }
+
+/* recompensas: premios y cartas en una sola fila, sin el dibujo de arriba */
+.phone .panel.celebrate.wide > .panel-art { display: none; }
+.phone .stage > .panel .reward-scroll { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 34px; overflow: visible; }
+.phone .reward-scroll > * { flex: none; }
+.phone .reward-scroll > .reward-pick { order: -1; flex-basis: 100%; max-width: none; margin: 0; }
+.phone .reward-scroll > .cosmetic-box, .phone .reward-scroll > .pass-gain { order: -2; }
+.phone .reward-scroll > .loot-row, .phone .reward-scroll > .reward-row { margin: 0; flex-wrap: nowrap; }
+.phone .reward-scroll > .reward-row { padding: 16px 10px 10px; gap: 22px; }
+.phone .reward-scroll .loot-item { width: 128px; min-height: 132px; }
+.phone .reward-scroll .loot-item.k-card { width: 118px; }
+
+/* colección, vestidor, pase y notas: más grandes */
+.phone .menu-screen.wide:not(.char-select) { zoom: 1.15; }
+
+/* visor del mazo y mochila: a pantalla completa y más grandes */
+.phone .panel.modal { width: 100%; height: 100%; border-radius: 0; padding: 10px 24px; zoom: 1.2; }
+.phone .panel.modal::before, .phone .panel.modal::after { display: none; }
+.phone .modal-grid { padding: 16px 8px; margin-bottom: 8px; }
+.phone .panel.modal.inventory { width: 100%; height: 100%; padding: 10px 22px 12px; zoom: 1.15; }
+
+/* tienda: se desplaza hacia abajo; Salir se queda a la vista */
+.phone .stage > .panel.shop { --phone-zoom: 1.3; justify-content: flex-start; }
+.phone .panel.shop > button.secondary { position: sticky; bottom: 2px; align-self: flex-end; z-index: 5; }
+
+/* elegir una carta del mazo (madurar, quitar): la lista llena la pantalla */
+.phone .stage > .panel:has(> .reward-row.picker) { --phone-zoom: 1.2; justify-content: flex-start; }
+.phone .stage > .panel:has(> .reward-row.picker) > .panel-art { display: none; }
+.phone .stage > .panel > .reward-row.picker { flex: 1 1 0; min-height: 0; max-height: none; margin: 2px 0 8px; }
