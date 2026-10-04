@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.yokyznt.fruitspire.core.PendingCombat
@@ -94,6 +96,38 @@ class ScreenshotTest {
         }
         CombatScreen(ctl, "kitchen")
         HudBar(hudStateOf(run), {}, {}, {}, {}, compact = true)
+    }
+
+    @Test
+    fun mapaInicio() = shot("mapa_inicio") {
+        Rng.seed(5)
+        val run = Run.start("manzana", "madura")
+        run.beginFloor()
+        MapScreen(mapViewOf(run), run.pos.x to run.pos.y, false, 1.25f, MapPan(), { _, _ -> }, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    /** Toca con el dedo (de mentiras) la primera casilla a la que se puede ir y comprueba que el mapa avisa. */
+    @Test
+    fun tocarLaPrimeraCasillaMueve() {
+        Rng.seed(5)
+        val run = Run.start("manzana", "madura")
+        run.beginFloor()
+        val view = mapViewOf(run)
+        val pan = MapPan()
+        var moved: Pair<Int, Int>? = null
+        compose.setContent { DesignCanvas { Box(Modifier.fillMaxSize()) { MapScreen(view, run.pos.x to run.pos.y, false, 1.25f, pan, { x, y -> moved = x to y }, {}) } } }
+        compose.waitForIdle()
+        val key = view.reachable.first()
+        val cx = key % 1000
+        val cy = key / 1000
+        val h = compose.onRoot().fetchSemanticsNode().size.height
+        val d = h / 660f
+        val x = pan.anim.value.x + (com.yokyznt.fruitspire.nativo.ui.cellPos(cx) + 62f) * 1.25f * d
+        val y = pan.anim.value.y + (com.yokyznt.fruitspire.nativo.ui.cellPos(cy) + 62f) * 1.25f * d
+        compose.onRoot().performTouchInput { click(androidx.compose.ui.geometry.Offset(x, y)) }
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals("la casilla tocada ($cx,$cy) debía avisar", cx to cy, moved)
     }
 
     @Test

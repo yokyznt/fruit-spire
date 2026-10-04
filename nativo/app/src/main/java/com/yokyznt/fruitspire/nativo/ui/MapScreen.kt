@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -56,7 +55,9 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -630,7 +631,12 @@ fun MapScreen(
     ) {
         CompositionLocalProvider(LocalDensity provides boardDensity) {
             Box(
-                Modifier.requiredSize(bw.dp, bh.dp).graphicsLayer {
+                // el tablero mide más que la pantalla: se coloca SIEMPRE en la esquina de arriba a la izquierda
+                // (requiredSize lo centraba y corría todo el mapa, las primeras casillas quedaban fuera)
+                Modifier.layout { measurable, constraints ->
+                    val placeable = measurable.measure(Constraints.fixed(bw.dp.roundToPx(), bh.dp.roundToPx()))
+                    layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, 0) }
+                }.graphicsLayer {
                     translationX = pan.anim.value.x; translationY = pan.anim.value.y
                     transformOrigin = TransformOrigin(0f, 0f)
                 }
