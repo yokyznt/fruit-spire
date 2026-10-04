@@ -308,7 +308,7 @@ private fun CombatantView(
                         val kn = if (actor.hit.value < 1f) knockPose(actor.hit.value, actor.hitKb.toFloat()) else Pose.None
                         // llegar al combate caminando (con sus saltitos) y entrar cayendo del cielo (invocados)
                         val e = actor.enter.value
-                        val walkX = (1f - e) * -560f * dir * -1f * (if (player) -1f else 1f)
+                        val walkX = (1f - e) * (if (player) -560f else 560f)
                         val hop = if (e < 1f) -abs(sin(e * PI.toFloat() * 4f)) * 14f else 0f
                         val sp = actor.spawn.value
                         val spawnY = (1f - sp) * -320f
@@ -726,6 +726,7 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
     val ui = ctl.ui
     val density = LocalDensity.current.density
     val designW = LocalDesignWidth.current
+    ctl.pxPerUnit = density
     // reloj en segundos para las animaciones de reposo (se lee solo al dibujar: no recompone nada)
     val clock = rememberInfiniteTransition(label = "reloj").animateFloat(0f, 3600f, infiniteRepeatable(tween(3_600_000, easing = androidx.compose.animation.core.LinearEasing), RepeatMode.Restart), label = "t")
     var drag by remember { mutableStateOf<DragState?>(null) }

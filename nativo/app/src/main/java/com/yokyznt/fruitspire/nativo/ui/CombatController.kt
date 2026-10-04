@@ -307,6 +307,8 @@ class CombatController(
     var flying by mutableStateOf<FlyingCard?>(null)
     /** Centro de cada personaje en la pantalla (px de pantalla), lo llena la interfaz. */
     val anchors = HashMap<String, Rect>()
+    /** Px de pantalla por px de diseño (lo pone la pantalla). */
+    var pxPerUnit = 1f
     /** Texto de la acción del enemigo que está actuando (su globo de intención pulsa). */
     var acting by mutableIntStateOf(-1)
         private set
@@ -433,7 +435,8 @@ class CombatController(
         val me = centerOf(key)
         val tg = targetKey?.let { centerOf(it) }
         a.dir = if (key == "player") 1 else -1
-        a.reach = if (me != null && tg != null && info.melee) Offset((tg.x - me.x) * .72f, (tg.y - me.y) * .5f) else Offset.Zero
+        // las poses van en px de diseño; las posiciones medidas, en px de pantalla
+        a.reach = if (me != null && tg != null && info.melee) Offset((tg.x - me.x) * .72f / pxPerUnit, (tg.y - me.y) * .5f / pxPerUnit) else Offset.Zero
         a.attackKind = kind
         scope.launch {
             a.attack.snapTo(0f)

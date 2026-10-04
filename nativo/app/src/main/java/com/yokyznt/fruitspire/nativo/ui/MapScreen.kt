@@ -67,11 +67,14 @@ import androidx.compose.ui.unit.sp
 import com.yokyznt.fruitspire.core.NodeType
 import com.yokyznt.fruitspire.core.Run
 import com.yokyznt.fruitspire.core.data.World
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 const val MAP_CELL = 124f
@@ -299,7 +302,8 @@ private fun DrawScope.drawBoard(v: MapView, pal: MapPalette) {
     val bh = boardHeight(v.rows)
     val decoCount = Math.round(v.cols * v.rows * 0.45f)
     for (i in 0 until decoCount) {
-        val sz = (34 + rnd() * 46).toInt().toFloat()
+        // el tamaño se redondea a decenas: así hay pocos dibujos distintos que preparar
+        val sz = (((34 + rnd() * 46) / 10f).roundToInt() * 10).toFloat()
         val left = (rnd() * bw).toInt().toFloat()
         val top = (rnd() * bh).toInt().toFloat()
         val rot = (rnd() * 60 - 30).toInt().toFloat()
@@ -571,6 +575,18 @@ fun MapScreen(
         if (cy < margin + HUD_H * base.density) y += margin + HUD_H * base.density - cy
         val target = clamp(Offset(x, y))
         if (target != pan.anim.value) pan.anim.animateTo(target, tween(450, easing = androidx.compose.animation.core.EaseOut))
+    }
+
+    // los dibujos del piso se preparan en segundo plano para que el primer cuadro no se trabe
+    LaunchedEffect(view.themeId, view.seed, zoom) {
+        withContext(Dispatchers.Default) {
+            val reqs = LinkedHashMap<String, SpriteRequest>()
+            fun add(id: String, size: Float) { reqs.getOrPut("$id@$size") { SpriteRequest(id, size) } }
+            add(view.charId, 86f)
+            view.grid.forEach { row -> row.forEach { type -> NodeInfo.of(type, view.castle)?.let { add(it.sprite, 86f) } } }
+            for (id in view.decoSet) for (s in 30..80 step 10) add(id, s.toFloat())
+            SpriteStore.preload(boardDensity.density, reqs.values)
+        }
     }
 
     val currentView by rememberUpdatedState(view)

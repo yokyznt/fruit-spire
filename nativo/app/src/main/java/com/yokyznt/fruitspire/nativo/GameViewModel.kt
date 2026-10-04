@@ -67,6 +67,12 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     /** Avisos cortos; los pone la actividad. */
     var toast: (String) -> Unit = {}
 
+    /**
+     * Scope de la composición: lo necesitan las animaciones del combate (Animatable pide el reloj de cuadros de
+     * Compose, que viewModelScope no tiene). Lo pone la pantalla de la partida.
+     */
+    var uiScope: kotlinx.coroutines.CoroutineScope? = null
+
     private fun bump() { tick++ }
 
     // ---------- menú ----------
@@ -177,7 +183,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         combatBg = (if (pc.kind == "boss") bossBgs else groundBgs).random()
         lateinit var ctl: CombatController
         val c = r.startCombat(pc, onEnd = { ctl.onEnd(it) })
-        ctl = CombatController(r, c, viewModelScope, { toast(it) }, { result -> finishCombat(result) })
+        ctl = CombatController(r, c, uiScope ?: viewModelScope, { toast(it) }, { result -> finishCombat(result) })
         combat = ctl
         bump()
     }

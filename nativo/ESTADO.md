@@ -23,18 +23,38 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
   habilidades de personaje), `data/EnemyAi.kt` (IA de 30 enemigos; los 14 que solo recorren una lista salen generados con `cycle(...)`).
 - `Entities.kt` (azar con semilla mulberry32 = el de las pruebas web, entidades), `Combat.kt` (port de `js/engine/combat.js`, incluida la vista previa).
 - `MapGen.kt` (port de `js/engine/map.js`: mapas, muros, ríos, casillas, sin trampas). 1000 mapas con semilla salen idénticos a JS y sin callejones.
-- Pendiente de portar: flujo de partida (`js/game.js`), guardado, mascotas (`PetHooks` ya es el enganche).
+- Flujo de partida (`Run.kt`, port de `js/game.js`): `Run.start` (fruta + grado), `newFloor`, `arrive` (casilla → combate pendiente o `NODE_STUB`),
+  `startCombat`/`finishCombat` (oro, 3 cartas, objeto de élite, semilla, jefe/guardián/castillo/final), `collectLoot`/`pickRewardCard`/`finishReward`,
+  `openBossRelics`, `startNextFloor` (cura, maldición de castillo). `Plan.kt` (temas de los 9 pisos, tamaños, jefe, encuentros), `Rewards.kt` (sorteos),
+  `Progress.kt` (grados desbloqueados, cartas vistas), `Save.kt` (JSON de la partida y del progreso; no se guarda en combate).
+  `RunTest` juega partidas completas con un bot (9 pisos hasta la victoria con 12 semillas, muertes en Desafiante, ida y vuelta del guardado).
+- Pendiente de portar: mascotas (`PetHooks` ya es el enganche), experiencia del pase (`Run.lastCombatXp` ya la guarda), bestiario.
 - Para cuidar que las reglas sean idénticas: comparación cruzada con semilla (`node tools/crosscheck-combat.js 3000 1000` genera las trazas de JS en `core/build/`, y `gradlew :core:test` exige que Kotlin salga idéntico).
+
+## Pantallas (app/)
+- `GameViewModel.kt` une core y pantallas (guarda tras cada acción; `tick` avisa a Compose); `Store.kt` guarda `partida.json` y `progreso.json` en `filesDir`.
+- `ui/`: `Text.kt` (números y palabras clave de color, iconos de corazón/energía), `Cards.kt` (carta 176×250, objeto, semilla dibujada, barra de vida),
+  `Hud.kt`, `CharacterSelect.kt`, `ActIntro.kt`, `MapScreen.kt`, `CombatController.kt` (modelos inmutables, poses de ataque = keyframes del CSS, tiempos de `js/fx.js`),
+  `CombatScreen.kt`, `RewardScreens.kt`, `DeckModal.kt`.
+- Las animaciones del combate necesitan el reloj de cuadros de Compose: el controlador usa el scope de la composición (`vm.uiScope`), NO `viewModelScope`.
+- Pruebas: `gradlew :core:test` (21 pruebas con el motor idéntico a JS) y `gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`
+  (capturas en `app/build/capturas/`; `FlowSmokeTest` monta `GameRoot` y juega con las pantallas reales).
+- Sin hacer todavía: audio y vibración (etapa 1 pendiente), mochila/semillas en combate y tooltips de objetos (etapa 3), explicaciones de intención y estados salen al tocar.
+- Emulador: el controlador AEHD no estaba cargado el 2026-10-04 (`emulator -accel-check` decía que no está instalado); el teléfono tiene bloqueo seguro, así que
+  las pruebas de pantalla se hicieron con Robolectric. APK: `./gradlew.bat :app:assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk` (ya instalado en el teléfono).
 
 ## Etapas
 - [x] 0. Tutorial arreglado en la app web (v2.9).
 - [ ] 1. Cimientos: proyecto, dibujos y letras exportados, base visual, menú y ajustes **(hecho)**;
       port del motor de combate y de todos los datos **(hecho, 3000 combates idénticos a JS)**;
       sonido exportado **(pendiente)**.
-- [ ] 2. Partida base. Hecho: motor de combate y datos. Hecho también: generador de mapas. **Pendiente (siguiente paso)**: flujo de partida y guardado de `js/game.js` (elegir fruta, portada de piso, casillas de enemigo/élite/jefe,
-      recompensas de combate, derrota/victoria, siguiente piso), y las pantallas Compose (elegir fruta, portada, mapa con arrastre y zoom,
-      combate con cartas arrastrables, recompensas).
-- [ ] 3. Tienda, campamento, tesoro, eventos, llave/cofre, pozo, objeto de jefe, reglas de piso, calabozo, dado, mochila, mazo.
+- [x] 2. Partida base **(hecha, falta probarla con dedo en el teléfono)**. Motor, mapas, flujo de partida, guardado y todas las pantallas:
+      elegir fruta y grado, portada de piso, barra de arriba, mapa (arrastre, zoom de Ajustes, muros de cinta, ríos con puente, guarida, ficha que camina),
+      «¡A pelear!», combate (mano en abanico: tocar selecciona, arrastrar juega; intenciones, estados, cáscara, efectos, turno enemigo, viñedo de la Uva,
+      regla del piso, pilas), recompensas con premios por recoger, objeto de jefe, derrota/victoria, visor del mazo/pilas, guardar y continuar.
+      Las casillas que no son combate (tienda, campamento, tesoro, misterio, mesa de juegos, llave, cofre) muestran «llega en la siguiente etapa» y se siguen de largo.
+      Se adelantó de la etapa 3 solo el objeto de jefe (el premio del jefe de castillo lo necesita).
+- [ ] 3. Tienda, campamento, tesoro, eventos, llave/cofre, pozo, reglas de piso (ya salen en combate), calabozo, dado del destino, mochila y semillas en combate, mazo.
 - [ ] 4. Minijuegos, pase de batalla, vestidor, colección, bestiario, notas.
 - [ ] 5. Tutorial, historia y final.
 - [ ] 6. Pulido, compilación de lanzamiento y relevo de la app web.

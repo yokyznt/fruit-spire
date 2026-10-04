@@ -127,6 +127,7 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
 @Composable
 fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag: () -> Unit) {
     vm.tick // se vuelve a dibujar cada vez que la partida cambia
+    vm.uiScope = androidx.compose.runtime.rememberCoroutineScope()
     val run = vm.run ?: return
     val ctl = vm.combat
     Box(Modifier.fillMaxSize()) {
