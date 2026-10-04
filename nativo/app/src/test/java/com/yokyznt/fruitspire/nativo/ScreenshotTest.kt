@@ -8,7 +8,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.yokyznt.fruitspire.core.PendingCombat
 import com.yokyznt.fruitspire.core.Progress
+import com.yokyznt.fruitspire.nativo.ui.RewardScreen
+import com.yokyznt.fruitspire.nativo.ui.CombatController
+import com.yokyznt.fruitspire.nativo.ui.CombatScreen
 import com.yokyznt.fruitspire.core.Rng
 import com.yokyznt.fruitspire.core.Run
 import com.yokyznt.fruitspire.nativo.ui.ActIntroScreen
@@ -74,6 +78,34 @@ class ScreenshotTest {
             if (next != null) run.arrive(next.first, next.second)
         }
         MapScreen(mapViewOf(run), run.pos.x to run.pos.y, false, 1.25f, MapPan(), { _, _ -> }, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun combate() = shot("combate") {
+        Rng.seed(11)
+        val run = Run.start("manzana", "madura")
+        run.beginFloor()
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        val ctl = androidx.compose.runtime.remember {
+            lateinit var c: CombatController
+            val combat = run.startCombat(PendingCombat(listOf("avispa_furiosa", "mosca_podrida"), "enemy"), onEnd = { c.onEnd(it) })
+            CombatController(run, combat, scope, {}, {}).also { c = it }
+        }
+        CombatScreen(ctl, "kitchen")
+        HudBar(hudStateOf(run), {}, {}, {}, {}, compact = true)
+    }
+
+    @Test
+    fun recompensa() = shot("recompensa") {
+        Rng.seed(21)
+        val run = Run.start("kiwi", "madura")
+        run.beginFloor()
+        val pc = PendingCombat(listOf("babosa_viscosa"), "elite")
+        val c = run.startCombat(pc)
+        c.enemies.forEach { it.hp = 0 }
+        run.finishCombat("win")
+        RewardScreen(run, {}, {}, {}, {})
         HudBar(hudStateOf(run), {}, {}, {}, {})
     }
 

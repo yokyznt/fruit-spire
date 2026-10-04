@@ -278,8 +278,6 @@ class CombatController(
     private val onFinished: (String) -> Unit,
     private val vibrate: (Int) -> Unit = {}
 ) {
-    var ui by mutableStateOf(buildUi())
-        private set
     /** Una animación está en curso: no se aceptan más jugadas. */
     var busy by mutableStateOf(true)
         private set
@@ -291,6 +289,15 @@ class CombatController(
     var hiddenSlot by mutableStateOf(-1L)
     var ended by mutableStateOf(false)
         private set
+    /** null = no se arrastra nada; true = la carta arrastrada necesita un enemigo; false = es para ti. */
+    var dragNeeds by mutableStateOf<Boolean?>(null)
+    /** La mano vuela al descarte (fin de turno). */
+    var discarding by mutableStateOf(false)
+        private set
+    /** Explicación de algo (estado, intención, regla): título y texto; se cierra tocando. */
+    var info by mutableStateOf<Pair<String, String>?>(null)
+    /** Pila que se quiere ver ("draw" | "discard" | "exhaust"). */
+    var pileView by mutableStateOf<String?>(null)
 
     val actors = List(5) { Actor() } // 0 = jugador, 1..4 = enemigos
     val floats = mutableStateListOf<FloatFx>()
@@ -317,6 +324,10 @@ class CombatController(
     private var result: String? = null
     private var finishing = false
     private var wantsEndTurn = false
+
+    /** Lo que dibuja la pantalla; se vuelve a leer del motor con [refresh] después de cada acción. */
+    var ui by mutableStateOf(buildUi())
+        private set
 
     fun actor(key: String): Actor = if (key == "player") actors[0] else actors[1 + key.removePrefix("enemy-").toInt()]
 
@@ -454,6 +465,41 @@ class CombatController(
         selected = if (selected == i) -1 else i
     }
 
+    fun showInfo(title: String, text: String) { info = title to text }
+    fun showPile(which: String) { pileView = which }
+
+    private fun handCard(idx: Int): Card? = Cards.get(combat.player.hand.getOrNull(idx))
+
+    /** Qué pasaría si se suelta la carta [idx] en [pos] (px de diseño): "enemy-i", "self" o null. */
+    fun dropResult(idx: Int, pos: Offset, density: Float): String? {
+        val card = handCard(idx) ?: return null
+        if (!needsTarget(card)) return if (pos.y < PLAY_LINE) "self" else null
+        val zones = aliveEnemyIndexes().mapNotNull { i ->
+            anchors["zone-enemy-$i"]?.let { r -> i to Rect(r.left / density, r.top / density, r.right / density, r.bottom / density) }
+        }
+        zones.firstOrNull { (_, r) -> pos.x >= r.left && pos.x <= r.right && pos.y >= r.top && pos.y <= r.bottom }?.let { return "enemy-${it.first}" }
+        if (zones.size == 1 && pos.y < PLAY_LINE) return "enemy-${zones[0].first}"
+        return null
+    }
+
+    /** Mientras se arrastra: marca el objetivo y calcula lo que haría la carta contra él. */
+    fun updateHover(idx: Int, pos: Offset, density: Float) {
+        val card = handCard(idx) ?: return
+        val res = dropResult(idx, pos, density)
+        if (res == hover) return
+        hover = res
+        dropPreview = if (res == null || card.unplayable) null else {
+            val target = if (res == "self") null else combat.enemies.getOrNull(res.removePrefix("enemy-").toInt())
+            (if (res == "self") "player" else res) to combat.previewCard(card, target)
+        }
+    }
+
+    fun endDrag() { hover = null; dropPreview = null; dragNeeds = null }
+
+    /** (vida, cáscara) del enemigo [key] para el cartelito del daño. */
+    fun previewTarget(key: String): Pair<Int, Int>? =
+        key.takeIf { it.startsWith("enemy-") }?.let { combat.enemies.getOrNull(it.removePrefix("enemy-").toInt()) }?.let { it.hp to it.block }
+
     fun tryPlay(handIndex: Int, targetIdx: Int?, from: Rect?) {
         if (!canPlayNow()) return
         val card = Cards.get(combat.player.hand.getOrNull(handIndex) ?: return) ?: return
@@ -525,9 +571,11 @@ class CombatController(
         selected = -1
         // 1) la mano vuela al descarte
         deckBump++
+        discarding = true
         delay(if (c.player.hand.isEmpty()) 100 else 400L + c.player.hand.size * 45L)
         c.endPlayerTurn()
         refresh()
+        discarding = false
         spawnFx(c.lastEvents, null)
         if (afterEngine()) return
         // 2) turno enemigo
