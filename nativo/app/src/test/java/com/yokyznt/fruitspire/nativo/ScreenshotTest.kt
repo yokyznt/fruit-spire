@@ -210,6 +210,74 @@ class ScreenshotTest {
     }
 
     @Test
+    fun evento() = shot("evento") {
+        val run = androidx.compose.runtime.remember {
+            runAt(NodeType.MYSTERY).also { it.currentEvent = com.yokyznt.fruitspire.core.Events.byId("comerciante_misterioso"); it.player.gold = 30 }
+        }
+        com.yokyznt.fruitspire.nativo.ui.EventScreen(run) {}
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun eventoResultado() = shot("evento_resultado") {
+        val run = androidx.compose.runtime.remember {
+            runAt(NodeType.MYSTERY).also {
+                it.player.hp = 30
+                it.currentEvent = com.yokyznt.fruitspire.core.Events.byId("arbol_sabio")
+                it.screen = com.yokyznt.fruitspire.core.RunScreen.EVENT
+                it.resolveEventOption(0)
+            }
+        }
+        com.yokyznt.fruitspire.nativo.ui.EventResultScreen(run, {}, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun pozo() = shot("pozo") {
+        val run = androidx.compose.runtime.remember {
+            runAt(NodeType.MYSTERY).also {
+                it.currentEvent = com.yokyznt.fruitspire.core.Events.byId("pozo_deseos")
+                it.screen = com.yokyznt.fruitspire.core.RunScreen.EVENT
+                it.resolveEventOption(0)
+                it.player.gold = 90
+                it.tossWellCoin()
+            }
+        }
+        com.yokyznt.fruitspire.nativo.ui.WellScreen(run, {}, {}, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun calabozo() = shot("calabozo") {
+        val run = androidx.compose.runtime.remember {
+            runAt(NodeType.MYSTERY).also {
+                it.currentEvent = com.yokyznt.fruitspire.core.Events.byId("trampilla")
+                it.screen = com.yokyznt.fruitspire.core.RunScreen.EVENT
+                it.resolveEventOption(0)
+            }
+        }
+        com.yokyznt.fruitspire.nativo.ui.DungeonScreen(run) { _, _ -> }
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun dadoDelDestino() = shot("dado") {
+        val run = androidx.compose.runtime.remember {
+            Rng.seed(40)
+            Run.start("manzana", "madura").also { r ->
+                r.beginFloor()
+                val bossCol = r.map.cols - 1
+                val y = (0 until r.map.rows).first { r.pos = com.yokyznt.fruitspire.core.Pos(bossCol - 1, it); r.isReachable(bossCol, it) }
+                r.pos = com.yokyznt.fruitspire.core.Pos(bossCol - 1, y)
+                r.arrive(bossCol, y)
+                r.rollFate()
+            }
+        }
+        com.yokyznt.fruitspire.nativo.ui.FateScreen(run, null, false, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
     fun mochila() = shot("mochila") {
         val run = androidx.compose.runtime.remember {
             Rng.seed(31)

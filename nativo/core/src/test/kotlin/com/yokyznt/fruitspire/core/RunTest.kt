@@ -73,9 +73,36 @@ class RunTest {
                 if (run.startShopRemoval()) assertTrue(run.shopRemoveCard(run.player.deck.indices.last))
                 assertTrue(run.leaveNode())
             }
-            RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT -> {
+            RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT, RunScreen.EVENT_RESULT -> {
                 run.loot.indices.forEach { i -> if (!run.collectLoot(i)) run.dropLoot(i) }
                 assertTrue(run.leaveNode())
+            }
+            RunScreen.EVENT -> {
+                val ev = run.currentEvent!!
+                val open = ev.options.indices.filter { ev.options[it].locked?.invoke(run.player).isNullOrEmpty() }
+                val pc = run.resolveEventOption(Rng.pick(open))
+                if (pc != null) playCombat(run, pc)
+            }
+            RunScreen.WELL -> {
+                repeat(Rng.int(4)) {
+                    if (run.tossWellCoin()) run.loot.indices.forEach { i -> if (!run.collectLoot(i)) run.dropLoot(i) }
+                }
+                run.loot.indices.forEach { i -> if (!run.collectLoot(i)) run.dropLoot(i) }
+                assertTrue(run.leaveNode())
+            }
+            RunScreen.DUNGEON -> {
+                val d = run.dungeon!!
+                val next = listOf(d.pos.x + 1 to d.pos.y, d.pos.x - 1 to d.pos.y, d.pos.x to d.pos.y + 1, d.pos.x to d.pos.y - 1)
+                    .filter { (x, y) -> x in 0..2 && y in 0..2 }
+                if (Rng.next() < 0.25) run.leaveDungeon()
+                else {
+                    val cell = next[Rng.int(next.size)]
+                    run.enterDungeonCell(cell.first, cell.second)?.let { playCombat(run, it) }
+                }
+            }
+            RunScreen.FATE -> {
+                run.rollFate()
+                run.fateFight()?.let { playCombat(run, it) }
             }
             RunScreen.REWARD -> {
                 run.loot.indices.forEach { i -> if (!run.collectLoot(i)) run.dropLoot(i) }
@@ -202,15 +229,15 @@ class RunTest {
                     val text = Save.encode(run)
                     val back = Save.decode(text, progress) ?: fail("no se pudo leer lo guardado (semilla $seed, paso $steps)")
                     // lo guardado en una pantalla "de paso" vuelve en el mapa; el resto, igual
-                    val keeps = run.screen in listOf(RunScreen.ACT_INTRO, RunScreen.REWARD, RunScreen.BOSS_RELIC)
+                    val keeps = run.screen in listOf(RunScreen.ACT_INTRO, RunScreen.REWARD, RunScreen.BOSS_RELIC, RunScreen.WELL, RunScreen.DUNGEON)
                     // una recompensa ya recogida entera se cierra sola al cargar
                     val closesOnLoad = run.screen == RunScreen.REWARD && run.canFinishReward()
                     if (!closesOnLoad) assertEquals(if (keeps) run.screen else RunScreen.MAP, back.screen, "pantalla (semilla $seed, paso $steps)")
-                    assertEquals(run.player.deck, back.player.deck)
-                    // un tesoro o cofre a medias (fuera de las recompensas) se da solo al cargar
+                    // un tesoro, cofre o evento a medias (fuera de las recompensas) se da solo al cargar
                     if (run.screen != RunScreen.REWARD && run.loot.any { it.isOpen }) {
                         assertTrue(back.loot.isEmpty(), "lo pendiente se da al cargar (semilla $seed, paso $steps)")
                     } else {
+                        assertEquals(run.player.deck, back.player.deck)
                         assertEquals(run.player.relics, back.player.relics)
                         assertEquals(run.player.hp, back.player.hp)
                         assertEquals(run.player.gold, back.player.gold)

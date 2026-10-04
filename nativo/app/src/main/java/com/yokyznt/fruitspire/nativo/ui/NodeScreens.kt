@@ -55,12 +55,12 @@ private val TYPE_ORDER = mapOf("attack" to 0, "skill" to 1, "power" to 2, "curse
 
 /** Se toca (sin onda). */
 @Composable
-private fun Modifier.tap(enabled: Boolean = true, onClick: () -> Unit): Modifier =
+internal fun Modifier.tap(enabled: Boolean = true, onClick: () -> Unit): Modifier =
     clickable(remember { MutableInteractionSource() }, null, enabled = enabled) { onClick() }
 
 /** Escala [content] (de [w]×[h] px de diseño) y reserva en el diseño el tamaño ya escalado. */
 @Composable
-private fun Scaled(scale: Float, w: Float, h: Float, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun Scaled(scale: Float, w: Float, h: Float, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(modifier.size((w * scale).dp, (h * scale).dp)) {
         Box(
             Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)

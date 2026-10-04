@@ -159,10 +159,22 @@ class FlowSmokeTest {
                     if (r.canRest()) vm.restHeal() else vm.leaveNode()
                 }
                 RunScreen.SHOP -> if (vm.flash == null) { vm.buyShopCard(0); vm.leaveNode() }
-                RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT -> {
+                RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT, RunScreen.EVENT_RESULT -> {
                     r.loot.indices.forEach { vm.collectLoot(it) }
                     vm.leaveNode()
                 }
+                RunScreen.EVENT -> if (vm.intro == null) {
+                    val ev = r.currentEvent!!
+                    val i = ev.options.indices.lastOrNull { ev.options[it].locked?.invoke(r.player).isNullOrEmpty() }
+                    if (i != null) vm.chooseEventOption(i)
+                }
+                RunScreen.WELL -> { r.loot.indices.forEach { vm.collectLoot(it) }; vm.leaveNode() }
+                RunScreen.DUNGEON -> if (vm.intro == null && vm.combat == null) {
+                    val d = r.dungeon!!
+                    listOf(d.pos.x + 1 to d.pos.y, d.pos.x - 1 to d.pos.y, d.pos.x to d.pos.y + 1, d.pos.x to d.pos.y - 1)
+                        .firstOrNull { (x, y) -> x in 0..2 && y in 0..2 && !d.cleared[y][x] }?.let { vm.enterDungeonCell(it.first, it.second) }
+                }
+                RunScreen.FATE -> if (!vm.fateRolling && vm.intro == null) { if (r.fateRoll == null) vm.rollFate() else vm.fateFight() }
                 RunScreen.BOSS_RELIC -> vm.skipBossRelic()
                 RunScreen.GAME_OVER, RunScreen.VICTORY -> break
             }

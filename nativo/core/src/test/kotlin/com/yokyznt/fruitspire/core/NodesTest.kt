@@ -308,7 +308,7 @@ class NodesTest {
     @Test
     fun othersStillWaitForTheNextStage() {
         val run = newRun(13)
-        enter(run, NodeType.MYSTERY)
+        enter(run, NodeType.GAME)
         assertEquals(RunScreen.NODE_STUB, run.screen)
         run.leaveStub()
         assertEquals(RunScreen.MAP, run.screen)

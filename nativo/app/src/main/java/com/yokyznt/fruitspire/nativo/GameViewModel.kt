@@ -201,6 +201,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return
         combat = null
         r.finishCombat(result)
+        // casilla de calabozo vencida: aviso del oro que dio
+        if (r.screen == RunScreen.DUNGEON && r.dungeonGold > 0) toast("+${r.dungeonGold} de oro")
         persist()
         bump()
     }
@@ -305,6 +307,64 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return
         if (flash != null) return
         if (!r.startShopRemoval()) { toast(if (r.shopStock?.removeUsed == true) "Ya usaste este servicio" else "¡No te alcanza el oro!"); return }
+        bump()
+    }
+
+    // ---------- eventos de misterio ----------
+    fun chooseEventOption(i: Int) {
+        val r = run ?: return
+        val pc = r.resolveEventOption(i)
+        r.trapMessage?.let { toast(it); r.trapMessage = null }
+        persist()
+        if (pc != null) startIntro(pc)
+        bump()
+    }
+
+    // ---------- pozo de los deseos ----------
+    fun tossWell() {
+        val r = run ?: return
+        if (!r.tossWellCoin()) { toast(if (r.lootPending()) "¡Primero recoge tus premios!" else "No te alcanza el oro"); return }
+        persist(); bump()
+    }
+
+    // ---------- calabozo ----------
+    fun enterDungeonCell(x: Int, y: Int) {
+        val r = run ?: return
+        if (intro != null || combat != null) return
+        val pc = r.enterDungeonCell(x, y)
+        if (pc != null) startIntro(pc)
+        persist(); bump()
+    }
+
+    // ---------- dado del destino ----------
+    /** Número que se ve mientras el dado rueda. */
+    var fateShown by mutableStateOf<Int?>(null)
+        private set
+    var fateRolling by mutableStateOf(false)
+        private set
+
+    fun rollFate() {
+        val r = run ?: return
+        if (fateRolling || r.fateRoll != null || r.screen != RunScreen.FATE) return
+        fateRolling = true
+        viewModelScope.launch {
+            for (i in 0 until 16) {
+                fateShown = 1 + Rng.int(20)
+                delay(60L + i * 8)
+                if (run !== r || r.screen != RunScreen.FATE) { fateRolling = false; return@launch }
+            }
+            r.rollFate()
+            fateShown = r.fateRoll
+            fateRolling = false
+            persist(); bump()
+        }
+    }
+
+    fun fateFight() {
+        val r = run ?: return
+        val pc = r.fateFight() ?: return
+        fateShown = null
+        startIntro(pc)
         bump()
     }
 

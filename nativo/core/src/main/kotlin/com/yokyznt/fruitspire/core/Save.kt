@@ -44,6 +44,9 @@ private class MapSave(
 private class LootSave(val k: String, val n: Int = 0, val id: String? = null, val heal: Int = 0)
 
 @Serializable
+private class DungeonSave(val cleared: List<List<Boolean>>, val posX: Int, val posY: Int, val exitX: Int, val exitY: Int, val deco: Int)
+
+@Serializable
 private class RunSave(
     val version: Int = 1,
     val characterId: String,
@@ -56,7 +59,10 @@ private class RunSave(
     val rewardPicked: Boolean = false,
     val afterReward: String = "map",
     val combatKind: String = "enemy",
-    val loot: List<LootSave> = emptyList()
+    val loot: List<LootSave> = emptyList(),
+    val wellSpins: Int = 0,
+    val wellMessage: String = "",
+    val dungeon: DungeonSave? = null
 )
 
 @Serializable
@@ -66,7 +72,7 @@ object Save {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     /** Pantallas a las que se puede volver al continuar; el resto regresa al mapa. */
-    private val RESUMABLE = setOf(RunScreen.ACT_INTRO, RunScreen.REWARD, RunScreen.BOSS_RELIC)
+    private val RESUMABLE = setOf(RunScreen.ACT_INTRO, RunScreen.REWARD, RunScreen.BOSS_RELIC, RunScreen.WELL, RunScreen.DUNGEON)
 
     /** ¿Tiene sentido guardar ahora? (no a mitad de un combate ni cuando la partida ya terminó). */
     fun shouldSave(run: Run): Boolean = run.screen != RunScreen.COMBAT && !run.isOver
@@ -100,7 +106,9 @@ object Save {
             screen = (if (run.screen in RESUMABLE) run.screen else RunScreen.MAP).name,
             rewardCards = run.rewardCards, rewardPicked = run.rewardCardPicked,
             afterReward = run.afterReward, combatKind = run.combatKind,
-            loot = run.loot.filter { it.isOpen }.map { LootSave(it.k, it.n, it.id, it.heal) }
+            loot = run.loot.filter { it.isOpen }.map { LootSave(it.k, it.n, it.id, it.heal) },
+            wellSpins = run.wellSpins, wellMessage = run.wellMessage,
+            dungeon = run.dungeon?.let { dg -> DungeonSave(dg.cleared.map { row -> row.toList() }, dg.pos.x, dg.pos.y, dg.exit.x, dg.exit.y, dg.deco) }
         )
         return json.encodeToString(RunSave.serializer(), data)
     }
@@ -153,6 +161,13 @@ object Save {
         run.rewardCards = d.rewardCards.filter { Cards.get(it) != null }
         run.rewardCardPicked = d.rewardPicked
         d.loot.forEach { run.loot.add(LootItem(it.k, it.n, it.id, it.heal)) }
+        run.wellSpins = d.wellSpins
+        run.wellMessage = d.wellMessage
+        d.dungeon?.let { ds ->
+            if (ds.cleared.size == 3 && ds.cleared.all { it.size == 3 }) {
+                run.dungeon = Dungeon(Array(3) { y -> BooleanArray(3) { x -> ds.cleared[y][x] } }, Pos(ds.posX.coerceIn(0, 2), ds.posY.coerceIn(0, 2)), Pos(ds.exitX.coerceIn(0, 2), ds.exitY.coerceIn(0, 2)), ds.deco)
+            }
+        }
         run.screen = runCatching { RunScreen.valueOf(d.screen) }.getOrDefault(RunScreen.MAP).takeIf { it in RESUMABLE } ?: RunScreen.MAP
         when (run.screen) {
             RunScreen.REWARD -> {
@@ -161,6 +176,7 @@ object Save {
                 if (!pending) run.finishReward()
             }
             RunScreen.BOSS_RELIC -> run.openBossRelics() // se vuelven a sortear las opciones
+            RunScreen.DUNGEON -> if (run.dungeon == null) run.screen = RunScreen.MAP
             else -> {}
         }
         // fuera de las recompensas, lo que quedó sin recoger (tesoro, cofre…) se da solo

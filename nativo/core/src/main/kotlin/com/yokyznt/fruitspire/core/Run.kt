@@ -8,6 +8,7 @@ import com.yokyznt.fruitspire.core.data.EnemyDef
 import com.yokyznt.fruitspire.core.data.Enemies
 import com.yokyznt.fruitspire.core.data.FloorTheme
 import com.yokyznt.fruitspire.core.data.Plan
+import com.yokyznt.fruitspire.core.data.RelicDef
 import com.yokyznt.fruitspire.core.data.Relics
 import com.yokyznt.fruitspire.core.data.Seeds
 import com.yokyznt.fruitspire.core.data.World
@@ -34,7 +35,17 @@ enum class RunScreen {
     KEY_FOUND,
     /** Cofre Sellado (con o sin llave). */
     VAULT,
-    /** Casilla cuyo contenido llega en la etapa 3 (misterio, mesa de juegos…). */
+    /** Casilla de misterio: un evento con opciones. */
+    EVENT,
+    /** Lo que pasó al elegir una opción del evento. */
+    EVENT_RESULT,
+    /** Pozo de los Deseos. */
+    WELL,
+    /** Calabozo de 3×3 (trampilla). */
+    DUNGEON,
+    /** Dado del destino antes del jefe. */
+    FATE,
+    /** Casilla cuyo contenido llega en la etapa 4 (mesas de juego). */
     NODE_STUB,
     GAME_OVER,
     VICTORY
@@ -171,8 +182,11 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         when (type) {
             NodeType.ENEMY, NodeType.ELITE, NodeType.BOSS -> {
                 val kind = if (type == NodeType.ELITE) "elite" else if (type == NodeType.BOSS) "boss" else "enemy"
+                // antes de cada jefe se tira el dado del destino (una sola vez por piso)
+                if (kind == "boss" && map.fate == null) { fateRoll = null; screen = RunScreen.FATE; return null }
                 return PendingCombat(encounterFor(kind, pos.x.toDouble() / (map.cols - 1)), kind)
             }
+            NodeType.MYSTERY -> openMystery()
             NodeType.EMPTY, NodeType.BLOCKED -> screen = RunScreen.MAP
             NodeType.REST -> { pickerMode = null; screen = RunScreen.REST }
             NodeType.SHOP -> openShop()
@@ -197,6 +211,8 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         pickerMode = null
         shopStock = null
         nodeMessage = ""
+        currentEvent = null
+        deckChanges = emptyList()
         screen = RunScreen.MAP
         return true
     }
@@ -334,6 +350,228 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         screen = RunScreen.VAULT
     }
 
+    // ---------- captura de premios (js/loot.js `withLootCapture`) ----------
+    private var lootCapture = false
+    internal var deckLog: MutableList<DeckChange>? = null
+
+    /** Un cambio del mazo que no es un premio (maldición que entra, madurar, quitar, transformar). */
+    internal fun logDeck(change: DeckChange) { deckLog?.add(change) }
+
+    /** Da un objeto; mientras se captura, en vez de darlo lo pone en la fila de premios por recoger. */
+    internal fun giveRelic(relic: RelicDef) {
+        if (lootCapture) loot.add(LootItem("relic", id = relic.id)) else Rewards.giveRelic(player, relic)
+    }
+
+    /**
+     * Corre un efecto (evento, pozo, cofre…) y convierte lo que ganaste (oro, vida, vida máxima, objetos, semillas y
+     * cartas) en premios por recoger; lo que pierdes se aplica al momento. Los cambios del mazo quedan en [deckChanges].
+     */
+    fun <T> withLootCapture(fn: () -> T): T {
+        val p = player
+        val gold0 = p.gold; val hp0 = p.hp; val max0 = p.maxHp
+        val deck0 = ArrayList(p.deck)
+        val seeds0 = p.seeds.toList()
+        val start = loot.size
+        lootCapture = true
+        deckLog = ArrayList()
+        val res = try { fn() } finally { lootCapture = false }
+        // cartas nuevas al final del mazo (las maldiciones y los estados entran solos)
+        if (p.deck.size > deck0.size && deck0.indices.all { p.deck[it] == deck0[it] }) {
+            val added = ArrayList(p.deck.subList(deck0.size, p.deck.size))
+            while (p.deck.size > deck0.size) p.deck.removeAt(p.deck.size - 1)
+            added.forEach { id ->
+                val c = Cards.get(id)
+                if (c == null || c.type == "curse" || c.type == "status") p.deck.add(id) else loot.add(LootItem("card", id = id))
+            }
+        }
+        val log = deckLog ?: ArrayList()
+        deckChanges = if (log.isNotEmpty()) log else deckDiff(deck0, p.deck)
+        deckLog = null
+        // semillas que aparecieron en huecos vacíos
+        for (i in p.seeds.indices) {
+            val id = p.seeds[i]
+            if (id != null && seeds0.getOrNull(i) == null) { p.seeds[i] = null; loot.add(LootItem("seed", id = id)) }
+        }
+        val dGold = p.gold - gold0; val dMax = p.maxHp - max0; val dHp = p.hp - hp0
+        if (dGold > 0) { p.gold -= dGold; loot.add(LootItem("gold", n = dGold)) }
+        if (dMax > 0) {
+            val heal = max(0, dHp)
+            p.maxHp -= dMax
+            p.hp = min(p.maxHp, p.hp - heal)
+            loot.add(LootItem("maxhp", n = dMax, heal = heal))
+        } else if (dHp > 0) {
+            p.hp -= dHp
+            loot.add(LootItem("heal", n = dHp))
+        }
+        // orden de la fila: oro, vida, objetos, semillas y cartas
+        val order = mapOf("gold" to 0, "heal" to 1, "maxhp" to 1, "relic" to 2, "seed" to 3, "card" to 4)
+        val added = ArrayList(loot.subList(start, loot.size)).sortedBy { order[it.k] ?: 9 }
+        while (loot.size > start) loot.removeAt(loot.size - 1)
+        loot.addAll(added)
+        return res
+    }
+
+    /** Cartas que salieron o entraron al mazo (contando copias), o que cambiaron en su lugar (transformar, madurar). */
+    private fun deckDiff(before: List<String>, after: List<String>): List<DeckChange> {
+        fun count(l: List<String>) = l.groupingBy { it }.eachCount()
+        val a = count(before); val b = count(after)
+        val removed = ArrayList<String>(); val added = ArrayList<String>()
+        a.forEach { (id, n) -> repeat(n - (b[id] ?: 0)) { removed.add(id) } }
+        b.forEach { (id, n) -> repeat(n - (a[id] ?: 0)) { added.add(id) } }
+        if (removed.isEmpty() && added.isEmpty()) return emptyList()
+        if (before.size == after.size) {
+            val moved = before.indices.filter { before[it] != after[it] }
+            if (moved.size == removed.size) {
+                return moved.map { DeckChange(if (after[it] == before[it] + "+") "upgrade" else "transform", before[it], after[it]) }
+            }
+        }
+        return removed.map { DeckChange("remove", from = it) } + added.map { DeckChange("add", to = it) }
+    }
+
+    // ---------- eventos de misterio ----------
+    var currentEvent: EventDef? = null
+    private var lastEventId: String? = null
+    /** Lo que le pasó al mazo en el último evento, pozo o cofre (para mostrarlo animado). */
+    var deckChanges: List<DeckChange> = emptyList()
+    /** Aviso de una trampa (el cofre era un mímico). */
+    var trapMessage: String? = null
+    /** Mesa de juego elegida en un evento ("dice", "poker", "chess", "slots", "roulette"). */
+    var gameId: String? = null
+
+    private fun openMystery() {
+        val themeId = map.themeId
+        val pool = Events.all.filter { ev ->
+            (ev.acts == null || player.act in ev.acts) && (ev.themes == null || themeId in ev.themes) && ev.id != lastEventId
+        }
+        val ev = Events.pick(pool.ifEmpty { Events.all })
+        currentEvent = ev
+        lastEventId = ev.id
+        nodeMessage = ""
+        trapMessage = null
+        loot.clear()
+        deckChanges = emptyList()
+        screen = RunScreen.EVENT
+    }
+
+    /** Lo que se sale a pelear cuando una casilla de misterio no era tan tranquila. */
+    private fun ambushFight() = PendingCombat(encounterFor("enemy", pos.x.toDouble() / (map.cols - 1)), "enemy")
+
+    /**
+     * Elige la opción [idx] del evento. Devuelve un combate por empezar si la opción (o una trampa) lleva a pelear;
+     * si no, la pantalla pasa a la que toque (resultado, pozo, calabozo, mesa de juego o derrota).
+     */
+    fun resolveEventOption(idx: Int): PendingCombat? {
+        val ev = currentEvent ?: return null
+        if (screen != RunScreen.EVENT) return null
+        val option = ev.options.getOrNull(idx) ?: return null
+        if (option.locked?.invoke(player)?.isNotEmpty() == true) return null
+        when (val special = option.special) {
+            null -> {}
+            "fight" -> { currentEvent = null; return ambushFight() }
+            "well" -> { currentEvent = null; wellSpins = 0; wellMessage = ""; loot.clear(); screen = RunScreen.WELL; return null }
+            "dungeon" -> { currentEvent = null; dungeon = Dungeon.create(); screen = RunScreen.DUNGEON; return null }
+            else -> { // game:<mesa>
+                currentEvent = null
+                gameId = special.removePrefix("game:")
+                stubNode = NodeType.GAME
+                screen = RunScreen.NODE_STUB
+                return null
+            }
+        }
+        loot.clear()
+        val helpers = EventHelpers(this)
+        val out = withLootCapture { option.effect!!.invoke(player, helpers) }
+        if (out.fight) {
+            // el evento resultó ser una trampa: lo ganado antes se da y se pelea
+            grantAllLoot()
+            currentEvent = null
+            trapMessage = out.msg.ifEmpty { "¡Es una trampa!" }
+            return ambushFight()
+        }
+        nodeMessage = out.msg.ifEmpty { "Algo pasó..." }
+        screen = if (player.hp <= 0) RunScreen.GAME_OVER else RunScreen.EVENT_RESULT
+        return null
+    }
+
+    // ---------- pozo de los deseos ----------
+    var wellSpins = 0
+    var wellMessage = ""
+
+    fun wellCost(): Int = 15 + wellSpins * 12
+
+    /** Tira una moneda. Falso si no se puede (sin oro o con premios sin recoger). */
+    fun tossWellCoin(): Boolean {
+        if (screen != RunScreen.WELL || lootPending() || player.gold < wellCost()) return false
+        player.gold -= wellCost()
+        wellSpins += 1
+        val picked = Well.pick()
+        loot.clear()
+        val helpers = EventHelpers(this)
+        wellMessage = withLootCapture { picked.effect(player, helpers) }
+        if (player.hp <= 0) screen = RunScreen.GAME_OVER
+        return true
+    }
+
+    // ---------- calabozo ----------
+    var dungeon: Dungeon? = null
+    /** Oro que dio el último combate de calabozo (la pantalla lo avisa). */
+    var dungeonGold = 0
+
+    /** Entra a una casilla contigua del calabozo. Devuelve el combate por empezar si hay uno. */
+    fun enterDungeonCell(x: Int, y: Int): PendingCombat? {
+        val d = dungeon ?: return null
+        if (screen != RunScreen.DUNGEON || Math.abs(x - d.pos.x) + Math.abs(y - d.pos.y) != 1 || x !in 0..2 || y !in 0..2) return null
+        if (d.cleared[y][x]) { d.pos = Pos(x, y); return null }
+        d.pending = Pos(x, y)
+        val isExit = x == d.exit.x && y == d.exit.y
+        return PendingCombat(encounterFor("enemy", if (isExit) 0.9 else 0.1), "dungeon")
+    }
+
+    fun leaveDungeon() { dungeon = null; screen = RunScreen.MAP }
+
+    private fun finishDungeonCombat() {
+        val d = dungeon
+        combat = null
+        player.statuses.clear()
+        player.block = 0
+        if (d == null) { screen = RunScreen.MAP; return }
+        val cell = d.pending
+        if (cell != null) { d.cleared[cell.y][cell.x] = true; d.pos = cell; d.pending = null }
+        if (cell != null && cell.x == d.exit.x && cell.y == d.exit.y) {
+            // la escalera: premio gordo por vaciar el calabozo
+            val gold = 45 + Rng.int(25)
+            loot.clear()
+            val helpers = EventHelpers(this)
+            nodeMessage = withLootCapture { player.gold += gold; "${helpers.grantRandomRelic()} Y $gold de oro por vaciar el calabozo." }
+            dungeon = null
+            screen = RunScreen.TREASURE
+        } else {
+            dungeonGold = 8 + Rng.int(8)
+            player.gold += dungeonGold
+            screen = RunScreen.DUNGEON
+        }
+    }
+
+    // ---------- dado del destino ----------
+    /** Lo que salió en el dado (null mientras no se ha tirado). */
+    var fateRoll: Int? = null
+
+    /** Tira el d20. La casilla del jefe no cuenta como pisada: si sales y vuelves, puedes entrar sin volver a tirar. */
+    fun rollFate(): Int {
+        val roll = 1 + Rng.int(20)
+        fateRoll = roll
+        map.fate = roll
+        visited.remove(pos.key)
+        return roll
+    }
+
+    /** «¡A pelear!» tras el dado. */
+    fun fateFight(): PendingCombat? {
+        if (screen != RunScreen.FATE || fateRoll == null) return null
+        fateRoll = null
+        return PendingCombat(encounterFor("boss", 1.0), "boss")
+    }
+
     // ---------- combate ----------
     fun startCombat(pc: PendingCombat, onUpdate: () -> Unit = {}, onEnd: (String) -> Unit = {}): Combat {
         screen = RunScreen.COMBAT
@@ -342,6 +580,8 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         val mods = World.scaledMods(diff.hpMult, diff.dmgBonus, player.act, player.floor)
         val c = Combat(player, pc.enemyIds, onUpdate, onEnd, mods, theme.rule)
         combat = c
+        // lo que salió en el dado del destino se aplica al combate contra el jefe
+        if (pc.kind == "boss") map.fate?.let { Fate.apply(c, it) }
         return c
     }
 
@@ -352,6 +592,7 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         lastCombatXp = min(160, c?.xpGained ?: 0)
         if (result != "win") { screen = RunScreen.GAME_OVER; return }
         val kind = combatKind
+        if (kind == "dungeon") { finishDungeonCombat(); return }
         CharacterHooks.onCombatEnd(p)
         p.relics.toList().forEach { Relics.hooks(it)?.onCombatEnd?.invoke(p) }
         p.statuses.clear()
@@ -390,7 +631,7 @@ class Run(val player: Player, val progress: Progress = Progress()) {
 
     // ---------- recompensas ----------
     fun lootPending(): Boolean = loot.any { it.isOpen }
-    private fun lootRelicIds(): List<String> = loot.filter { it.k == "relic" && it.isOpen }.mapNotNull { it.id }
+    internal fun lootRelicIds(): List<String> = loot.filter { it.k == "relic" && it.isOpen }.mapNotNull { it.id }
 
     /** Da de verdad un premio. */
     private fun grant(item: LootItem) {

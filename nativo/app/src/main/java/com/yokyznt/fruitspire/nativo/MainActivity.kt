@@ -43,6 +43,10 @@ import com.yokyznt.fruitspire.nativo.ui.CharacterSelectScreen
 import com.yokyznt.fruitspire.nativo.ui.CombatScreen
 import com.yokyznt.fruitspire.nativo.ui.DeckModal
 import com.yokyznt.fruitspire.nativo.ui.DesignCanvas
+import com.yokyznt.fruitspire.nativo.ui.DungeonScreen
+import com.yokyznt.fruitspire.nativo.ui.EventResultScreen
+import com.yokyznt.fruitspire.nativo.ui.EventScreen
+import com.yokyznt.fruitspire.nativo.ui.FateScreen
 import com.yokyznt.fruitspire.nativo.ui.Fonts
 import com.yokyznt.fruitspire.nativo.ui.GameOverScreen
 import com.yokyznt.fruitspire.nativo.ui.HudBar
@@ -59,6 +63,7 @@ import com.yokyznt.fruitspire.nativo.ui.SettingsWindow
 import com.yokyznt.fruitspire.nativo.ui.ShopScreen
 import com.yokyznt.fruitspire.nativo.ui.Sprite
 import com.yokyznt.fruitspire.nativo.ui.SpriteStore
+import com.yokyznt.fruitspire.nativo.ui.WellScreen
 import com.yokyznt.fruitspire.nativo.ui.ToastState
 import com.yokyznt.fruitspire.nativo.ui.VictoryScreen
 import com.yokyznt.fruitspire.nativo.ui.hudStateOf
@@ -160,6 +165,11 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
                 vm::startShopRemoval, vm::pickCard, onClosePicker = { vm.setPicker(null) }, onLeave = vm::leaveNode
             )
             RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT -> NodeResultScreen(run, vm::collectLoot, vm::dropLoot, vm::leaveNode)
+            RunScreen.EVENT -> EventScreen(run, vm::chooseEventOption)
+            RunScreen.EVENT_RESULT -> EventResultScreen(run, vm::collectLoot, vm::dropLoot, vm::leaveNode)
+            RunScreen.WELL -> WellScreen(run, vm::tossWell, vm::collectLoot, vm::dropLoot, vm::leaveNode)
+            RunScreen.DUNGEON -> DungeonScreen(run, vm::enterDungeonCell)
+            RunScreen.FATE -> FateScreen(run, vm.fateShown, vm.fateRolling, vm::rollFate, vm::fateFight)
             RunScreen.NODE_STUB -> NodeStubScreen(run, vm::leaveStub)
             RunScreen.GAME_OVER -> GameOverScreen(run, vm::toMenu)
             RunScreen.VICTORY -> VictoryScreen(run, vm::toMenu)
