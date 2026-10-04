@@ -1,0 +1,4 @@
+# La web se sirve desde la raiz del repositorio (fruit-spire.vercel.app).
+# Estas carpetas son de las apps de Android y no tienen nada que hacer en el despliegue web.
+nativo
+android
