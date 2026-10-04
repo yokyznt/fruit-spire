@@ -99,7 +99,7 @@ private fun Polaroid(c: CharacterDef, index: Int, selected: Boolean, progress: P
                 contentAlignment = Alignment.Center
             ) {
                 Box(Modifier.graphicsLayer { if (selected) translationY = -kotlin.math.abs(kotlin.math.sin(hop * Math.PI)).toFloat() * 10f * density }) {
-                    Sprite(c.id, 104.dp)
+                    FruitSprite(c.id, 104.dp)
                 }
             }
             BasicText(c.name, style = Fonts.hand(28f), modifier = Modifier.padding(top = 2.dp))

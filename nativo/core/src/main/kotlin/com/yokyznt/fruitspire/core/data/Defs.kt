@@ -100,6 +100,15 @@ class RelicDef(
     val ref: String? = null, val drawBonus: Int = 0, val noRest: Boolean = false
 )
 
+/**
+ * Algo del vestidor. [type]: "skin" (color de una fruta), "acc" (accesorio de una ranura: head, face o neck; con [char] solo esa fruta
+ * puede ponérselo) o "pet" (mascotita de una fruta con su [bonus] y el reto para ganarla: [reqBossAct] o [reqWin]).
+ */
+class CosmeticDef(
+    val id: String, val type: String, val name: String, val char: String? = null, val slot: String? = null,
+    val bonus: String? = null, val reqBossAct: Int? = null, val reqWin: String? = null
+)
+
 /** Ganchos de un objeto (todos opcionales). Ver js/data/relics.js. */
 class RelicHooks(
     val onPickup: ((Player) -> Unit)? = null,

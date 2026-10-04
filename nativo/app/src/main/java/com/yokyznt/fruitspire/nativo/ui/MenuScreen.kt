@@ -13,9 +13,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,7 +43,9 @@ fun MenuScreen(
     onWardrobe: () -> Unit,
     onCollection: () -> Unit,
     onNotes: () -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    /** Premios del pase por reclamar (se muestra como insignia en el botón). */
+    passBadge: Int = 0
 ) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
@@ -49,7 +55,7 @@ fun MenuScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(40.dp)) {
                 listOf("manzana", "platanin", "kiwi", "uva").forEachIndexed { i, id ->
-                    Sprite(id, 108.dp, Modifier.graphicsLayer {
+                    FruitSprite(id, 108.dp, Modifier.graphicsLayer {
                         val wave = sin((time + i * 0.135f) * 2f * PI.toFloat())
                         rotationZ = wave * 4f
                         translationY = (-3f - wave * 3f) * density
@@ -69,7 +75,17 @@ fun MenuScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {
                     StickerButton("Cómo jugar", onTutorial, wide, color = Ink.banana, fontSize = 27f, padding = pad)
-                    StickerButton("Pase de Batalla", onPass, wide, color = Ink.strawberryBtn, fontSize = 27f, padding = pad)
+                    Box(wide) {
+                        StickerButton("Pase de Batalla", onPass, Modifier.fillMaxWidth(), color = Ink.strawberryBtn, fontSize = 27f, padding = pad)
+                        if (passBadge > 0) {
+                            Box(
+                                Modifier.align(Alignment.TopEnd).offset(10.dp, (-12).dp).size(38.dp).drawBehind {
+                                    drawCircle(Ink.ink, size.minDimension / 2 + 2.dp.toPx()); drawCircle(Ink.mint, size.minDimension / 2)
+                                },
+                                contentAlignment = Alignment.Center
+                            ) { BasicText("$passBadge", style = Fonts.display(22f, Color.White)) }
+                        }
+                    }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {
                     StickerButton("Vestidor", onWardrobe, wide, color = Ink.grapeBtn, fontSize = 27f, padding = pad)

@@ -182,7 +182,7 @@ private fun DungeonCell(d: Dungeon, x: Int, y: Int, charId: String, onClick: () 
         contentAlignment = Alignment.Center
     ) {
         when {
-            here -> Sprite(charId, 92.dp)
+            here -> FruitSprite(charId, 92.dp)
             isExit -> ArtOrEmoji("node_stairs", "🪜", 84.dp)
             cleared -> ArtOrEmoji("dg_bones", "🦴", 70.dp)
             else -> ArtOrEmoji(if ((d.deco + x * 3 + y) % 3 == 0) "dg_ghost" else "dg_skull", "💀", 78.dp)

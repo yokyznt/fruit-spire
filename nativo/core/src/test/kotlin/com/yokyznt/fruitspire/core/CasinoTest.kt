@@ -619,12 +619,12 @@ class CasinoTest {
         t.start(0)
         t.dicePlayer.addAll(listOf(6, 6, 6)); t.diceHouse.addAll(listOf(6, 6, 5))
         t.diceSettle()
-        assertEquals(15, run.extraPassXp)
+        assertEquals(15, run.progress.passXp)
         val t2 = tableOf(run, "dice")
         t2.start(0)
         t2.dicePlayer.addAll(listOf(6, 6, 2)); t2.diceHouse.addAll(listOf(6, 6, 6))
         t2.diceSettle()
-        assertEquals(15, run.extraPassXp)
+        assertEquals(15, run.progress.passXp)
         Rng.unseed()
     }
 

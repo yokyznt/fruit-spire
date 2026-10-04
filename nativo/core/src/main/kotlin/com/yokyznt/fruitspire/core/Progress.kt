@@ -1,5 +1,6 @@
 package com.yokyznt.fruitspire.core
 
+import com.yokyznt.fruitspire.core.data.CosmeticDef
 import com.yokyznt.fruitspire.core.data.World
 import kotlin.math.min
 
@@ -28,4 +29,67 @@ class Progress {
 
     /** Anota cartas vistas ("id+" cuenta como "id"). */
     fun discover(ids: Collection<String>) { ids.forEach { discovered.add(it.removeSuffix("+")) } }
+
+    // ---------- Pase de Batalla y vestidor ----------
+    /** Experiencia del pase y niveles ya reclamados (ver Pass.kt). */
+    var passXp = 0
+    val passClaimed = LinkedHashSet<Int>()
+    /** Ids del vestidor que ya se tienen (lo gratis desde el principio). */
+    val owned = LinkedHashSet<String>(Cosmetics.FREE)
+    /** fruta → ranura (skin, head, face, neck, pet) → id. */
+    val equipped = HashMap<String, MutableMap<String, String?>>()
+    /** Cambió algo que hay que guardar (lo limpia quien guarda). */
+    var dirty = false
+
+    fun isOwned(id: String): Boolean = id in owned
+
+    /** Lo consigue (si existe). Devuelve lo que es. */
+    fun grantCosmetic(id: String): CosmeticDef? {
+        val c = Cosmetics.get(id) ?: return null
+        if (owned.add(id)) dirty = true
+        return c
+    }
+
+    fun equippedFor(charId: String): Equipped {
+        val e = equipped[charId] ?: return Equipped()
+        return Equipped(e["skin"], e["head"], e["face"], e["neck"], e["pet"])
+    }
+
+    /** La mascotita que acompaña a [charId] (solo si es suya y ya la tiene). */
+    fun petFor(charId: String): CosmeticDef? {
+        val c = Cosmetics.get(equippedFor(charId).pet) ?: return null
+        return c.takeIf { it.type == "pet" && it.char == charId && isOwned(it.id) }
+    }
+
+    /**
+     * Ponerse algo (o quitárselo). Un color reemplaza al otro; un accesorio o mascotita igual al puesto se quita.
+     * Falso si no se tiene o es de otra fruta.
+     */
+    fun equip(charId: String, id: String): Boolean {
+        val c = Cosmetics.get(id) ?: return false
+        if (!isOwned(id) || (c.char != null && c.char != charId)) return false
+        val e = equipped.getOrPut(charId) { HashMap() }
+        if (c.type == "skin") e["skin"] = id
+        else { val slot = c.slot ?: return false; e[slot] = if (e[slot] == id) null else id }
+        dirty = true
+        return true
+    }
+
+    fun unequipSlot(charId: String, slot: String) {
+        equipped[charId]?.put(slot, null)
+        dirty = true
+    }
+
+    /**
+     * Revisa los retos de las mascotitas tras un logro y devuelve las nuevas. [bossAct]: castillo del jefe vencido (0 si no hubo);
+     * [win]: grado en el que se ganó la partida (null si no se ganó).
+     */
+    fun checkPetUnlocks(charId: String, bossAct: Int, win: String?): List<CosmeticDef> {
+        val ids = World.difficulties.take(3).map { it.id } // los tres grados normales; el grado Verde no cuenta
+        val done = { c: CosmeticDef ->
+            if (c.reqBossAct != null) bossAct >= c.reqBossAct
+            else win != null && ids.indexOf(win) >= ids.indexOf(c.reqWin)
+        }
+        return Cosmetics.all.filter { it.type == "pet" && it.char == charId && !isOwned(it.id) && done(it) }.mapNotNull { grantCosmetic(it.id) }
+    }
 }

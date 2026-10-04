@@ -77,7 +77,7 @@ class Table internal constructor(val kind: String, private val run: Run) {
             if (relic) out += " ${EventHelpers(run).grantRandomRelic()}"
         }
         if (hp > 0) { p.hp = max(1, p.hp - hp); out += " Pierdes $hp ❤️." }
-        if (result == "win") run.extraPassXp += 15
+        if (result == "win" && run.gainPassXp(15).levels > 0) out += " ¡Subes de nivel en el Pase de Batalla!"
         text = out
         say(result)
     }

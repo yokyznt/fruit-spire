@@ -56,6 +56,11 @@ import com.yokyznt.fruitspire.nativo.ui.MapScreen
 import com.yokyznt.fruitspire.nativo.ui.MenuScreen
 import com.yokyznt.fruitspire.nativo.ui.NodeResultScreen
 import com.yokyznt.fruitspire.nativo.ui.TableScreen
+import com.yokyznt.fruitspire.nativo.ui.LocalProgress
+import com.yokyznt.fruitspire.nativo.ui.PassScreen
+import com.yokyznt.fruitspire.nativo.ui.WardrobeScreen
+import com.yokyznt.fruitspire.core.Pass
+import androidx.compose.runtime.CompositionLocalProvider
 import com.yokyznt.fruitspire.nativo.ui.OutlinedText
 import com.yokyznt.fruitspire.nativo.ui.RestScreen
 import com.yokyznt.fruitspire.nativo.ui.RewardScreen
@@ -108,12 +113,17 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
     val toast = remember { ToastState() }
     vm.toast = { toast.show(it) }
     val soon = { toast.show("Llega en una etapa siguiente") }
+    CompositionLocalProvider(LocalProgress provides vm.progress) {
     Box(Modifier.fillMaxSize().notebookPaper()) {
         when (vm.screen) {
             AppScreen.MENU -> MenuScreen(
                 canContinue = vm.canContinue, onContinue = vm::continueGame, onNewGame = vm::newGame,
-                onTutorial = soon, onPass = soon, onWardrobe = soon, onCollection = soon, onNotes = soon,
-                onSettings = { showSettings = true }
+                onTutorial = soon, onPass = vm::openPass, onWardrobe = vm::openWardrobe, onCollection = soon, onNotes = soon,
+                onSettings = { showSettings = true }, passBadge = Pass.unclaimed(vm.progress)
+            )
+            AppScreen.PASS -> PassScreen(vm.progress, vm.tick, vm::claimPassLevel, vm::claimAllPass, onWardrobe = vm::openWardrobe, onBack = vm::toMenu)
+            AppScreen.WARDROBE -> WardrobeScreen(
+                vm.progress, vm.wardrobeChar, vm.tick, vm::wardrobeSelect, vm::wardrobeEquip, vm::wardrobeClear, onBack = vm::toMenu
             )
             AppScreen.CHARACTER_SELECT -> CharacterSelectScreen(
                 vm.progress, vm.selectedChar, vm.selectedDiff, vm::selectChar, vm::selectDiff,
@@ -123,6 +133,7 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
         }
         if (showSettings) SettingsWindow(settings) { showSettings = false }
         toast.Host(Modifier.align(Alignment.BottomCenter).padding(bottom = 40.dp))
+    }
     }
     // el botón de atrás cierra lo abierto o vuelve al menú (la partida ya está guardada)
     BackHandler(enabled = vm.screen != AppScreen.MENU || showSettings) {
@@ -157,7 +168,7 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
                 val pile = ctl.pileView
                 LaunchedEffect(pile) { if (pile != null) { vm.showPile(pile); ctl.pileView = null } }
             }
-            RunScreen.REWARD -> RewardScreen(run, vm::collectLoot, vm::dropLoot, vm::pickRewardCard, vm::continueReward)
+            RunScreen.REWARD -> RewardScreen(run, vm::collectLoot, vm::dropLoot, vm::pickRewardCard, vm::continueReward, vm::wearPet)
             RunScreen.BOSS_RELIC -> BossRelicScreen(run, vm::pickBossRelic, vm::skipBossRelic)
             RunScreen.REST -> RestScreen(run, vm.flash, vm::restHeal, vm::setPicker, vm::pickCard, vm::leaveNode)
             RunScreen.SHOP -> ShopScreen(
@@ -172,7 +183,7 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
             RunScreen.FATE -> FateScreen(run, vm.fateShown, vm.fateRolling, vm::rollFate, vm::fateFight)
             RunScreen.MINIGAME -> vm.tableController()?.let { TableScreen(run, it, vm.tick, vm::collectLoot, vm::dropLoot, vm::leaveNode) }
             RunScreen.GAME_OVER -> GameOverScreen(run, vm::toMenu)
-            RunScreen.VICTORY -> VictoryScreen(run, vm::toMenu)
+            RunScreen.VICTORY -> VictoryScreen(run, vm::toMenu, vm::wearPet)
         }
         if (run.screen != RunScreen.GAME_OVER && run.screen != RunScreen.VICTORY) {
             val seedReady = run.screen == RunScreen.COMBAT && ctl?.canUseSeedNow() == true && run.player.seeds.any { it != null }

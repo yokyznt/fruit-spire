@@ -113,7 +113,7 @@ fun HudBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy((12 * scale).dp)
     ) {
-        Box(Modifier.clickable(remember { MutableInteractionSource() }, null) { onMenu() }) { Sprite(state.charId, (40 * scale).dp) }
+        Box(Modifier.clickable(remember { MutableInteractionSource() }, null) { onMenu() }) { FruitSprite(state.charId, (40 * scale).dp) }
         Spacer(Modifier.weight(1f))
         // castillo y piso
         Row(

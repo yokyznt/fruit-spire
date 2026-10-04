@@ -3,6 +3,7 @@ package com.yokyznt.fruitspire.core
 import com.yokyznt.fruitspire.core.data.CastleDef
 import com.yokyznt.fruitspire.core.data.Cards
 import com.yokyznt.fruitspire.core.data.CharacterHooks
+import com.yokyznt.fruitspire.core.data.CosmeticDef
 import com.yokyznt.fruitspire.core.data.Difficulty
 import com.yokyznt.fruitspire.core.data.EnemyDef
 import com.yokyznt.fruitspire.core.data.Enemies
@@ -72,10 +73,21 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     var combat: Combat? = null
     /** enemy | elite | boss */
     var combatKind = "enemy"
-    /** Experiencia del pase de batalla del último combate (la usará el pase en la etapa 4). */
+    /** Experiencia del pase de batalla del último combate. */
     var lastCombatXp = 0
-    /** Experiencia del pase que se gana fuera de combate (victorias en las mesas de juego); el pase la sumará. */
-    var extraPassXp = 0
+    /** Lo que dio al pase el último combate (para el aviso de la pantalla de premios); null si no dio nada. */
+    var passGain: Pass.Gain? = null
+    /** Mascotitas que se desbloquearon con el último jefe de castillo (para avisarlo). */
+    var newPets: List<CosmeticDef> = emptyList()
+
+    /** Suma experiencia al Pase de Batalla (combates y mesas de juego). */
+    fun gainPassXp(n: Int): Pass.Gain = Pass.addXp(progress, n)
+
+    /** «Llevarla» en el aviso de una mascotita nueva. */
+    fun wearPet(id: String) {
+        val c = Cosmetics.get(id) ?: return
+        if (c.type == "pet" && c.char == player.characterId && progress.equippedFor(c.char).pet != id) progress.equip(c.char, id)
+    }
 
     // ---------- recompensa ----------
     val loot = ArrayList<LootItem>()
@@ -590,7 +602,7 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         combatKind = pc.kind
         val diff = difficulty
         val mods = World.scaledMods(diff.hpMult, diff.dmgBonus, player.act, player.floor)
-        val c = Combat(player, pc.enemyIds, onUpdate, onEnd, mods, theme.rule)
+        val c = Combat(player, pc.enemyIds, onUpdate, onEnd, mods, theme.rule, Pets.hooks(progress.petFor(player.characterId)?.id))
         combat = c
         // lo que salió en el dado del destino se aplica al combate contra el jefe
         if (pc.kind == "boss") map.fate?.let { Fate.apply(c, it) }
@@ -602,6 +614,9 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         val c = combat
         val p = player
         lastCombatXp = min(160, c?.xpGained ?: 0)
+        // gane o pierda, cada enemigo derrotado suma al pase
+        passGain = if (lastCombatXp > 0) gainPassXp(lastCombatXp) else null
+        newPets = emptyList()
         if (result != "win") { screen = RunScreen.GAME_OVER; return }
         val kind = combatKind
         if (kind == "dungeon") { finishDungeonCombat(); return }
@@ -615,6 +630,7 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         // reparten un botín parecido al de una élite y suben al siguiente piso.
         val isCastleBoss = kind == "boss" && p.floor >= World.FLOORS_PER_CASTLE
         val isFinalBoss = isCastleBoss && p.act >= World.castles.size
+        if (isCastleBoss) newPets = progress.checkPetUnlocks(p.characterId, p.act, if (isFinalBoss) p.difficulty else null)
         if (isFinalBoss) {
             // el Rey Fruta queda libre: se acabó la partida
             unlockMsg = progress.unlockNext(p.characterId, p.difficulty)
@@ -627,8 +643,9 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         else if (kind == "boss") 45 + Rng.int(20)
         else if (kind == "elite") 28 + Rng.int(14)
         else 12 + Rng.int(12)
+        val petGold = Pets.onWin(progress.petFor(p.characterId)?.id, p)
         loot.clear()
-        loot.add(LootItem("gold", n = gold))
+        loot.add(LootItem("gold", n = gold + petGold))
         rewardCards = Rewards.rollCards(p, 3, rewardKind)
         progress.discover(rewardCards)
         rewardCardPicked = false

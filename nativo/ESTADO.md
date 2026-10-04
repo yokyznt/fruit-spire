@@ -34,7 +34,14 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
   instante y la interfaz solo espera lo que se ve (por eso `slotsDraw`/`slotsSettle`, `rouletteSpin`/`rouletteSettle`, `houseRoll`/`diceSettle` van en dos pasos).
   `Run.openMinigame/openGameTable` (1 de cada 3 mesas es máquina; si no, la del tema del piso), `RunScreen.MINIGAME`, `Run.table`. No se reanuda al continuar
   (como en la web): la apuesta ya está pagada y se vuelve al mapa. `CasinoTest` (32 pruebas, incluidas partidas completas de ajedrez con un bot al azar).
-- Pendiente de portar: mascotas (`PetHooks` ya es el enganche), experiencia del pase (`Run.lastCombatXp` y `Run.extraPassXp` —15 por victoria en una mesa— solo viven en memoria), bestiario.
+- Vestidor, pase y mascotas (etapa 4B): `Cosmetics.kt` (datos de `GEN_COSMETICS`, generados de js/data/cosmetics.js: 16 colores, 23 accesorios, 12 mascotitas; textos y las capas
+  que se dibujan sobre la fruta), `Pass.kt` (34 niveles, `xpForLevel = 60 + 12n`, reclamar), `Pets.kt` (efectos de las 12 mascotitas: ganchos de combate y premio al ganar) y
+  en `Progress` lo que se tiene, lo que se lleva puesto, la experiencia y los retos de mascotas (`checkPetUnlocks`). Se guarda en `progreso.json` (campos nuevos con valor por defecto,
+  los guardados viejos se leen igual). `Run.finishCombat` suma la XP (gane o pierda; tope 160 por combate) y abre mascotas con los jefes de castillo; las victorias en mesas dan 15 XP.
+  `CosmeticsTest` (15 pruebas, incluidos los efectos de las mascotas en combate).
+- Pantallas 4B: `ui/Dress.kt` (`FruitSprite` viste a la fruta con `LocalProgress`; `CosmeticIcon`), `PassScreen.kt`, `WardrobeScreen.kt`; el menú muestra los premios por reclamar y los avisos de XP y de
+  mascotita nueva salen en premios, derrota y victoria. Los íconos sueltos de accesorios son dibujos exportados `accicon~<id>` (tools/export-sprites.js). `MetaScreenshotTest` (7 pruebas).
+- Pendiente de portar: bestiario, colección y notas (4C).
 - Para cuidar que las reglas sean idénticas: comparación cruzada con semilla (`node tools/crosscheck-combat.js 3000 1000` genera las trazas de JS en `core/build/`, y `gradlew :core:test` exige que Kotlin salga idéntico).
 
 ## Pantallas (app/)
@@ -75,6 +82,7 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
       calabozo 3×3 de la trampilla y dado del destino (`ui/EventScreens.kt`). El pozo y el calabozo se reanudan al continuar. `EventsTest` (19 pruebas).
 - [ ] 4. Minijuegos, pase de batalla, vestidor, colección, bestiario, notas.
       **Hecho (4A):** las cinco mesas de juego (dados, póker, ajedrez, tragamonedas, ruleta), desde las casillas del mapa y desde los eventos de misterio.
-      **Falta:** pase de batalla (que sume `Run.lastCombatXp` y `Run.extraPassXp`), vestidor, colección, bestiario y notas.
+      **Hecho (4B):** pase de batalla, vestidor (con la fruta vestida en el mapa, el combate, la barra de arriba y la selección) y mascotitas con sus retos y efectos.
+      **Falta (4C):** colección (cartas, objetos, semillas), bestiario y notas.
 - [ ] 5. Tutorial, historia y final.
 - [ ] 6. Pulido, compilación de lanzamiento y relevo de la app web.

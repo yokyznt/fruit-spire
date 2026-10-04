@@ -342,7 +342,9 @@ private fun CombatantView(
             ) {
                 // sombra
                 Box(Modifier.align(Alignment.BottomCenter).size((spriteSize * .93f).dp, 20.dp).drawBehind { drawOval(Color(0x2E4A3428), Offset.Zero, size) })
-                Sprite(c.sprite, spriteSize.dp, mood = if (actor.hurtFace) "hurt" else null, hurt = c.hurt)
+                val mood = if (actor.hurtFace) "hurt" else null
+                if (c.charId != null) FruitSprite(c.charId, spriteSize.dp, mood = mood, hurt = c.hurt) // tu fruta, vestida
+                else Sprite(c.sprite, spriteSize.dp, mood = mood, hurt = c.hurt)
             }
             Plate(c, ctl, multi, Modifier.fillMaxWidth().padding(top = 0.dp))
         }

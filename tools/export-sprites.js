@@ -77,6 +77,9 @@ const IN_PAGE = `(() => {
                     if (!a) return;
                     add('acc~' + ch + '~' + c.id, wrap('<g transform="translate(' + a[0] + ' ' + a[1] + ') rotate(' + a[3] + ') scale(' + a[2] + ')">' + c.draw() + '</g>'));
                 });
+                // el accesorio solo, centrado en su ranura, para el ícono del vestidor y del pase (cosmeticIcon de render.js)
+                const [iy, isc] = { head: [64, 1.6], face: [40, 2.2], neck: [38, 2.1] }[c.slot];
+                add('accicon~' + c.id, wrap('<g transform="translate(50 ' + iy + ') scale(' + isc + ')">' + c.draw() + '</g>'));
                 accs.push(c.id);
             } else if (c.type === 'pet') {
                 add('pet~' + c.id, wrap('<g transform="translate(13 86) scale(.78)">' + c.draw() + '</g>'));

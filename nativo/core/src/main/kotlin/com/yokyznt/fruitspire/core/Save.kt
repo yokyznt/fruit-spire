@@ -66,7 +66,11 @@ private class RunSave(
 )
 
 @Serializable
-private class ProgressSave(val unlocked: Map<String, Int> = emptyMap(), val discovered: List<String> = emptyList())
+private class ProgressSave(
+    val unlocked: Map<String, Int> = emptyMap(), val discovered: List<String> = emptyList(),
+    val passXp: Int = 0, val passClaimed: List<Int> = emptyList(),
+    val owned: List<String> = emptyList(), val equipped: Map<String, Map<String, String?>> = emptyMap()
+)
 
 object Save {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -191,7 +195,13 @@ object Save {
     }
 
     fun encodeProgress(p: Progress): String =
-        json.encodeToString(ProgressSave.serializer(), ProgressSave(p.unlocked.toMap(), p.discovered.toList()))
+        json.encodeToString(
+            ProgressSave.serializer(),
+            ProgressSave(
+                p.unlocked.toMap(), p.discovered.toList(), p.passXp, p.passClaimed.toList(), p.owned.toList(),
+                p.equipped.toSortedMap().mapValues { (_, slots) -> slots.toSortedMap() }
+            )
+        )
 
     fun decodeProgress(text: String?): Progress {
         val out = Progress()
@@ -200,6 +210,16 @@ object Save {
             val d = json.decodeFromString(ProgressSave.serializer(), text)
             d.unlocked.forEach { (k, v) -> out.unlocked[k] = min(World.difficulties.size - 1, v) }
             out.discovered.addAll(d.discovered)
+            out.passXp = maxOf(0, d.passXp)
+            d.passClaimed.filter { it in 1..Pass.rewards.size }.forEach { out.passClaimed.add(it) }
+            d.owned.filter { Cosmetics.get(it) != null }.forEach { out.owned.add(it) }
+            val slots = setOf("skin", "head", "face", "neck", "pet")
+            d.equipped.forEach { (char, worn) ->
+                if (World.character(char) == null) return@forEach
+                worn.forEach { (slot, id) ->
+                    if (slot in slots && (id == null || Cosmetics.get(id) != null)) out.equipped.getOrPut(char) { HashMap() }[slot] = id
+                }
+            }
         } catch (e: Exception) { /* dañado: se empieza de cero */ }
         return out
     }

@@ -513,7 +513,7 @@ private fun PlayerToken(charId: String, target: Pair<Int, Int>, moving: Boolean)
                 scaleX = 1f + idle * .04f
                 scaleY = 1f - idle * .05f
             }
-        ) { Sprite(charId, 86.dp) }
+        ) { FruitSprite(charId, 86.dp) }
     }
 }
 

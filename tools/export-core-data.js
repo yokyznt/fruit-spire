@@ -11,7 +11,7 @@ const OUT = path.join(root, 'nativo/core/src/main/kotlin/com/yokyznt/fruitspire/
 const files = [
     'js/data/statuses.js', 'js/data/seeds.js', 'js/data/sprouts.js', 'js/data/cards.js', 'js/data/cards_characters.js', 'js/data/starter.js',
     'js/data/enemies.js', 'js/data/enemies_extra.js', 'js/data/enemies_castles.js', 'js/data/castles.js', 'js/data/enemies_more.js',
-    'js/data/relics.js', 'js/data/relics_indie.js', 'js/data/characters.js', 'js/data/difficulty.js'
+    'js/data/relics.js', 'js/data/relics_indie.js', 'js/data/characters.js', 'js/data/difficulty.js', 'js/data/cosmetics.js'
 ];
 files.forEach((f) => require(path.join(root, f)));
 
@@ -121,5 +121,11 @@ write('GenWorld.kt', HEAD() +
     `val GEN_FLOOR_SCALING: List<Pair<Double, Int>> = listOf(${window.FLOOR_SCALING.map((s) => `${dbl(s.hpMult)} to ${s.dmgBonus}`).join(', ')})\n` +
     `val GEN_STARTER_BASE: List<String> = ${klist(window.STARTER_BASE)}\n` +
     `val GEN_STARTER_SIGNATURE: Map<String, List<String>> = mapOf(${Object.keys(window.STARTER_SIGNATURE).map((k) => `${ks(k)} to ${klist(window.STARTER_SIGNATURE[k])}`).join(', ')})\n`);
+
+// ---------- vestidor: colores, accesorios y mascotitas (los dibujos y los efectos de las mascotas van aparte) ----------
+write('GenCosmetics.kt', HEAD() + `val GEN_COSMETICS: List<CosmeticDef> = listOf(\n${window.COSMETICS.map((c) => '    ' + `CosmeticDef(${named([
+    ['id', ks(c.id)], ['type', ks(c.type)], ['name', ks(c.name)], ['char', c.char && ks(c.char)], ['slot', c.slot && ks(c.slot)], ['bonus', c.bonus && ks(c.bonus)],
+    ['reqBossAct', c.req && c.req.bossAct || null], ['reqWin', c.req && c.req.win && ks(c.req.win)]
+])})`).join(',\n')}\n)\n`);
 
 console.log(`estados ${Object.keys(window.STATUS_DB).length}, cartas ${Object.keys(window.CARD_DEFS).length}, objetos ${Object.keys(window.RELIC_DB).length}, semillas ${Object.keys(window.SEED_DB).length}, enemigos ${Object.keys(window.ENEMY_DB).length}, temas ${Object.keys(window.FLOOR_THEMES).length}`);

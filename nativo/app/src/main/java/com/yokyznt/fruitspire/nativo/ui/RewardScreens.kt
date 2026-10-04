@@ -116,12 +116,49 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
     }
 }
 
+/** Aviso de la experiencia que dio el último combate al Pase de Batalla (`passGainBox` del juego web). */
+@Composable
+fun PassGainBox(run: Run) {
+    val g = run.passGain ?: return
+    if (g.xp <= 0) return
+    val level = com.yokyznt.fruitspire.core.Pass.state(run.progress).level
+    val up = if (g.levels > 0) "  ¡subiste ${g.levels} nivel${if (g.levels > 1) "es" else ""}!" else ""
+    Box(Modifier.stickerCard(16.dp, fill = Ink.bananaSoft).padding(horizontal = 16.dp, vertical = 4.dp)) {
+        BasicText("⭐ +${g.xp} XP del Pase de Batalla · Nivel $level$up", style = Fonts.body(16f, FontWeight.Medium))
+    }
+}
+
+/** Aviso de mascotitas que se acaban de desbloquear, con «Llevarla» (`petUnlockBox` del juego web). */
+@Composable
+fun PetUnlockBox(run: Run, onWear: (String) -> Unit) {
+    run.newPets.forEach { c ->
+        val on = run.progress.equippedFor(c.char ?: "").pet == c.id
+        Row(
+            Modifier.stickerCard(18.dp, fill = Ink.mintSoft).padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CosmeticIcon(c, 56.dp)
+            Column {
+                BasicText("¡Mascotita desbloqueada!", style = Fonts.hand(23f))
+                BasicText("${c.name}: ${c.bonus}", style = Fonts.body(14.5f, color = Ink.inkSoft))
+            }
+            if (on) BasicText("¡Ya te acompaña!", style = Fonts.hand(21f))
+            else StickerButton("Llevarla", { onWear(c.id) }, color = Ink.mint, fontSize = 17f)
+        }
+    }
+}
+
 /** Recompensa de un combate: premios por recoger y una carta para elegir. */
 @Composable
-fun RewardScreen(run: Run, onCollect: (Int) -> Unit, onDrop: (Int) -> Unit, onPickCard: (String) -> Unit, onContinue: () -> Unit) {
+fun RewardScreen(
+    run: Run, onCollect: (Int) -> Unit, onDrop: (Int) -> Unit, onPickCard: (String) -> Unit, onContinue: () -> Unit,
+    onWearPet: (String) -> Unit = {}
+) {
     val title = when (run.combatKind) { "boss" -> "¡Jefe derrotado!"; "elite" -> "¡Élite derrotada!"; else -> "¡Victoria!" }
     val full = com.yokyznt.fruitspire.core.Rewards.seedsFull(run.player)
     PaperScreen(title) {
+        PetUnlockBox(run, onWearPet)
+        PassGainBox(run)
         Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Bottom) {
             run.loot.forEachIndexed { i, it -> if (!it.dropped) LootItemView(it, i, full, { onCollect(i) }, { onDrop(i) }) }
         }
@@ -163,14 +200,15 @@ fun BossRelicScreen(run: Run, onPick: (String) -> Unit, onSkip: () -> Unit) {
 
 @Composable
 fun GameOverScreen(run: Run, onMenu: () -> Unit) {
-    PaperScreen("Game over…", art = { Sprite(run.player.characterId, 110.dp, mood = "hurt", hurt = 3) }) {
+    PaperScreen("Game over…", art = { FruitSprite(run.player.characterId, 110.dp, mood = "hurt", hurt = 3) }) {
         BasicText("Caíste en el castillo ${run.player.act}, piso ${run.player.floor}.", style = Fonts.body(19f, color = Ink.inkSoft))
+        PassGainBox(run)
         StickerButton("Volver al menú", onMenu, fontSize = 21f)
     }
 }
 
 @Composable
-fun VictoryScreen(run: Run, onMenu: () -> Unit) {
+fun VictoryScreen(run: Run, onMenu: () -> Unit, onWearPet: (String) -> Unit = {}) {
     val p = run.player
     val boss = Enemies.get(run.lastBossId ?: "")?.name ?: run.boss.name
     PaperScreen("¡Derrotaste a $boss!", art = {
@@ -182,6 +220,8 @@ fun VictoryScreen(run: Run, onMenu: () -> Unit) {
     }) {
         BasicText(buildAnnotatedString { append("¡Liberaste al "); withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("Rey Fruta") }; append(" y a todas las frutas!") }, style = Fonts.body(20f, color = Ink.inkSoft))
         if (run.unlockMsg.isNotEmpty()) BasicText("🔓 ${run.unlockMsg}", style = Fonts.hand(24f))
+        PetUnlockBox(run, onWearPet)
+        PassGainBox(run)
         GameText("Grado: ${run.difficulty.name} · ${p.deck.size} cartas · ${p.relics.size} objetos · ${p.hp}/${p.maxHp} ❤️", Fonts.hand(23f))
         StickerButton("Volver al menú", onMenu, fontSize = 21f)
     }

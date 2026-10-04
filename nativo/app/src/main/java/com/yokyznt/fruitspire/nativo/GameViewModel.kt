@@ -8,6 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yokyznt.fruitspire.core.BuyResult
+import com.yokyznt.fruitspire.core.Cosmetics
+import com.yokyznt.fruitspire.core.Pass
 import com.yokyznt.fruitspire.core.PendingCombat
 import com.yokyznt.fruitspire.core.Pos
 import com.yokyznt.fruitspire.core.Progress
@@ -25,7 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Pantalla de más arriba de la app: menú, elegir fruta o una partida en curso. */
-enum class AppScreen { MENU, CHARACTER_SELECT, RUN }
+enum class AppScreen { MENU, CHARACTER_SELECT, RUN, PASS, WARDROBE }
 
 /** La transición «¡A pelear!» antes de cada combate. */
 class IntroUi(val title: String, val names: String, val sprites: List<String>, val kind: String, val act: Int)
@@ -132,9 +134,56 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return
         if (r.isOver) { store.clearRun(); canContinue = false; persistProgress(); return }
         if (Save.shouldSave(r)) { store.writeRun(Save.encode(r)); canContinue = true }
+        if (progress.dirty) persistProgress() // experiencia del pase, mascotitas nuevas…
     }
 
-    private fun persistProgress() { store.writeProgress(Save.encodeProgress(progress)) }
+    private fun persistProgress() {
+        store.writeProgress(Save.encodeProgress(progress))
+        progress.dirty = false
+    }
+
+    // ---------- pase de batalla y vestidor ----------
+    /** Fruta que se está viendo en el vestidor. */
+    var wardrobeChar by mutableStateOf("manzana")
+        private set
+
+    fun openPass() { screen = AppScreen.PASS }
+
+    fun openWardrobe() {
+        wardrobeChar = run?.player?.characterId ?: selectedChar
+        screen = AppScreen.WARDROBE
+    }
+
+    fun claimPassLevel(level: Int) {
+        val c = Pass.claim(progress, level) ?: return
+        persistProgress(); bump()
+        toast("¡${c.name} desbloqueado!")
+    }
+
+    fun claimAllPass() {
+        val got = Pass.claimAll(progress)
+        if (got.isEmpty()) return
+        persistProgress(); bump()
+        toast("¡${got.size} premio${if (got.size > 1) "s" else ""} reclamado${if (got.size > 1) "s" else ""}!")
+    }
+
+    fun wardrobeSelect(charId: String) { wardrobeChar = charId; bump() }
+
+    /** Tocar algo en el vestidor: ponérselo (o quitárselo); si aún no se tiene, avisa cómo conseguirlo. */
+    fun wardrobeEquip(id: String) {
+        val c = Cosmetics.get(id) ?: return
+        if (!progress.isOwned(id)) {
+            toast(if (c.type == "pet") "Bloqueada. Para desbloquearla: ${Cosmetics.petHowText(c)}" else "Aún no lo tienes. Se gana subiendo de nivel en el Pase de Batalla.")
+            return
+        }
+        progress.equip(wardrobeChar, id)
+        persistProgress(); bump()
+    }
+
+    fun wardrobeClear(slot: String) { progress.unequipSlot(wardrobeChar, slot); persistProgress(); bump() }
+
+    /** «Llevarla» en el aviso de una mascotita nueva. */
+    fun wearPet(id: String) { run?.wearPet(id); persistProgress(); bump() }
 
     // ---------- portada y mapa ----------
     fun beginFloor() {
