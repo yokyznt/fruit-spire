@@ -41,7 +41,15 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
   `CosmeticsTest` (15 pruebas, incluidos los efectos de las mascotas en combate).
 - Pantallas 4B: `ui/Dress.kt` (`FruitSprite` viste a la fruta con `LocalProgress`; `CosmeticIcon`), `PassScreen.kt`, `WardrobeScreen.kt`; el menú muestra los premios por reclamar y los avisos de XP y de
   mascotita nueva salen en premios, derrota y victoria. Los íconos sueltos de accesorios son dibujos exportados `accicon~<id>` (tools/export-sprites.js). `MetaScreenshotTest` (7 pruebas).
-- Pendiente de portar: bestiario, colección y notas (4C).
+- Colección, bestiario y notas, **solo el núcleo** (etapa 4C, parte 1): `Bestiary.kt` (catálogo por castillo y piso con dónde sale cada enemigo y su nivel, `describeMove` y `traits` en texto;
+  `gameText` ya resalta números y palabras clave), `Album.kt` (cartas por fruta/neutrales/maldiciones, objetos y semillas por rareza en orden alfabético, `refOf` = guiño a otros juegos),
+  `GenNotes.kt` (13 notas de la versión, `GAME_VERSION`, datos del creador y 27 guiños; lo genera `tools/export-core-data.js` desde js/notes.js y js/data/refs.js). `Progress` guarda objetos y semillas
+  encontrados (`Run.syncFound()` anota lo que llevas; falta llamarla desde `GameViewModel.persist()`), el bestiario (`bestiary`: id → derrotas; entrar = visto) y `notesSeen` (`notesAreNew`/`openNotes`).
+  `Run.startCombat` marca vistos a los enemigos y `finishCombat` suma las derrotas. `AlbumTest` (10 pruebas).
+- **Falta de la 4C (pantallas):** `AppScreen.COLLECTION` y `AppScreen.NOTES` en `GameViewModel`, `ui/CollectionScreen.kt` (pestañas Cartas · Objetos · Semillas · Bestiario como en js/collection.js:
+  cuadrículas con siluetas «???» para lo no encontrado y ficha de detalle; el bestiario con pestañas Castillo 1/2/3 e Invocados y la ficha con vida, dónde sale, rasgos y jugadas), `ui/NotesScreen.kt`
+  (notas, tarjeta del creador que abre `CREATOR_URL` con `LocalUriHandler`; los botones «Ver la historia/el final otra vez» llegan en la etapa 5), conectar `onCollection`/`onNotes` en
+  `MainActivity` (hoy `soon`) y el puntito de notas nuevas en `MenuScreen`. Llamar `run.syncFound()` en `GameViewModel.persist()`. Pruebas de pantalla: copiar el patrón de `MetaScreenshotTest`.
 - Para cuidar que las reglas sean idénticas: comparación cruzada con semilla (`node tools/crosscheck-combat.js 3000 1000` genera las trazas de JS en `core/build/`, y `gradlew :core:test` exige que Kotlin salga idéntico).
 
 ## Pantallas (app/)
@@ -83,6 +91,6 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
 - [ ] 4. Minijuegos, pase de batalla, vestidor, colección, bestiario, notas.
       **Hecho (4A):** las cinco mesas de juego (dados, póker, ajedrez, tragamonedas, ruleta), desde las casillas del mapa y desde los eventos de misterio.
       **Hecho (4B):** pase de batalla, vestidor (con la fruta vestida en el mapa, el combate, la barra de arriba y la selección) y mascotitas con sus retos y efectos.
-      **Falta (4C):** colección (cartas, objetos, semillas), bestiario y notas.
+      **Hecho (4C, núcleo):** bestiario, álbum, guiños y notas (ver arriba). **Falta (4C):** las pantallas de colección, bestiario y notas y conectarlas al menú.
 - [ ] 5. Tutorial, historia y final.
 - [ ] 6. Pulido, compilación de lanzamiento y relevo de la app web.
