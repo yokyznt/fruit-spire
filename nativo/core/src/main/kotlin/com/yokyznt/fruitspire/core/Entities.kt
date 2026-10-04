@@ -98,7 +98,11 @@ class Player : Entity("Manzano", 70, 70) {
     /** "Compost": cartas consumidas en este combate. */
     var exhaustPile = ArrayList<String>()
     var permanentStrength = 0
+    /** Castillo (1-3) y piso (1-3) en los que está. */
     var act = 1
+    var floor = 1
+    /** Temas de los 9 pisos de esta partida: un renglón por castillo (ver data/Plan.kt). */
+    var plan: List<List<String>> = emptyList()
     var difficulty = "madura"
     /** Cuántas cartas se han quitado en tiendas (sube el precio). */
     var removals = 0

@@ -47,6 +47,11 @@ class MapData(
     var rows = 0
     var variant = "classic"
     var seed = 0
+    // lo que el flujo de partida le pega al mapa de un piso (no lo usa el generador)
+    var themeId = ""
+    var bossId = ""
+    /** Resultado del dado del destino antes del jefe (null = aún no se tira). */
+    var fate: Int? = null
 }
 
 object MapGen {
