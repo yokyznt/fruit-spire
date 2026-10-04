@@ -90,6 +90,17 @@ const IN_PAGE = `(() => {
         Object.values(window.SEED_DB || {}).forEach((s) => { add('seed~' + s.id, svgOf(seedArt(s, 'lg'))); seeds.push(s.id); });
         // el engrane de Ajustes (js/settings.js) no está en SPRITES
         if (window.gearArt) { add('ui_gear', svgOf(window.gearArt('md'))); manifest.ui_gear = { moods: [], hurts: [], skins: [] }; }
+        // piezas del ajedrez de las mesas de juego (js/minigames.js): mgp_<pieza><equipo> con carita (tablero)
+        // y mgp_<pieza><equipo>_s sin ella (bandejas de piezas comidas). Equipo 0 = tuyas, 1 = del rival.
+        if (window.MG && window.MG.fruitPiece) {
+            [0, 1].forEach((team) => ['P', 'R', 'N', 'B', 'Q', 'K'].forEach((t) => {
+                const mood = team === 0 ? 'happy' : 'angry';
+                add('mgp_' + t + team, wrap(window.MG.fruitPiece(t, team, mood, true)));
+                add('mgp_' + t + team + '_s', wrap(window.MG.fruitPiece(t, team, mood, false)));
+                manifest['mgp_' + t + team] = { moods: [], hurts: [], skins: [] };
+                manifest['mgp_' + t + team + '_s'] = { moods: [], hurts: [], skins: [] };
+            }));
+        }
         window.__jobs = jobs;
         return { count: jobs.length, manifest, accs, pets, seeds };
     };

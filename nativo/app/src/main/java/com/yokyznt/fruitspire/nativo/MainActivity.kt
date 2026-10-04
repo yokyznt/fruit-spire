@@ -55,7 +55,7 @@ import com.yokyznt.fruitspire.nativo.ui.InventoryModal
 import com.yokyznt.fruitspire.nativo.ui.MapScreen
 import com.yokyznt.fruitspire.nativo.ui.MenuScreen
 import com.yokyznt.fruitspire.nativo.ui.NodeResultScreen
-import com.yokyznt.fruitspire.nativo.ui.NodeStubScreen
+import com.yokyznt.fruitspire.nativo.ui.TableScreen
 import com.yokyznt.fruitspire.nativo.ui.OutlinedText
 import com.yokyznt.fruitspire.nativo.ui.RestScreen
 import com.yokyznt.fruitspire.nativo.ui.RewardScreen
@@ -170,7 +170,7 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
             RunScreen.WELL -> WellScreen(run, vm::tossWell, vm::collectLoot, vm::dropLoot, vm::leaveNode)
             RunScreen.DUNGEON -> DungeonScreen(run, vm::enterDungeonCell)
             RunScreen.FATE -> FateScreen(run, vm.fateShown, vm.fateRolling, vm::rollFate, vm::fateFight)
-            RunScreen.NODE_STUB -> NodeStubScreen(run, vm::leaveStub)
+            RunScreen.MINIGAME -> vm.tableController()?.let { TableScreen(run, it, vm.tick, vm::collectLoot, vm::dropLoot, vm::leaveNode) }
             RunScreen.GAME_OVER -> GameOverScreen(run, vm::toMenu)
             RunScreen.VICTORY -> VictoryScreen(run, vm::toMenu)
         }

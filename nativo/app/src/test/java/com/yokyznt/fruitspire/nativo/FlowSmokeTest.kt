@@ -154,7 +154,7 @@ class FlowSmokeTest {
                     r.rewardCards.firstOrNull()?.let { vm.pickRewardCard(it) }
                     if (r.screen == RunScreen.REWARD && r.canFinishReward()) { vm.continueReward(); fights++ }
                 }
-                RunScreen.NODE_STUB -> vm.leaveStub()
+                RunScreen.MINIGAME -> vm.leaveNode() // mesa sin apostar: se sale
                 RunScreen.REST -> if (vm.flash == null) {
                     if (r.canRest()) vm.restHeal() else vm.leaveNode()
                 }

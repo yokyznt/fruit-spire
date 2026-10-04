@@ -610,6 +610,7 @@
         }
         return base + body;
     }
+    MG.fruitPiece = fruitPiece; // lo usa tools/export-sprites.js para sacar las piezas del juego nativo
     function pieceArt(p, small) {
         if (!window.SPRITE_KIT) return GLYPH[p.t];
         return `<span class="art"><svg class="sprite" viewBox="0 0 100 100">${fruitPiece(p.t, p.c, p.c === 0 ? 'happy' : 'angry', !small)}</svg></span>`;

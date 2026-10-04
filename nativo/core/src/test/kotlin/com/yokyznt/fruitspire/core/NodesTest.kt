@@ -306,11 +306,11 @@ class NodesTest {
     }
 
     @Test
-    fun othersStillWaitForTheNextStage() {
+    fun gameTilesOpenATable() {
         val run = newRun(13)
         enter(run, NodeType.GAME)
-        assertEquals(RunScreen.NODE_STUB, run.screen)
-        run.leaveStub()
+        assertEquals(RunScreen.MINIGAME, run.screen)
+        assertTrue(run.leaveNode())
         assertEquals(RunScreen.MAP, run.screen)
         Rng.unseed()
     }

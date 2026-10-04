@@ -73,7 +73,7 @@ class EventsTest {
             } else {
                 when (run.screen) {
                     RunScreen.EVENT_RESULT -> { results++; assertTrue(run.nodeMessage.isNotEmpty(), label) }
-                    RunScreen.WELL, RunScreen.DUNGEON, RunScreen.NODE_STUB -> {}
+                    RunScreen.WELL, RunScreen.DUNGEON, RunScreen.MINIGAME -> {}
                     else -> fail("$label terminó en ${run.screen}")
                 }
             }
@@ -197,8 +197,8 @@ class EventsTest {
         val r3 = newRun(12)
         show(r3, "mesa_dados")
         assertNull(r3.resolveEventOption(0))
-        assertEquals(RunScreen.NODE_STUB, r3.screen)
-        assertEquals("dice", r3.gameId)
+        assertEquals(RunScreen.MINIGAME, r3.screen)
+        assertEquals("dice", r3.table!!.kind)
         Rng.unseed()
     }
 

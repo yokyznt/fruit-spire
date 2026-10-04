@@ -161,17 +161,6 @@ fun BossRelicScreen(run: Run, onPick: (String) -> Unit, onSkip: () -> Unit) {
     }
 }
 
-/** Casillas cuyo contenido llega en la siguiente etapa del port (tienda, campamento, tesoro, misterio…). */
-@Composable
-fun NodeStubScreen(run: Run, onLeave: () -> Unit) {
-    val info = NodeInfo.of(run.stubNode ?: "", run.player.act)
-    PaperScreen(info?.label ?: "Casilla", art = { Sprite(info?.sprite ?: "node_mystery", 110.dp) }) {
-        BasicText(info?.desc ?: "", style = Fonts.body(18f, color = Ink.inkSoft))
-        BasicText("Esta casilla llega en la siguiente etapa del juego nativo.", style = Fonts.hand(24f).copy(textAlign = TextAlign.Center))
-        StickerButton("Seguir", onLeave, color = Ink.mint, fontSize = 21f)
-    }
-}
-
 @Composable
 fun GameOverScreen(run: Run, onMenu: () -> Unit) {
     PaperScreen("Game over…", art = { Sprite(run.player.characterId, 110.dp, mood = "hurt", hurt = 3) }) {

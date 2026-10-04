@@ -58,7 +58,7 @@ class RunTest {
         when (run.screen) {
             RunScreen.ACT_INTRO -> run.beginFloor()
             RunScreen.MAP -> walkOneStep(run)
-            RunScreen.NODE_STUB -> run.leaveStub()
+            RunScreen.MINIGAME -> { run.table!!.start(0); assertTrue(run.leaveNode()) }
             RunScreen.REST -> {
                 // descansa si le falta vida; si no, madura la primera carta que se pueda (o se va)
                 val i = run.player.deck.indexOfFirst { Cards.get(it)?.canUpgrade == true }
@@ -177,10 +177,12 @@ class RunTest {
             // para llegar hasta el final sin morir: mucha vida y mucha fuerza
             run.player.maxHp = 5000; run.player.hp = 5000; run.player.permanentStrength = 60
             val floorsSeen = HashSet<String>()
+            val cursesSeen = HashSet<String>()
             val log = ArrayList<String>()
             var steps = 0
             while (!run.isOver && steps < 20000) {
                 floorsSeen.add("${run.player.act}-${run.player.floor}")
+                run.actCurse?.let { cursesSeen.add(it) }
                 step(run, log)
                 checkInvariants(run)
                 steps++
@@ -191,8 +193,9 @@ class RunTest {
             assertTrue(progress.isUnlocked(run.player.characterId, "pasada"))
             assertFalse(Save.shouldSave(run), "una partida terminada no se guarda")
             assertNotNull(run.lastBossId)
-            // se colaron las dos maldiciones de castillo
-            assertTrue(run.player.deck.contains("dado_trucado") && run.player.deck.contains("gusano_interior"))
+            // se colaron las dos maldiciones de castillo (un evento o el pozo pueden quitarlas después, así que se mira que entraron)
+            assertEquals(setOf("dado_trucado", "gusano_interior"), cursesSeen, "semilla $seed")
+            assertTrue(progress.discovered.containsAll(cursesSeen), "semilla $seed: las maldiciones se descubren al entrar")
         }
         Rng.unseed()
     }

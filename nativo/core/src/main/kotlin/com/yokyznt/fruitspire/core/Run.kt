@@ -45,8 +45,8 @@ enum class RunScreen {
     DUNGEON,
     /** Dado del destino antes del jefe. */
     FATE,
-    /** Casilla cuyo contenido llega en la etapa 4 (mesas de juego). */
-    NODE_STUB,
+    /** Mesa de juego (dados, póker, ajedrez, tragamonedas o ruleta). */
+    MINIGAME,
     GAME_OVER,
     VICTORY
 }
@@ -74,6 +74,8 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     var combatKind = "enemy"
     /** Experiencia del pase de batalla del último combate (la usará el pase en la etapa 4). */
     var lastCombatXp = 0
+    /** Experiencia del pase que se gana fuera de combate (victorias en las mesas de juego); el pase la sumará. */
+    var extraPassXp = 0
 
     // ---------- recompensa ----------
     val loot = ArrayList<LootItem>()
@@ -88,8 +90,6 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     var actCurse: String? = null
     var unlockMsg = ""
     var lastBossId: String? = null
-    /** Tipo de casilla que se está mostrando en NODE_STUB. */
-    var stubNode: String? = null
 
     // ---------- campamento, tienda, tesoro y cofre ----------
     /** Selector de cartas abierto en el campamento o la tienda: upgrade | remove (null = ninguno). */
@@ -166,7 +166,7 @@ class Run(val player: Player, val progress: Progress = Progress()) {
 
     /**
      * La ficha llegó a la casilla (x, y). Devuelve el combate por empezar si hay uno; si no, la pantalla
-     * pasa a la que toque (hoy: [RunScreen.NODE_STUB]).
+     * pasa a la que toque (campamento, tienda, tesoro, misterio, mesa de juego…).
      */
     fun arrive(x: Int, y: Int): PendingCombat? {
         if (!isReachable(x, y)) return null
@@ -193,21 +193,37 @@ class Run(val player: Player, val progress: Progress = Progress()) {
             NodeType.TREASURE -> openTreasure()
             NodeType.KEY -> { player.hasGoldenKey = true; screen = RunScreen.KEY_FOUND }
             NodeType.VAULT -> openVault()
-            else -> { stubNode = type; screen = RunScreen.NODE_STUB }
+            NodeType.GAME -> openGameTable()
+            else -> screen = RunScreen.MAP // lo que ya no se genera (regalo de partidas viejas)
         }
         return null
     }
 
-    /** Sigue de largo una casilla que aún no tiene contenido. */
-    fun leaveStub() { stubNode = null; screen = RunScreen.MAP }
+    // ---------- mesas de juego ----------
+    /** La mesa en curso (solo con [RunScreen.MINIGAME]). */
+    var table: Table? = null
+
+    /** Abre la mesa [kind] ("dice", "poker", "chess", "slots" o "roulette"); si no existe, la de dados. */
+    fun openMinigame(kind: String) {
+        table = Table(if (Casino.KINDS.containsKey(kind)) kind else "dice", this)
+        loot.clear()
+        screen = RunScreen.MINIGAME
+    }
+
+    /** La mesa de una casilla de juego: 1 de cada 3 es una máquina; si no, la del tema del piso (o una al azar). */
+    fun openGameTable() {
+        val machine = if (Rng.next() < 0.34) Rng.pick(listOf("slots", "roulette")) else null
+        openMinigame(machine ?: theme.gameKind ?: Rng.pick(listOf("dice", "poker", "chess")))
+    }
 
     /**
-     * Sale de una casilla con contenido (campamento, tienda, tesoro, llave, cofre) y vuelve al mapa.
+     * Sale de una casilla con contenido (campamento, tienda, tesoro, llave, cofre, mesa de juego) y vuelve al mapa.
      * Falso si todavía queda algún premio por recoger.
      */
     fun leaveNode(): Boolean {
         if (lootPending()) return false
         loot.clear()
+        table = null
         pickerMode = null
         shopStock = null
         nodeMessage = ""
@@ -435,8 +451,6 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     var deckChanges: List<DeckChange> = emptyList()
     /** Aviso de una trampa (el cofre era un mímico). */
     var trapMessage: String? = null
-    /** Mesa de juego elegida en un evento ("dice", "poker", "chess", "slots", "roulette"). */
-    var gameId: String? = null
 
     private fun openMystery() {
         val themeId = map.themeId
@@ -472,9 +486,7 @@ class Run(val player: Player, val progress: Progress = Progress()) {
             "dungeon" -> { currentEvent = null; dungeon = Dungeon.create(); screen = RunScreen.DUNGEON; return null }
             else -> { // game:<mesa>
                 currentEvent = null
-                gameId = special.removePrefix("game:")
-                stubNode = NodeType.GAME
-                screen = RunScreen.NODE_STUB
+                openMinigame(special.removePrefix("game:"))
                 return null
             }
         }

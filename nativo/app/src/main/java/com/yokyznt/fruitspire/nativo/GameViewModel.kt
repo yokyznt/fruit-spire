@@ -20,6 +20,7 @@ import com.yokyznt.fruitspire.core.data.World
 import com.yokyznt.fruitspire.nativo.ui.CombatController
 import com.yokyznt.fruitspire.nativo.ui.MapPan
 import com.yokyznt.fruitspire.nativo.ui.PickFlash
+import com.yokyznt.fruitspire.nativo.ui.TableController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -156,10 +157,15 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun leaveStub() {
-        run?.leaveStub()
-        persist()
-        bump()
+    // ---------- mesas de juego ----------
+    private var tableCtl: TableController? = null
+
+    /** El controlador de la mesa en curso (se crea al abrirla, y se cambia cuando se abre otra). */
+    fun tableController(): TableController? {
+        val r = run ?: return null
+        val t = r.table ?: return null
+        tableCtl?.let { if (it.table === t && it.run === r) return it }
+        return TableController(r, t, uiScope ?: viewModelScope, { persist() }, { bump() }, { toast(it) }).also { tableCtl = it }
     }
 
     // ---------- combate ----------

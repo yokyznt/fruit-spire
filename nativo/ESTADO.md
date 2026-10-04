@@ -28,7 +28,13 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
   `openBossRelics`, `startNextFloor` (cura, maldición de castillo). `Plan.kt` (temas de los 9 pisos, tamaños, jefe, encuentros), `Rewards.kt` (sorteos),
   `Progress.kt` (grados desbloqueados, cartas vistas), `Save.kt` (JSON de la partida y del progreso; no se guarda en combate).
   `RunTest` juega partidas completas con un bot (9 pisos hasta la victoria con 12 semillas, muertes en Desafiante, ida y vuelta del guardado).
-- Pendiente de portar: mascotas (`PetHooks` ya es el enganche), experiencia del pase (`Run.lastCombatXp` ya la guarda), bestiario.
+- Mesas de juego (etapa 4A): `Casino.kt` (reglas puras de `MG` de js/minigames.js: manos de póker y la casa que cambia cartas, ajedrez 5×6 con su rival negamax,
+  pagos de tragamonedas y ruleta; `Casino.KINDS` trae nombre, dibujo, reglas y crupier de cada mesa) y `Table.kt` (la mesa en curso: fases `intro → play → house → result`,
+  apuesta, dados, póker, tragamonedas, ruleta y ajedrez; el oro y el objeto salen como premios por recoger con `Run.withLootCapture`). El núcleo decide el resultado al
+  instante y la interfaz solo espera lo que se ve (por eso `slotsDraw`/`slotsSettle`, `rouletteSpin`/`rouletteSettle`, `houseRoll`/`diceSettle` van en dos pasos).
+  `Run.openMinigame/openGameTable` (1 de cada 3 mesas es máquina; si no, la del tema del piso), `RunScreen.MINIGAME`, `Run.table`. No se reanuda al continuar
+  (como en la web): la apuesta ya está pagada y se vuelve al mapa. `CasinoTest` (32 pruebas, incluidas partidas completas de ajedrez con un bot al azar).
+- Pendiente de portar: mascotas (`PetHooks` ya es el enganche), experiencia del pase (`Run.lastCombatXp` y `Run.extraPassXp` —15 por victoria en una mesa— solo viven en memoria), bestiario.
 - Para cuidar que las reglas sean idénticas: comparación cruzada con semilla (`node tools/crosscheck-combat.js 3000 1000` genera las trazas de JS en `core/build/`, y `gradlew :core:test` exige que Kotlin salga idéntico).
 
 ## Pantallas (app/)
@@ -37,9 +43,15 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
   `Hud.kt`, `CharacterSelect.kt`, `ActIntro.kt`, `MapScreen.kt`, `CombatController.kt` (modelos inmutables, poses de ataque = keyframes del CSS, tiempos de `js/fx.js`),
   `CombatScreen.kt`, `RewardScreens.kt`, `DeckModal.kt`.
 - Las animaciones del combate necesitan el reloj de cuadros de Compose: el controlador usa el scope de la composición (`vm.uiScope`), NO `viewModelScope`.
-- Pruebas: `gradlew :core:test` (21 pruebas con el motor idéntico a JS) y `gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`
-  (capturas en `app/build/capturas/`; `FlowSmokeTest` monta `GameRoot` y juega con las pantallas reales).
-- Sin hacer todavía: audio y vibración (etapa 1 pendiente), mochila/semillas en combate y tooltips de objetos (etapa 3), explicaciones de intención y estados salen al tocar.
+- Pruebas: `gradlew :core:test` (78 pruebas, con el motor idéntico a JS) y `gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`
+  (41 pruebas; capturas en `app/build/capturas/`; `FlowSmokeTest` monta `GameRoot` y juega con las pantallas reales; `TableScreenshotTest` captura cada mesa y prueba
+  toques y arrastres reales en el tablero).
+- Mesas de juego en pantalla: `ui/TableController.kt` (tiempos de las animaciones y toques; `busy` ignora toques) y `ui/TableScreens.kt` (tapete, crupier con globo, fichas,
+  dados y cartas dibujados con Canvas, rodillos, ruleta, tablero de ajedrez que se toca o se arrastra). Las piezas de ajedrez son dibujos exportados `mgp_<pieza><equipo>`
+  (con carita) y `mgp_<pieza><equipo>_s` (sin ella, para las bandejas); salen de `MG.fruitPiece` de js/minigames.js (se expuso solo para el exportador).
+- Cuidado: un `return@key` dentro del lambda de `key(...)` de Compose generó una clase inválida (`Illegal method name "<anonymous>"`) que compila pero revienta al cargarse;
+  `TableScreen` lo evita separando en otra función. Si una prueba de pantalla dice `ClassFormatError`, buscar un retorno anticipado dentro de un lambda inline composable.
+- Sin hacer todavía: audio y vibración (etapa 1 pendiente), tooltips de objetos, explicaciones de intención y estados salen al tocar.
 - Emulador: el controlador AEHD no estaba cargado el 2026-10-04 (`emulator -accel-check` decía que no está instalado); el teléfono tiene bloqueo seguro, así que
   las pruebas de pantalla se hicieron con Robolectric. APK: `./gradlew.bat :app:assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk` (ya instalado en el teléfono).
 
@@ -52,7 +64,6 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
       elegir fruta y grado, portada de piso, barra de arriba, mapa (arrastre, zoom de Ajustes, muros de cinta, ríos con puente, guarida, ficha que camina),
       «¡A pelear!», combate (mano en abanico: tocar selecciona, arrastrar juega; intenciones, estados, cáscara, efectos, turno enemigo, viñedo de la Uva,
       regla del piso, pilas), recompensas con premios por recoger, objeto de jefe, derrota/victoria, visor del mazo/pilas, guardar y continuar.
-      Las casillas que no son combate (tienda, campamento, tesoro, misterio, mesa de juegos, llave, cofre) muestran «llega en la siguiente etapa» y se siguen de largo.
       Se adelantó de la etapa 3 solo el objeto de jefe (el premio del jefe de castillo lo necesita).
 - [ ] 3. Tienda, campamento, tesoro, eventos, llave/cofre, pozo, reglas de piso (ya salen en combate), calabozo, dado del destino, mochila y semillas en combate, mazo.
       **Hecho (3A):** campamento (descansar / madurar / despegar), tienda (5 cartas con una en oferta, objetos, semillas, quitar carta con precio creciente),
@@ -62,7 +73,8 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
       **Hecho (3B):** mochila (`ui/InventoryModal.kt`; semillas usables en combate con `CombatController.useSeedFromBag/useSeedOn`, apuntar con un toque),
       30 eventos de misterio (`core/Events.kt`, `Run.resolveEventOption`), captura de premios (`Run.withLootCapture`, igual que `js/loot.js`), pozo de los deseos,
       calabozo 3×3 de la trampilla y dado del destino (`ui/EventScreens.kt`). El pozo y el calabozo se reanudan al continuar. `EventsTest` (19 pruebas).
-      Las mesas de juego (`NODE_STUB` + `Run.gameId`) llegan en la etapa 4.
 - [ ] 4. Minijuegos, pase de batalla, vestidor, colección, bestiario, notas.
+      **Hecho (4A):** las cinco mesas de juego (dados, póker, ajedrez, tragamonedas, ruleta), desde las casillas del mapa y desde los eventos de misterio.
+      **Falta:** pase de batalla (que sume `Run.lastCombatXp` y `Run.extraPassXp`), vestidor, colección, bestiario y notas.
 - [ ] 5. Tutorial, historia y final.
 - [ ] 6. Pulido, compilación de lanzamiento y relevo de la app web.
