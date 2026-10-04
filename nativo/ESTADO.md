@@ -59,7 +59,10 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
       tesoro, Llave Dorada y Cofre Sellado. `Run.kt` (`restHeal`, `restUpgrade`, `restRemove`, `buyShop*`, `shopRemoveCard`, `leaveNode`), `Shop.kt` (surtido y precios),
       `ui/NodeScreens.kt` (`RestScreen`, `DeckPickerScreen`, `ShopScreen`, `NodeResultScreen`), `NodesTest` (14 pruebas). Estas pantallas no se reanudan al continuar
       (igual que en la web): lo que quedó sin recoger se da solo al cargar (`Run.grantAllLoot`).
-      **Falta (3B):** misterio (eventos), mesa de juegos, pozo, calabozo, dado del destino, mochila (objetos y semillas usables en combate).
+      **Hecho (3B):** mochila (`ui/InventoryModal.kt`; semillas usables en combate con `CombatController.useSeedFromBag/useSeedOn`, apuntar con un toque),
+      30 eventos de misterio (`core/Events.kt`, `Run.resolveEventOption`), captura de premios (`Run.withLootCapture`, igual que `js/loot.js`), pozo de los deseos,
+      calabozo 3×3 de la trampilla y dado del destino (`ui/EventScreens.kt`). El pozo y el calabozo se reanudan al continuar. `EventsTest` (19 pruebas).
+      Las mesas de juego (`NODE_STUB` + `Run.gameId`) llegan en la etapa 4.
 - [ ] 4. Minijuegos, pase de batalla, vestidor, colección, bestiario, notas.
 - [ ] 5. Tutorial, historia y final.
 - [ ] 6. Pulido, compilación de lanzamiento y relevo de la app web.
