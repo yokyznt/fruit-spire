@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -125,6 +127,36 @@ object SpriteStore {
 
     const val FRAME_RATIO = FRAME
     const val PAD_PX = PAD
+}
+
+/** Grosor del borde de sticker (px de pantalla) para un dibujo de [sizeDp]: 2 px de diseño, 1 en los muy chicos. */
+private fun outlineFor(sizeDp: Float, density: Float, outline: Boolean): Int =
+    if (!outline) 0 else ((if (sizeDp <= 26f) 1f else 2f) * density).roundToInt().coerceAtLeast(1)
+
+/**
+ * Pinta un dibujo del juego directo en un [DrawScope] (sin crear un composable): sirve para el mapa, que lleva
+ * cientos de casillas. [topLeft] y [sizePx] son los de las 100 unidades del dibujo, en px de pantalla.
+ */
+fun DrawScope.drawSprite(id: String, topLeft: Offset, sizePx: Float, mood: String? = null, outline: Boolean = true, alpha: Float = 1f) {
+    val boxPx = sizePx.roundToInt().coerceAtLeast(1)
+    val image = SpriteStore.get(listOf(SpriteStore.fileName(id, mood)), boxPx, outlineFor(sizePx / density, density, outline)) ?: return
+    val frame = (boxPx * SpriteStore.FRAME_RATIO).roundToInt()
+    val shift = ((boxPx - frame) / 2f).roundToInt() - SpriteStore.PAD_PX
+    drawImage(
+        image, dstOffset = IntOffset(topLeft.x.roundToInt() + shift, topLeft.y.roundToInt() + shift),
+        dstSize = IntSize(image.width, image.height), alpha = alpha
+    )
+}
+
+/** Un dibujo que se va a necesitar pronto: [sizeDp] en px de diseño. */
+class SpriteRequest(val id: String, val sizeDp: Float, val mood: String? = null)
+
+/** Deja listos en la caché los dibujos de [requests] (llamar desde un hilo de fondo para no trabar la pantalla). */
+fun SpriteStore.preload(density: Float, requests: Collection<SpriteRequest>) {
+    for (r in requests) {
+        val boxPx = (r.sizeDp * density).roundToInt().coerceAtLeast(1)
+        get(listOf(fileName(r.id, r.mood)), boxPx, outlineFor(r.sizeDp, density, true))
+    }
 }
 
 /**
