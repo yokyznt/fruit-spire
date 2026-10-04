@@ -19,6 +19,7 @@ import com.yokyznt.fruitspire.core.RunScreen
 import com.yokyznt.fruitspire.core.Save
 import com.yokyznt.fruitspire.core.data.Enemies
 import com.yokyznt.fruitspire.core.data.World
+import com.yokyznt.fruitspire.nativo.ui.CollectionState
 import com.yokyznt.fruitspire.nativo.ui.CombatController
 import com.yokyznt.fruitspire.nativo.ui.MapPan
 import com.yokyznt.fruitspire.nativo.ui.PickFlash
@@ -27,7 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Pantalla de más arriba de la app: menú, elegir fruta o una partida en curso. */
-enum class AppScreen { MENU, CHARACTER_SELECT, RUN, PASS, WARDROBE }
+enum class AppScreen { MENU, CHARACTER_SELECT, RUN, PASS, WARDROBE, COLLECTION, NOTES }
 
 /** La transición «¡A pelear!» antes de cada combate. */
 class IntroUi(val title: String, val names: String, val sprites: List<String>, val kind: String, val act: Int)
@@ -132,6 +133,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- guardado ----------
     private fun persist() {
         val r = run ?: return
+        r.syncFound() // lo que llevas cuenta como encontrado para la Colección
         if (r.isOver) { store.clearRun(); canContinue = false; persistProgress(); return }
         if (Save.shouldSave(r)) { store.writeRun(Save.encode(r)); canContinue = true }
         if (progress.dirty) persistProgress() // experiencia del pase, mascotitas nuevas…
@@ -140,6 +142,27 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private fun persistProgress() {
         store.writeProgress(Save.encodeProgress(progress))
         progress.dirty = false
+    }
+
+    // ---------- colección y notas ----------
+    /** Lo que se mira en la Colección (pestaña, ficha elegida): sigue igual al volver. */
+    val collection = CollectionState()
+
+    fun openCollection() {
+        run?.syncFound()
+        if (collection.fresh) { // la primera vez, el bestiario abre en el castillo de tu partida
+            collection.fresh = false
+            collection.bestTab = (run?.player?.act ?: 1).coerceIn(1, 3)
+        }
+        if (progress.dirty) persistProgress()
+        screen = AppScreen.COLLECTION
+    }
+
+    /** Abrir las notas las marca como leídas (se quita el puntito del menú). */
+    fun openNotes() {
+        progress.openNotes()
+        persistProgress()
+        screen = AppScreen.NOTES
     }
 
     // ---------- pase de batalla y vestidor ----------

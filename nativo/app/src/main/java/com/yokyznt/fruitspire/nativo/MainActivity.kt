@@ -40,6 +40,7 @@ import com.yokyznt.fruitspire.core.RunScreen
 import com.yokyznt.fruitspire.nativo.ui.ActIntroScreen
 import com.yokyznt.fruitspire.nativo.ui.BossRelicScreen
 import com.yokyznt.fruitspire.nativo.ui.CharacterSelectScreen
+import com.yokyznt.fruitspire.nativo.ui.CollectionScreen
 import com.yokyznt.fruitspire.nativo.ui.CombatScreen
 import com.yokyznt.fruitspire.nativo.ui.DeckModal
 import com.yokyznt.fruitspire.nativo.ui.DesignCanvas
@@ -55,6 +56,7 @@ import com.yokyznt.fruitspire.nativo.ui.InventoryModal
 import com.yokyznt.fruitspire.nativo.ui.MapScreen
 import com.yokyznt.fruitspire.nativo.ui.MenuScreen
 import com.yokyznt.fruitspire.nativo.ui.NodeResultScreen
+import com.yokyznt.fruitspire.nativo.ui.NotesScreen
 import com.yokyznt.fruitspire.nativo.ui.TableScreen
 import com.yokyznt.fruitspire.nativo.ui.LocalProgress
 import com.yokyznt.fruitspire.nativo.ui.PassScreen
@@ -118,9 +120,11 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
         when (vm.screen) {
             AppScreen.MENU -> MenuScreen(
                 canContinue = vm.canContinue, onContinue = vm::continueGame, onNewGame = vm::newGame,
-                onTutorial = soon, onPass = vm::openPass, onWardrobe = vm::openWardrobe, onCollection = soon, onNotes = soon,
-                onSettings = { showSettings = true }, passBadge = Pass.unclaimed(vm.progress)
+                onTutorial = soon, onPass = vm::openPass, onWardrobe = vm::openWardrobe, onCollection = vm::openCollection, onNotes = vm::openNotes,
+                onSettings = { showSettings = true }, passBadge = Pass.unclaimed(vm.progress), notesBadge = vm.progress.notesAreNew()
             )
+            AppScreen.COLLECTION -> CollectionScreen(vm.progress, vm.collection, onInfo = { toast.show(it) }, onBack = vm::toMenu)
+            AppScreen.NOTES -> NotesScreen(onBack = vm::toMenu)
             AppScreen.PASS -> PassScreen(vm.progress, vm.tick, vm::claimPassLevel, vm::claimAllPass, onWardrobe = vm::openWardrobe, onBack = vm::toMenu)
             AppScreen.WARDROBE -> WardrobeScreen(
                 vm.progress, vm.wardrobeChar, vm.tick, vm::wardrobeSelect, vm::wardrobeEquip, vm::wardrobeClear, onBack = vm::toMenu

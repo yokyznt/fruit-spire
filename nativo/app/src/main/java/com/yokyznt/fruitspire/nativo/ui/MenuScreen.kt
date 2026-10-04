@@ -45,7 +45,9 @@ fun MenuScreen(
     onNotes: () -> Unit,
     onSettings: () -> Unit,
     /** Premios del pase por reclamar (se muestra como insignia en el botón). */
-    passBadge: Int = 0
+    passBadge: Int = 0,
+    /** Hay notas de la versión sin leer (puntito rojo en el botón Notas). */
+    notesBadge: Boolean = false
 ) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
@@ -94,10 +96,16 @@ fun MenuScreen(
             }
         }
         // esquinas: notas (arriba a la izquierda) y ajustes (arriba a la derecha)
-        StickerButton(
-            "Notas", onNotes, Modifier.align(Alignment.TopStart).padding(start = 40.dp, top = 22.dp),
-            color = Color.White, fontSize = 26f, leading = { Sprite("ui_notes", 40.dp) }
-        )
+        Box(Modifier.align(Alignment.TopStart).padding(start = 40.dp, top = 22.dp)) {
+            StickerButton("Notas", onNotes, color = Color.White, fontSize = 26f, leading = { Sprite("ui_notes", 40.dp) })
+            if (notesBadge) {
+                Box(
+                    Modifier.align(Alignment.TopEnd).offset(4.dp, (-6).dp).size(20.dp).drawBehind {
+                        drawCircle(Color.White, size.minDimension / 2); drawCircle(Ink.strawberry, size.minDimension / 2 - 3.dp.toPx())
+                    }
+                )
+            }
+        }
         StickerButton(
             "", onSettings, Modifier.align(Alignment.TopEnd).padding(end = 40.dp, top = 22.dp),
             color = Ink.paper2, padding = PaddingValues(12.dp), leading = { Sprite("ui_gear", 44.dp) }

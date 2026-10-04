@@ -138,8 +138,11 @@ write('GenNotes.kt', HEAD() +
     // relic id → los juegos que lo inspiran y el porqué (REFS de js/data/refs.js)
     `val GEN_RELIC_REFS: Map<String, RefInfo> = mapOf(\n${Object.keys(window.RELIC_REFS).map((id) => {
         const r = window.RELIC_REFS[id];
-        const games = [r[0], r[2]].filter(Boolean).map((k) => window.GAME_REFS[k].name);
-        return `    ${ks(id)} to RefInfo(${klistN(games)}, ${ks(r[1])})`;
-    }).join(',\n')}\n)\n`);
+        const keys = [r[0], r[2]].filter(Boolean);
+        const games = keys.map((k) => window.GAME_REFS[k].name);
+        return `    ${ks(id)} to RefInfo(${klistN(games)}, ${ks(r[1])}, ${klistN(keys)})`;
+    }).join(',\n')}\n)\n\n` +
+    // clave del juego → color de su cajita (el dibujo es el sprite refgame~<clave>)
+    `val GEN_GAME_COLORS: Map<String, String> = mapOf(\n${Object.keys(window.GAME_REFS).map((k) => `    ${ks(k)} to ${ks(window.GAME_REFS[k].color)}`).join(',\n')}\n)\n`);
 
 console.log(`estados ${Object.keys(window.STATUS_DB).length}, cartas ${Object.keys(window.CARD_DEFS).length}, objetos ${Object.keys(window.RELIC_DB).length}, semillas ${Object.keys(window.SEED_DB).length}, enemigos ${Object.keys(window.ENEMY_DB).length}, temas ${Object.keys(window.FLOOR_THEMES).length}`);

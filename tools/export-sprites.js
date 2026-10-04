@@ -91,6 +91,13 @@ const IN_PAGE = `(() => {
         // semillas (render.js: seedArt)
         const seeds = [];
         Object.values(window.SEED_DB || {}).forEach((s) => { add('seed~' + s.id, svgOf(seedArt(s, 'lg'))); seeds.push(s.id); });
+        // el dibujito del juego de cada guiño de un objeto (js/data/refs.js): refgame~<clave>
+        if (window.GAME_REFS) {
+            Object.keys(window.GAME_REFS).forEach((k) => {
+                add('refgame~' + k, svgOf(window.GAME_REFS[k].draw()));
+                manifest['refgame~' + k] = { moods: [], hurts: [], skins: [] };
+            });
+        }
         // el engrane de Ajustes (js/settings.js) no está en SPRITES
         if (window.gearArt) { add('ui_gear', svgOf(window.gearArt('md'))); manifest.ui_gear = { moods: [], hurts: [], skins: [] }; }
         // piezas del ajedrez de las mesas de juego (js/minigames.js): mgp_<pieza><equipo> con carita (tablero)

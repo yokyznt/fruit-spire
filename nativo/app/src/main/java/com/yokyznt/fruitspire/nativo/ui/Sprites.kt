@@ -14,6 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.asImageBitmap
@@ -172,7 +174,9 @@ fun Sprite(
     hurt: Int = 0,
     skin: String? = null,
     extra: List<String> = emptyList(),
-    outline: Boolean = true
+    outline: Boolean = true,
+    /** Solo la mancha oscura del dibujo (lo que aún no descubres): el brightness(0) con opacidad .28 de la versión web. */
+    silhouette: Boolean = false
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -187,6 +191,9 @@ fun Sprite(
         val img = image ?: return@Canvas
         val frame = (boxPx * SpriteStore.FRAME_RATIO).roundToInt()
         val shift = ((boxPx - frame) / 2f).roundToInt() - SpriteStore.PAD_PX
-        drawImage(img, dstOffset = IntOffset(shift, shift), dstSize = IntSize(img.width, img.height))
+        drawImage(
+            img, dstOffset = IntOffset(shift, shift), dstSize = IntSize(img.width, img.height),
+            alpha = if (silhouette) .28f else 1f, colorFilter = if (silhouette) ColorFilter.tint(Color.Black) else null
+        )
     }
 }

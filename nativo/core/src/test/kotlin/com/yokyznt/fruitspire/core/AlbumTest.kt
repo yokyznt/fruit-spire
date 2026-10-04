@@ -8,6 +8,7 @@ import com.yokyznt.fruitspire.core.data.Relics
 import com.yokyznt.fruitspire.core.data.Seeds
 import com.yokyznt.fruitspire.core.data.Statuses
 import com.yokyznt.fruitspire.core.data.gen.GAME_VERSION
+import com.yokyznt.fruitspire.core.data.gen.GEN_GAME_COLORS
 import com.yokyznt.fruitspire.core.data.gen.GEN_PATCH_NOTES
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -149,11 +150,32 @@ class AlbumTest {
             assertNotNull(info, "${r.id} tiene guiño pero no su explicación")
             assertTrue(info.games.isNotEmpty() && info.text.isNotBlank())
             info.games.forEach { g -> assertTrue(r.ref!!.contains(g), "${r.id}: «${r.ref}» no nombra a $g") }
+            assertEquals(info.games.size, info.keys.size, "${r.id}: cada juego trae la clave de su dibujo")
+            info.keys.forEach { k -> assertTrue(GEN_GAME_COLORS[k]?.startsWith("#") == true, "$k sin color") }
             n++
         }
+        assertEquals(listOf("isaac", "cuphead"), Album.refOf(Relics.get("azufre_infernal")!!)!!.keys)
         assertEquals(27, n)
         assertNull(Album.refOf(Relics.db.values.first { it.ref == null }))
         assertEquals(setOf("The Binding of Isaac", "Cuphead"), Album.refOf(Relics.get("azufre_infernal")!!)!!.games.toSet())
+    }
+
+    @Test
+    fun theCountOfEachTabReadsLikeTheWebGame() {
+        val p = Progress()
+        assertEquals("0 de ${Album.cardCount()} cartas", Album.countText("cards", p))
+        assertEquals("0 de ${Relics.db.size} objetos", Album.countText("relics", p))
+        assertEquals("0 de ${Seeds.db.size} semillas", Album.countText("seeds", p))
+        assertEquals("0 de ${Enemies.db.size} enemigos descubiertos", Album.countText("bestiary", p))
+        p.discover(listOf("golpe_cascara+", "ficha_que_no_existe"))
+        p.markFoundRelic(Album.relicsOf("rare").first().id)
+        p.markFoundSeed(Album.seedsOf("common").first().id)
+        p.bestiarySee("mosca_podrida")
+        assertEquals("1 de ${Album.cardCount()} cartas", Album.countText("cards", p), "una carta madura cuenta como la normal; lo que no es del álbum no cuenta")
+        assertEquals("1 de ${Relics.db.size} objetos", Album.countText("relics", p))
+        assertEquals("1 de ${Seeds.db.size} semillas", Album.countText("seeds", p))
+        assertEquals("1 de ${Enemies.db.size} enemigos descubiertos", Album.countText("bestiary", p))
+        assertEquals(listOf("cards", "relics", "seeds", "bestiary"), Album.TABS.map { it.first })
     }
 
     // ------------------------------------------------------------------ notas de la versión

@@ -1,6 +1,7 @@
 package com.yokyznt.fruitspire.core
 
 import com.yokyznt.fruitspire.core.data.Cards
+import com.yokyznt.fruitspire.core.data.Enemies
 import com.yokyznt.fruitspire.core.data.RefInfo
 import com.yokyznt.fruitspire.core.data.RelicDef
 import com.yokyznt.fruitspire.core.data.Relics
@@ -31,6 +32,17 @@ object Album {
     }
 
     fun cardCount(): Int = albumCards.size
+
+    /** Las pestañas de la Colección: (id, nombre). */
+    val TABS = listOf("cards" to "Cartas", "relics" to "Objetos", "seeds" to "Semillas", "bestiary" to "Bestiario")
+
+    /** Lo que dice arriba a la derecha en cada pestaña («3 de 73 cartas»). */
+    fun countText(tab: String, p: Progress): String = when (tab) {
+        "cards" -> "${albumCards.count { it.id in p.discovered }} de ${albumCards.size} cartas"
+        "relics" -> "${Relics.db.keys.count { it in p.foundRelics }} de ${Relics.db.size} objetos"
+        "seeds" -> "${Seeds.db.keys.count { it in p.foundSeeds }} de ${Seeds.db.size} semillas"
+        else -> "${Enemies.db.keys.count { it in p.bestiary }} de ${Enemies.db.size} enemigos descubiertos"
+    }
 
     /** (nivel, título del apartado, etiqueta de la ficha). */
     val relicTiers = listOf(

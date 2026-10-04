@@ -41,15 +41,17 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
   `CosmeticsTest` (15 pruebas, incluidos los efectos de las mascotas en combate).
 - Pantallas 4B: `ui/Dress.kt` (`FruitSprite` viste a la fruta con `LocalProgress`; `CosmeticIcon`), `PassScreen.kt`, `WardrobeScreen.kt`; el menú muestra los premios por reclamar y los avisos de XP y de
   mascotita nueva salen en premios, derrota y victoria. Los íconos sueltos de accesorios son dibujos exportados `accicon~<id>` (tools/export-sprites.js). `MetaScreenshotTest` (7 pruebas).
-- Colección, bestiario y notas, **solo el núcleo** (etapa 4C, parte 1): `Bestiary.kt` (catálogo por castillo y piso con dónde sale cada enemigo y su nivel, `describeMove` y `traits` en texto;
+- Colección, bestiario y notas (etapa 4C): `Bestiary.kt` (catálogo por castillo y piso con dónde sale cada enemigo y su nivel, `describeMove` y `traits` en texto;
   `gameText` ya resalta números y palabras clave), `Album.kt` (cartas por fruta/neutrales/maldiciones, objetos y semillas por rareza en orden alfabético, `refOf` = guiño a otros juegos),
-  `GenNotes.kt` (13 notas de la versión, `GAME_VERSION`, datos del creador y 27 guiños; lo genera `tools/export-core-data.js` desde js/notes.js y js/data/refs.js). `Progress` guarda objetos y semillas
-  encontrados (`Run.syncFound()` anota lo que llevas; falta llamarla desde `GameViewModel.persist()`), el bestiario (`bestiary`: id → derrotas; entrar = visto) y `notesSeen` (`notesAreNew`/`openNotes`).
-  `Run.startCombat` marca vistos a los enemigos y `finishCombat` suma las derrotas. `AlbumTest` (10 pruebas).
-- **Falta de la 4C (pantallas):** `AppScreen.COLLECTION` y `AppScreen.NOTES` en `GameViewModel`, `ui/CollectionScreen.kt` (pestañas Cartas · Objetos · Semillas · Bestiario como en js/collection.js:
-  cuadrículas con siluetas «???» para lo no encontrado y ficha de detalle; el bestiario con pestañas Castillo 1/2/3 e Invocados y la ficha con vida, dónde sale, rasgos y jugadas), `ui/NotesScreen.kt`
-  (notas, tarjeta del creador que abre `CREATOR_URL` con `LocalUriHandler`; los botones «Ver la historia/el final otra vez» llegan en la etapa 5), conectar `onCollection`/`onNotes` en
-  `MainActivity` (hoy `soon`) y el puntito de notas nuevas en `MenuScreen`. Llamar `run.syncFound()` en `GameViewModel.persist()`. Pruebas de pantalla: copiar el patrón de `MetaScreenshotTest`.
+  `GenNotes.kt` (13 notas de la versión, `GAME_VERSION`, datos del creador, 27 guiños con la clave de su juego y `GEN_GAME_COLORS`; lo genera `tools/export-core-data.js` desde js/notes.js y js/data/refs.js). `Progress` guarda objetos y semillas
+  encontrados (`Run.syncFound()` anota lo que llevas; `GameViewModel.persist()` la llama tras cada acción), el bestiario (`bestiary`: id → derrotas; entrar = visto) y `notesSeen` (`notesAreNew`/`openNotes`).
+  `Run.startCombat` marca vistos a los enemigos y `finishCombat` suma las derrotas. `Album.TABS`/`countText` dan las pestañas y el «N de M …» de arriba. `AlbumTest` (10 pruebas).
+- Pantallas 4C: `ui/CollectionScreen.kt` (`CollectionState` = pestaña y fichas elegidas, las guarda el ViewModel; pestañas Cartas · Objetos · Semillas · Bestiario con cuadrículas, siluetas «???» para lo no encontrado y ficha en grande a la derecha;
+  el objeto muestra su guiño con el dibujito del juego `refgame~<clave>`; el bestiario tiene Castillo 1/2/3 e Invocados, el chip de la regla del piso (toque → aviso con `onInfo`) y la ficha con vida, dónde sale, rasgos y jugadas, que al tocarlas explican sus estados),
+  `ui/NotesScreen.kt` (notas a la derecha, a la izquierda la tarjeta del creador que abre `CREATOR_URL` con `LocalUriHandler`), puntito rojo de notas nuevas en `MenuScreen` (`notesBadge`) y `AppScreen.COLLECTION/NOTES` en el `GameViewModel`
+  (`openCollection` anota lo que llevas y abre el bestiario en el castillo de tu partida la primera vez; `openNotes` las marca leídas y guarda). `Sprite(silhouette = true)` y `SeedArt(silhouette = true)` dibujan la mancha oscura de lo no descubierto.
+  Los botones «Ver la historia/el final otra vez» de las notas llegan en la etapa 5. `CollectionScreenTest` (19 pruebas: capturas de cada pestaña, toques y el recorrido menú → Colección/Notas con el `GameViewModel` real).
+- Gotcha de los dibujos: volver a correr `node tools/export-sprites.js` regraba ~12 `.webp` viejos con bytes distintos (carta_marcada, flor_imperial, guardia_hielo…); si no vienen al caso, restaurarlos con `git checkout` y dejar solo los nuevos y `sprites.json`.
 - Para cuidar que las reglas sean idénticas: comparación cruzada con semilla (`node tools/crosscheck-combat.js 3000 1000` genera las trazas de JS en `core/build/`, y `gradlew :core:test` exige que Kotlin salga idéntico).
 
 ## Pantallas (app/)
@@ -58,8 +60,8 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
   `Hud.kt`, `CharacterSelect.kt`, `ActIntro.kt`, `MapScreen.kt`, `CombatController.kt` (modelos inmutables, poses de ataque = keyframes del CSS, tiempos de `js/fx.js`),
   `CombatScreen.kt`, `RewardScreens.kt`, `DeckModal.kt`.
 - Las animaciones del combate necesitan el reloj de cuadros de Compose: el controlador usa el scope de la composición (`vm.uiScope`), NO `viewModelScope`.
-- Pruebas: `gradlew :core:test` (78 pruebas, con el motor idéntico a JS) y `gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`
-  (41 pruebas; capturas en `app/build/capturas/`; `FlowSmokeTest` monta `GameRoot` y juega con las pantallas reales; `TableScreenshotTest` captura cada mesa y prueba
+- Pruebas: `gradlew :core:test` (103 pruebas, con el motor idéntico a JS) y `gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`
+  (67 pruebas; capturas en `app/build/capturas/`; `FlowSmokeTest` monta `GameRoot` y juega con las pantallas reales; `TableScreenshotTest` captura cada mesa y prueba
   toques y arrastres reales en el tablero).
 - Mesas de juego en pantalla: `ui/TableController.kt` (tiempos de las animaciones y toques; `busy` ignora toques) y `ui/TableScreens.kt` (tapete, crupier con globo, fichas,
   dados y cartas dibujados con Canvas, rodillos, ruleta, tablero de ajedrez que se toca o se arrastra). Las piezas de ajedrez son dibujos exportados `mgp_<pieza><equipo>`
@@ -91,6 +93,6 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
 - [ ] 4. Minijuegos, pase de batalla, vestidor, colección, bestiario, notas.
       **Hecho (4A):** las cinco mesas de juego (dados, póker, ajedrez, tragamonedas, ruleta), desde las casillas del mapa y desde los eventos de misterio.
       **Hecho (4B):** pase de batalla, vestidor (con la fruta vestida en el mapa, el combate, la barra de arriba y la selección) y mascotitas con sus retos y efectos.
-      **Hecho (4C, núcleo):** bestiario, álbum, guiños y notas (ver arriba). **Falta (4C):** las pantallas de colección, bestiario y notas y conectarlas al menú.
+      **Hecho (4C):** colección (cartas, objetos, semillas), bestiario y notas, con sus pantallas conectadas al menú. **Con esto la etapa 4 queda completa.**
 - [ ] 5. Tutorial, historia y final.
 - [ ] 6. Pulido, compilación de lanzamiento y relevo de la app web.

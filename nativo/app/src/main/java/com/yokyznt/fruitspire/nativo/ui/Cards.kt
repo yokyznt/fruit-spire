@@ -297,10 +297,17 @@ private fun DrawScope.drawMark(mark: String) {
 
 /** Una semilla dibujada: gota del color de la semilla con su marca blanca. [size] es el lado del dibujo. */
 @Composable
-fun SeedArt(seed: SeedDef, size: Dp, modifier: Modifier = Modifier) {
+fun SeedArt(seed: SeedDef, size: Dp, modifier: Modifier = Modifier, silhouette: Boolean = false) {
     val color = remember(seed.color) { Color(android.graphics.Color.parseColor(seed.color)) }
     Canvas(modifier.size(size)) {
         val k = this.size.minDimension / 100f
+        if (silhouette) { // una semilla que aún no encuentras: solo su mancha oscura
+            scale(k, k, pivot = Offset.Zero) {
+                drawPath(SEED_DROP, Color.Black.copy(alpha = .28f))
+                drawPath(SEED_DROP, Color.Black.copy(alpha = .28f), style = Stroke(5f, join = StrokeJoin.Round))
+            }
+            return@Canvas
+        }
         scale(k, k, pivot = Offset.Zero) {
             drawPath(SEED_DROP, color)
             drawPath(SEED_DROP, Color(0xFF3A2A1E), style = Stroke(5f, join = StrokeJoin.Round))

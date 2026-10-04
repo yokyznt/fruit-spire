@@ -64,8 +64,8 @@ private fun relicStatus(r: RelicDef, p: Player): String {
 }
 
 @Composable
-private fun RelicSprite(r: RelicDef, size: Int) {
-    if (SpriteStore.has(r.id)) Sprite(r.id, size.dp) else BasicText(r.icon, style = Fonts.body(size * .8f))
+internal fun RelicSprite(r: RelicDef, size: Int, silhouette: Boolean = false) {
+    if (SpriteStore.has(r.id)) Sprite(r.id, size.dp, silhouette = silhouette) else BasicText(r.icon, style = Fonts.body(size * .8f))
 }
 
 /**
