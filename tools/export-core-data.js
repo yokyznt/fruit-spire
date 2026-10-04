@@ -13,7 +13,9 @@ const files = [
     'js/data/enemies.js', 'js/data/enemies_extra.js', 'js/data/enemies_castles.js', 'js/data/castles.js', 'js/data/enemies_more.js',
     'js/data/relics.js', 'js/data/relics_indie.js', 'js/data/characters.js', 'js/data/difficulty.js', 'js/data/cosmetics.js'
 ];
-files.forEach((f) => require(path.join(root, f)));
+// refs.js pide los dibujos del juego web al cargarse; aquí solo se leen sus textos, así que basta un stub
+window.SPRITE_KIT = { st: () => '' };
+files.concat(['js/notes.js', 'js/data/refs.js']).forEach((f) => require(path.join(root, f)));
 
 // ---------- ayudas de escritura ----------
 const ks = (s) => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/\n/g, '\\n') + '"';
@@ -127,5 +129,17 @@ write('GenCosmetics.kt', HEAD() + `val GEN_COSMETICS: List<CosmeticDef> = listOf
     ['id', ks(c.id)], ['type', ks(c.type)], ['name', ks(c.name)], ['char', c.char && ks(c.char)], ['slot', c.slot && ks(c.slot)], ['bonus', c.bonus && ks(c.bonus)],
     ['reqBossAct', c.req && c.req.bossAct || null], ['reqWin', c.req && c.req.win && ks(c.req.win)]
 ])})`).join(',\n')}\n)\n`);
+
+// ---------- notas de la versión y guiños a otros juegos ----------
+const klistN = (a) => `listOf(${(a || []).map(ks).join(', ')})`;
+write('GenNotes.kt', HEAD() +
+    `const val GAME_VERSION = ${ks(window.GAME_VERSION)}\nconst val CREATOR_HANDLE = ${ks(window.CREATOR.handle)}\nconst val CREATOR_URL = ${ks(window.CREATOR.url)}\n\n` +
+    `val GEN_PATCH_NOTES: List<PatchNote> = listOf(\n${window.PATCH_NOTES.map((n) => `    PatchNote(${ks(n.version)}, ${ks(n.date)}, ${ks(n.title)}, ${klistN(n.items)}, ${klistN(n.fixes)})`).join(',\n')}\n)\n\n` +
+    // relic id → los juegos que lo inspiran y el porqué (REFS de js/data/refs.js)
+    `val GEN_RELIC_REFS: Map<String, RefInfo> = mapOf(\n${Object.keys(window.RELIC_REFS).map((id) => {
+        const r = window.RELIC_REFS[id];
+        const games = [r[0], r[2]].filter(Boolean).map((k) => window.GAME_REFS[k].name);
+        return `    ${ks(id)} to RefInfo(${klistN(games)}, ${ks(r[1])})`;
+    }).join(',\n')}\n)\n`);
 
 console.log(`estados ${Object.keys(window.STATUS_DB).length}, cartas ${Object.keys(window.CARD_DEFS).length}, objetos ${Object.keys(window.RELIC_DB).length}, semillas ${Object.keys(window.SEED_DB).length}, enemigos ${Object.keys(window.ENEMY_DB).length}, temas ${Object.keys(window.FLOOR_THEMES).length}`);

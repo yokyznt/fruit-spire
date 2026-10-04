@@ -109,6 +109,12 @@ class CosmeticDef(
     val bonus: String? = null, val reqBossAct: Int? = null, val reqWin: String? = null
 )
 
+/** Una entrada de las notas de la versión (js/notes.js). */
+class PatchNote(val version: String, val date: String, val title: String, val items: List<String>, val fixes: List<String>)
+
+/** El guiño de un objeto: los juegos que lo inspiran y por qué (REFS de js/data/refs.js). */
+class RefInfo(val games: List<String>, val text: String)
+
 /** Ganchos de un objeto (todos opcionales). Ver js/data/relics.js. */
 class RelicHooks(
     val onPickup: ((Player) -> Unit)? = null,

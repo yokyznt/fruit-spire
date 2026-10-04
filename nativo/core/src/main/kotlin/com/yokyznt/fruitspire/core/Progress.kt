@@ -92,4 +92,33 @@ class Progress {
         }
         return Cosmetics.all.filter { it.type == "pet" && it.char == charId && !isOwned(it.id) && done(it) }.mapNotNull { grantCosmetic(it.id) }
     }
+
+    // ---------- Colección: lo encontrado, el bestiario y las notas ----------
+    /** Objetos y semillas que has tenido alguna vez (se anotan para siempre). */
+    val foundRelics = LinkedHashSet<String>()
+    val foundSeeds = LinkedHashSet<String>()
+    /** Enemigos que has visto (una entrada = visto) y cuántas veces los derrotaste. */
+    val bestiary = LinkedHashMap<String, Int>()
+    /** Versión de las notas que ya abriste (para avisar de las nuevas). */
+    var notesSeen = ""
+
+    fun markFoundRelic(id: String?) { if (id != null && foundRelics.add(id)) dirty = true }
+    fun markFoundSeed(id: String?) { if (id != null && foundSeeds.add(id)) dirty = true }
+
+    /** Lo marca como visto (al aparecer en un combate). */
+    fun bestiarySee(id: String) { if (id !in bestiary) { bestiary[id] = 0; dirty = true } }
+
+    /** Al terminar un combate: todos los que salieron quedan vistos y cada derrotado suma una victoria. */
+    fun recordCombat(enemies: List<EnemyInstance>) {
+        enemies.forEach { e ->
+            bestiary[e.def.id] = (bestiary[e.def.id] ?: 0) + if (!e.isAlive()) 1 else 0
+        }
+        if (enemies.isNotEmpty()) dirty = true
+    }
+
+    fun bestiarySeen(): Int = bestiary.size
+
+    fun notesAreNew(): Boolean = notesSeen != com.yokyznt.fruitspire.core.data.gen.GAME_VERSION
+
+    fun openNotes() { notesSeen = com.yokyznt.fruitspire.core.data.gen.GAME_VERSION; dirty = true }
 }

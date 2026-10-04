@@ -80,6 +80,12 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     /** Mascotitas que se desbloquearon con el último jefe de castillo (para avisarlo). */
     var newPets: List<CosmeticDef> = emptyList()
 
+    /** Lo que llevas (objetos y semillas) cuenta como encontrado para la Colección; se queda anotado aunque lo pierdas o lo gastes. */
+    fun syncFound() {
+        player.relics.forEach { progress.markFoundRelic(it) }
+        player.seeds.forEach { progress.markFoundSeed(it) }
+    }
+
     /** Suma experiencia al Pase de Batalla (combates y mesas de juego). */
     fun gainPassXp(n: Int): Pass.Gain = Pass.addXp(progress, n)
 
@@ -602,6 +608,7 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         combatKind = pc.kind
         val diff = difficulty
         val mods = World.scaledMods(diff.hpMult, diff.dmgBonus, player.act, player.floor)
+        pc.enemyIds.forEach { progress.bestiarySee(it) }
         val c = Combat(player, pc.enemyIds, onUpdate, onEnd, mods, theme.rule, Pets.hooks(progress.petFor(player.characterId)?.id))
         combat = c
         // lo que salió en el dado del destino se aplica al combate contra el jefe
@@ -614,7 +621,8 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         val c = combat
         val p = player
         lastCombatXp = min(160, c?.xpGained ?: 0)
-        // gane o pierda, cada enemigo derrotado suma al pase
+        // gane o pierda, cada enemigo derrotado suma al pase y al bestiario
+        c?.let { progress.recordCombat(it.enemies) }
         passGain = if (lastCombatXp > 0) gainPassXp(lastCombatXp) else null
         newPets = emptyList()
         if (result != "win") { screen = RunScreen.GAME_OVER; return }
