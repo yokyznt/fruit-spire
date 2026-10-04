@@ -84,6 +84,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         moving = null
         deckView = null
         flash = null
+        bagOpen = false
         screen = AppScreen.MENU
         canContinue = store.hasRun()
     }
@@ -305,6 +306,26 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (flash != null) return
         if (!r.startShopRemoval()) { toast(if (r.shopStock?.removeUsed == true) "Ya usaste este servicio" else "¡No te alcanza el oro!"); return }
         bump()
+    }
+
+    // ---------- mochila ----------
+    var bagOpen by mutableStateOf(false)
+        private set
+
+    fun openBag() { if (run != null) bagOpen = true }
+    fun closeBag() { bagOpen = false }
+
+    /** «Usar» en una semilla de la mochila: en combate y en tu turno; con varios enemigos hay que tocar uno. */
+    fun useSeedFromBag(slot: Int) {
+        bagOpen = false
+        val ctl = combat
+        val msg = if (ctl == null) "Las semillas se usan en combate, en tu turno" else ctl.useSeedFromBag(slot)
+        if (msg != null) toast(msg)
+    }
+
+    fun dropSeed(slot: Int) {
+        val r = run ?: return
+        if (r.discardSeed(slot)) { persist(); bump() }
     }
 
     // ---------- visor de cartas ----------

@@ -418,6 +418,13 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     /** Deja una semilla que no cabe en la bolsa. */
     fun dropLoot(i: Int) { loot.getOrNull(i)?.takeIf { it.isOpen }?.dropped = true }
 
+    /** Tira la semilla del hueco [i] de la bolsa. Falso si ya estaba vacío. */
+    fun discardSeed(i: Int): Boolean {
+        if (i !in player.seeds.indices || player.seeds[i] == null) return false
+        player.seeds[i] = null
+        return true
+    }
+
     /** Al cargar una partida: lo que quedó sin recoger fuera de las recompensas se da solo (menos semillas sin sitio). */
     fun grantAllLoot() {
         loot.filter { it.isOpen && (it.k != "seed" || !Rewards.seedsFull(player)) }.forEach { grant(it); it.taken = true }

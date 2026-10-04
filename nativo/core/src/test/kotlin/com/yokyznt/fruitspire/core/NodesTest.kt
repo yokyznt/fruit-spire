@@ -293,6 +293,19 @@ class NodesTest {
     }
 
     @Test
+    fun discardingASeedFreesItsSlot() {
+        val run = newRun(14)
+        val p = run.player
+        assertTrue(Rewards.addSeed(p, "semilla_fantasma"))
+        assertFalse(Rewards.seedsFull(p))
+        assertTrue(run.discardSeed(0))
+        assertNull(p.seeds[0])
+        assertFalse(run.discardSeed(0), "ya estaba vacío")
+        assertFalse(run.discardSeed(9))
+        Rng.unseed()
+    }
+
+    @Test
     fun othersStillWaitForTheNextStage() {
         val run = newRun(13)
         enter(run, NodeType.MYSTERY)

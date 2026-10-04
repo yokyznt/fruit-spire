@@ -64,6 +64,48 @@ class FlowSmokeTest {
         assertEquals("el combate debía terminar en recompensa", RunScreen.REWARD, run.screen)
     }
 
+    /** Semillas de la mochila en combate: una que pide enemigo se apunta con un toque; otra se usa al momento. */
+    @Test
+    fun seedsFromTheBagAreAimedAndUsed() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        com.yokyznt.fruitspire.core.Rng.seed(77)
+        val run = com.yokyznt.fruitspire.core.Run.start("manzana", "madura")
+        run.beginFloor()
+        run.player.seeds[0] = "semilla_chile" // 20 de daño a un enemigo
+        run.player.seeds[1] = "semilla_coco" // duplica la cáscara y suma 8
+        var ctl: com.yokyznt.fruitspire.nativo.ui.CombatController? = null
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            DesignCanvas {
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                val c = androidx.compose.runtime.remember {
+                    val combat = run.startCombat(com.yokyznt.fruitspire.core.PendingCombat(listOf("avispa_furiosa", "mosca_podrida"), "enemy"))
+                    com.yokyznt.fruitspire.nativo.ui.CombatController(run, combat, scope, {}, {})
+                }
+                ctl = c
+                com.yokyznt.fruitspire.nativo.ui.CombatScreen(c, "kitchen")
+            }
+        }
+        advance(2500)
+        val c = ctl!!
+        assertTrue("la entrada del combate debía haber terminado", c.canUseSeedNow())
+        // con dos enemigos vivos, la semilla de un solo objetivo espera un toque
+        assertEquals("Toca al enemigo que quieras", c.useSeedFromBag(0))
+        assertEquals(0, c.seedAiming)
+        val before = c.combat.enemies[1].hp
+        c.useSeedOn(1)
+        advance(1500)
+        assertEquals(-1, c.seedAiming)
+        org.junit.Assert.assertNull("la semilla se gasta", run.player.seeds[0])
+        assertTrue("el enemigo tocado debía recibir daño", !c.combat.enemies[1].isAlive() || c.combat.enemies[1].hp < before)
+        // la de cáscara no necesita objetivo: se usa sin preguntar
+        val block = run.player.block
+        org.junit.Assert.assertNull(c.useSeedFromBag(1))
+        advance(1500)
+        assertTrue("la cáscara debía subir al menos 8 (era $block, ahora ${run.player.block})", run.player.block >= block + 8)
+        org.junit.Assert.assertNull(run.player.seeds[1])
+    }
+
     @Test
     fun playsThroughSeveralFloorNodes() {
         val app = ApplicationProvider.getApplicationContext<Application>()

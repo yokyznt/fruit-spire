@@ -47,6 +47,7 @@ import com.yokyznt.fruitspire.nativo.ui.Fonts
 import com.yokyznt.fruitspire.nativo.ui.GameOverScreen
 import com.yokyznt.fruitspire.nativo.ui.HudBar
 import com.yokyznt.fruitspire.nativo.ui.Ink
+import com.yokyznt.fruitspire.nativo.ui.InventoryModal
 import com.yokyznt.fruitspire.nativo.ui.MapScreen
 import com.yokyznt.fruitspire.nativo.ui.MenuScreen
 import com.yokyznt.fruitspire.nativo.ui.NodeResultScreen
@@ -113,7 +114,7 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
                 vm.progress, vm.selectedChar, vm.selectedDiff, vm::selectChar, vm::selectDiff,
                 onBack = vm::toMenu, onPlay = vm::play, onLockedGrade = { toast.show("Gana en el grado anterior con esta fruta para desbloquearlo") }
             )
-            AppScreen.RUN -> RunHost(vm, settings, onSettings = { showSettings = true }, onBag = soon)
+            AppScreen.RUN -> RunHost(vm, settings, onSettings = { showSettings = true }, onBag = vm::openBag)
         }
         if (showSettings) SettingsWindow(settings) { showSettings = false }
         toast.Host(Modifier.align(Alignment.BottomCenter).padding(bottom = 40.dp))
@@ -121,6 +122,7 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
     // el botón de atrás cierra lo abierto o vuelve al menú (la partida ya está guardada)
     BackHandler(enabled = vm.screen != AppScreen.MENU || showSettings) {
         if (showSettings) showSettings = false
+        else if (vm.bagOpen) vm.closeBag()
         else if (vm.deckView != null) vm.deckView = null
         else if (vm.screen == AppScreen.RUN && vm.run?.pickerMode != null) vm.setPicker(null)
         else vm.toMenu()
@@ -163,11 +165,13 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
             RunScreen.VICTORY -> VictoryScreen(run, vm::toMenu)
         }
         if (run.screen != RunScreen.GAME_OVER && run.screen != RunScreen.VICTORY) {
+            val seedReady = run.screen == RunScreen.COMBAT && ctl?.canUseSeedNow() == true && run.player.seeds.any { it != null }
             HudBar(
-                hudStateOf(run), onMenu = vm::toMenu, onBag = onBag, onDeck = vm::showDeck, onSettings = onSettings,
+                hudStateOf(run, seedReady), onMenu = vm::toMenu, onBag = onBag, onDeck = vm::showDeck, onSettings = onSettings,
                 modifier = Modifier.align(Alignment.TopStart), compact = run.screen == RunScreen.COMBAT
             )
         }
+        if (vm.bagOpen) InventoryModal(run, ctl?.canUseSeedNow() == true, vm::useSeedFromBag, vm::dropSeed, vm::closeBag)
         vm.intro?.let { CombatIntroOverlay(it) }
         vm.deckView?.let { (title, note, ids) -> DeckModal(title, note, ids) { vm.deckView = null } }
     }

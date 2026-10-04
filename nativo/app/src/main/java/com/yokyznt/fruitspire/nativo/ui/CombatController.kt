@@ -20,6 +20,7 @@ import com.yokyznt.fruitspire.core.PreviewResult
 import com.yokyznt.fruitspire.core.Run
 import com.yokyznt.fruitspire.core.data.Card
 import com.yokyznt.fruitspire.core.data.Cards
+import com.yokyznt.fruitspire.core.data.Seeds
 import com.yokyznt.fruitspire.core.data.Sprouts
 import com.yokyznt.fruitspire.core.data.Statuses
 import kotlinx.coroutines.CoroutineScope
@@ -554,6 +555,54 @@ class CombatController(
         refresh()
         spawnFx(c.lastEvents, card.fx ?: "punch")
         delay(max(260, info.dur - info.hit - 120).toLong())
+        if (!c.ended) busy = false
+        afterEngine()
+    }
+
+    // ---------- semillas (la bolsa de la mochila) ----------
+    /** Hueco de la bolsa cuya semilla se está apuntando (hay que tocar a un enemigo), o -1. */
+    var seedAiming by mutableIntStateOf(-1)
+        private set
+
+    /** Las semillas se usan en tu turno, sin animaciones en curso. */
+    fun canUseSeedNow(): Boolean = canPlayNow()
+
+    /**
+     * Usa la semilla del hueco [slot]. Si necesita un enemigo y hay varios vivos, espera a que se toque uno
+     * ([useSeedOn]); si no, se usa al momento. Devuelve un aviso si no se pudo.
+     */
+    fun useSeedFromBag(slot: Int): String? {
+        if (!canUseSeedNow()) return "Las semillas se usan en combate, en tu turno"
+        val seed = run.player.seeds.getOrNull(slot)?.let { Seeds.get(it) } ?: return null
+        selected = -1
+        val alive = aliveEnemyIndexes()
+        if (seed.target == "enemy" && alive.size > 1) { seedAiming = slot; return "Toca al enemigo que quieras" }
+        scope.launch { useSeedSeq(slot, if (seed.target == "enemy") alive.firstOrNull() else null) }
+        return null
+    }
+
+    fun useSeedOn(enemyIdx: Int) {
+        val slot = seedAiming
+        if (slot < 0) return
+        seedAiming = -1
+        if (canUseSeedNow()) scope.launch { useSeedSeq(slot, enemyIdx) }
+    }
+
+    fun cancelSeedAim() { seedAiming = -1 }
+
+    private suspend fun useSeedSeq(slot: Int, target: Int?) {
+        val c = combat
+        val id = run.player.seeds.getOrNull(slot) ?: return
+        val seed = Seeds.get(id) ?: return
+        busy = true
+        run.player.seeds[slot] = null
+        banner("player", seed.name, null)
+        playAnim("player", "cast", null)
+        delay(320)
+        c.useSeed(id, target)
+        refresh()
+        spawnFx(c.lastEvents, "burst")
+        delay(400)
         if (!c.ended) busy = false
         afterEngine()
     }

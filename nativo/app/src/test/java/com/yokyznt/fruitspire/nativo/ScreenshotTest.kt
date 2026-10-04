@@ -210,6 +210,18 @@ class ScreenshotTest {
     }
 
     @Test
+    fun mochila() = shot("mochila") {
+        val run = androidx.compose.runtime.remember {
+            Rng.seed(31)
+            Run.start("manzana", "madura").also { r ->
+                r.player.relics.addAll(listOf("regadera", "estrella_guardado", "corazon_durian", "chile_picante", "aura_ajo"))
+                r.player.seeds[0] = "semilla_chile"; r.player.seeds[2] = "semilla_fantasma"
+            }
+        }
+        com.yokyznt.fruitspire.nativo.ui.InventoryModal(run, true, {}, {}, {})
+    }
+
+    @Test
     fun portadaDePiso() = shot("portada") {
         Rng.seed(3)
         val run = Run.start("manzana", "madura")

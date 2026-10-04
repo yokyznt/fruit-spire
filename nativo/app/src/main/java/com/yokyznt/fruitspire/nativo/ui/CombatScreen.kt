@@ -278,9 +278,12 @@ private fun CombatantView(
     val density = LocalDensity.current.density
     val hidden = !player && !c.alive
     val hover = ctl.hover == c.key || (player && ctl.hover == "self")
-    val targetable = !player && ctl.dragNeeds == true && c.alive
+    // al apuntar una semilla, los enemigos vivos se tocan para elegirlos
+    val aiming = !player && c.alive && ctl.seedAiming >= 0
+    val targetable = !player && c.alive && (ctl.dragNeeds == true || aiming)
     Box(
         modifier.width(width.dp).onGloballyPositioned { ctl.anchors["zone-${c.key}"] = it.boundsInRoot() }
+            .pointerInput(aiming) { if (aiming) detectTapGestures { ctl.useSeedOn(index - 1) } }
     ) {
         // marco de objetivo al arrastrar una carta
         if (targetable || (player && ctl.dragNeeds == false)) {
@@ -873,6 +876,16 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
                     Box(Modifier.offset { IntOffset(a.center.x.roundToInt(), (a.top - 4f * density).roundToInt()) }.wrapContentSize(Alignment.TopStart, unbounded = true).graphicsLayer { translationX = -size.width / 2f; translationY = -size.height }) {
                         DropPreviewChip(prev, ctl.previewTarget(target))
                     }
+                }
+            }
+            // semilla por usar: hay que tocar a un enemigo
+            if (ctl.seedAiming >= 0) {
+                Row(
+                    Modifier.align(Alignment.TopCenter).padding(top = 64.dp).chip(99.dp, Ink.mintSoft).padding(start = 18.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    BasicText("Toca al enemigo que quieras", style = Fonts.hand(24f))
+                    StickerButton("Cancelar", { ctl.cancelSeedAim() }, secondary = true, fontSize = 15f, padding = PaddingValues(horizontal = 14.dp, vertical = 3.dp))
                 }
             }
             ctl.info?.let { (title, text) ->
