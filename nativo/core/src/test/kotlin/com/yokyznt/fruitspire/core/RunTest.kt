@@ -59,6 +59,24 @@ class RunTest {
             RunScreen.ACT_INTRO -> run.beginFloor()
             RunScreen.MAP -> walkOneStep(run)
             RunScreen.NODE_STUB -> run.leaveStub()
+            RunScreen.REST -> {
+                // descansa si le falta vida; si no, madura la primera carta que se pueda (o se va)
+                val i = run.player.deck.indexOfFirst { Cards.get(it)?.canUpgrade == true }
+                if (run.canRest() && run.player.hp < run.player.maxHp) assertTrue(run.restHeal())
+                else { if (i >= 0) assertTrue(run.restUpgrade(i)); assertTrue(run.leaveNode()) }
+            }
+            RunScreen.SHOP -> {
+                val s = run.shopStock!!
+                if (run.buyShopCard(0) == BuyResult.OK) assertTrue(s.cards.size == 4)
+                run.buyShopRelic(0)
+                run.buyShopSeed(0)
+                if (run.startShopRemoval()) assertTrue(run.shopRemoveCard(run.player.deck.indices.last))
+                assertTrue(run.leaveNode())
+            }
+            RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT -> {
+                run.loot.indices.forEach { i -> if (!run.collectLoot(i)) run.dropLoot(i) }
+                assertTrue(run.leaveNode())
+            }
             RunScreen.REWARD -> {
                 run.loot.indices.forEach { i -> if (!run.collectLoot(i)) run.dropLoot(i) }
                 if (run.rewardCards.isNotEmpty()) run.pickRewardCard(run.rewardCards[0])
@@ -189,9 +207,14 @@ class RunTest {
                     val closesOnLoad = run.screen == RunScreen.REWARD && run.canFinishReward()
                     if (!closesOnLoad) assertEquals(if (keeps) run.screen else RunScreen.MAP, back.screen, "pantalla (semilla $seed, paso $steps)")
                     assertEquals(run.player.deck, back.player.deck)
-                    assertEquals(run.player.relics, back.player.relics)
-                    assertEquals(run.player.hp, back.player.hp)
-                    assertEquals(run.player.gold, back.player.gold)
+                    // un tesoro o cofre a medias (fuera de las recompensas) se da solo al cargar
+                    if (run.screen != RunScreen.REWARD && run.loot.any { it.isOpen }) {
+                        assertTrue(back.loot.isEmpty(), "lo pendiente se da al cargar (semilla $seed, paso $steps)")
+                    } else {
+                        assertEquals(run.player.relics, back.player.relics)
+                        assertEquals(run.player.hp, back.player.hp)
+                        assertEquals(run.player.gold, back.player.gold)
+                    }
                     assertEquals(run.player.plan, back.player.plan)
                     // en la guarida del jefe (solo justo después de vencerlo) la ficha vuelve una casilla atrás, como en la web
                     if (run.pos.x < run.map.cols - 1) assertEquals(run.pos.key, back.pos.key)

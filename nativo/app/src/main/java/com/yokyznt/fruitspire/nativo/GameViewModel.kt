@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.yokyznt.fruitspire.core.BuyResult
 import com.yokyznt.fruitspire.core.PendingCombat
 import com.yokyznt.fruitspire.core.Pos
 import com.yokyznt.fruitspire.core.Progress
@@ -18,6 +19,7 @@ import com.yokyznt.fruitspire.core.data.Enemies
 import com.yokyznt.fruitspire.core.data.World
 import com.yokyznt.fruitspire.nativo.ui.CombatController
 import com.yokyznt.fruitspire.nativo.ui.MapPan
+import com.yokyznt.fruitspire.nativo.ui.PickFlash
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -81,6 +83,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         intro = null
         moving = null
         deckView = null
+        flash = null
         screen = AppScreen.MENU
         canContinue = store.hasRun()
     }
@@ -181,10 +184,15 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private fun beginCombat(pc: PendingCombat) {
         val r = run ?: return
         combatBg = (if (pc.kind == "boss") bossBgs else groundBgs).random()
-        lateinit var ctl: CombatController
-        val c = r.startCombat(pc, onEnd = { ctl.onEnd(it) })
-        ctl = CombatController(r, c, uiScope ?: viewModelScope, { toast(it) }, { result -> finishCombat(result) })
-        combat = ctl
+        // Un objeto que daña al empezar el turno (aura de ajo, lágrima sagrada) puede ganar el combate dentro del
+        // propio constructor del motor, cuando el controlador todavía no existe: el resultado se guarda y se le da después.
+        var ctl: CombatController? = null
+        var earlyResult: String? = null
+        val c = r.startCombat(pc, onEnd = { res -> val k = ctl; if (k != null) k.onEnd(res) else earlyResult = res })
+        val made = CombatController(r, c, uiScope ?: viewModelScope, { toast(it) }, { result -> finishCombat(result) })
+        ctl = made
+        earlyResult?.let { made.onEnd(it) }
+        combat = made
         bump()
     }
 
@@ -230,6 +238,74 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun pickBossRelic(id: String) { run?.pickBossRelic(id); persist(); bump() }
     fun skipBossRelic() { run?.skipBossRelic(); persist(); bump() }
+
+    // ---------- campamento ----------
+    /** Carta del selector que se está madurando o quitando (la pantalla la anima antes de cambiar el mazo). */
+    var flash: PickFlash? by mutableStateOf(null)
+        private set
+
+    fun restHeal() {
+        val r = run ?: return
+        if (flash != null) return
+        if (!r.restHeal()) { toast("No puedes descansar"); return }
+        persist(); bump()
+    }
+
+    fun setPicker(mode: String?) {
+        if (flash != null) return
+        run?.setPicker(mode)
+        bump()
+    }
+
+    /** Elige la copia [index] del mazo en el selector (madurar o despegar en el campamento; quitar en la tienda). */
+    fun pickCard(index: Int) {
+        val r = run ?: return
+        val mode = r.pickerMode ?: return
+        if (flash != null) return
+        flash = PickFlash(mode, index)
+        viewModelScope.launch {
+            delay(if (mode == "upgrade") 900 else 560)
+            if (run !== r) return@launch
+            val ok = when {
+                r.screen == RunScreen.SHOP -> r.shopRemoveCard(index)
+                mode == "upgrade" -> r.restUpgrade(index)
+                else -> r.restRemove(index)
+            }
+            flash = null
+            if (ok && r.screen == RunScreen.REST) r.leaveNode()
+            persist(); bump()
+        }
+    }
+
+    /** Sale del campamento, la tienda, el tesoro, la llave o el cofre. */
+    fun leaveNode() {
+        val r = run ?: return
+        if (flash != null) return
+        if (!r.leaveNode()) { toast("¡Primero recoge tus premios!"); return }
+        persist(); bump()
+    }
+
+    // ---------- tienda ----------
+    private fun bought(res: BuyResult) {
+        when (res) {
+            BuyResult.NO_GOLD -> toast("¡No te alcanza el oro!")
+            BuyResult.BAG_FULL -> toast("Tu bolsa de semillas está llena")
+            BuyResult.OK -> persist()
+            BuyResult.INVALID -> {}
+        }
+        bump()
+    }
+
+    fun buyShopCard(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopCard(i)) }
+    fun buyShopRelic(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopRelic(i)) }
+    fun buyShopSeed(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopSeed(i)) }
+
+    fun startShopRemoval() {
+        val r = run ?: return
+        if (flash != null) return
+        if (!r.startShopRemoval()) { toast(if (r.shopStock?.removeUsed == true) "Ya usaste este servicio" else "¡No te alcanza el oro!"); return }
+        bump()
+    }
 
     // ---------- visor de cartas ----------
     fun showDeck() {

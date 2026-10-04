@@ -37,6 +37,33 @@ class FlowSmokeTest {
         compose.waitForIdle()
     }
 
+    /**
+     * Un objeto que daña al empezar el turno (aura de ajo) puede ganar el combate dentro del constructor del motor,
+     * antes de que exista el controlador de la pantalla. Antes eso reventaba con un lateinit sin inicializar.
+     */
+    @Test
+    fun combatWonByARelicAtTurnStartDoesNotCrash() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val vm = GameViewModel(app)
+        compose.mainClock.autoAdvance = false
+        compose.setContent { DesignCanvas { GameRoot(vm, Settings(app)) } }
+        vm.newGame(); advance(100)
+        vm.play(); advance(100)
+        val run = vm.run!!
+        vm.beginFloor(); advance(100)
+        run.player.relics.add("aura_ajo")
+        run.player.permanentStrength = 500 // el golpe del aura mata a cualquiera
+        val x = run.pos.x; val y = run.pos.y
+        val (nx, ny) = listOf(x + 1 to y, x to y - 1, x to y + 1).first { run.isReachable(it.first, it.second) }
+        run.map.grid[ny][nx] = com.yokyznt.fruitspire.core.NodeType.ENEMY
+        vm.moveTo(nx, ny)
+        for (i in 0 until 40) {
+            advance(250)
+            if (run.screen == RunScreen.REWARD) break
+        }
+        assertEquals("el combate debía terminar en recompensa", RunScreen.REWARD, run.screen)
+    }
+
     @Test
     fun playsThroughSeveralFloorNodes() {
         val app = ApplicationProvider.getApplicationContext<Application>()
@@ -86,6 +113,14 @@ class FlowSmokeTest {
                     if (r.screen == RunScreen.REWARD && r.canFinishReward()) { vm.continueReward(); fights++ }
                 }
                 RunScreen.NODE_STUB -> vm.leaveStub()
+                RunScreen.REST -> if (vm.flash == null) {
+                    if (r.canRest()) vm.restHeal() else vm.leaveNode()
+                }
+                RunScreen.SHOP -> if (vm.flash == null) { vm.buyShopCard(0); vm.leaveNode() }
+                RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT -> {
+                    r.loot.indices.forEach { vm.collectLoot(it) }
+                    vm.leaveNode()
+                }
                 RunScreen.BOSS_RELIC -> vm.skipBossRelic()
                 RunScreen.GAME_OVER, RunScreen.VICTORY -> break
             }

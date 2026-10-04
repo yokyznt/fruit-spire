@@ -10,8 +10,12 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.yokyznt.fruitspire.core.NodeType
 import com.yokyznt.fruitspire.core.PendingCombat
 import com.yokyznt.fruitspire.core.Progress
+import com.yokyznt.fruitspire.nativo.ui.NodeResultScreen
+import com.yokyznt.fruitspire.nativo.ui.RestScreen
+import com.yokyznt.fruitspire.nativo.ui.ShopScreen
 import com.yokyznt.fruitspire.nativo.ui.RewardScreen
 import com.yokyznt.fruitspire.nativo.ui.CombatController
 import com.yokyznt.fruitspire.nativo.ui.CombatScreen
@@ -140,6 +144,68 @@ class ScreenshotTest {
         c.enemies.forEach { it.hp = 0 }
         run.finishCombat("win")
         RewardScreen(run, {}, {}, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    /** Una partida recién empezada que acaba de pisar una casilla de [type] (puesta al lado de la salida). */
+    private fun runAt(type: String, key: Boolean = false, seed: Int = 30): Run {
+        Rng.seed(seed)
+        val run = Run.start("manzana", "madura")
+        run.beginFloor()
+        run.player.hasGoldenKey = key
+        val x = run.pos.x; val y = run.pos.y
+        val (nx, ny) = listOf(x + 1 to y, x to y - 1, x to y + 1).first { run.isReachable(it.first, it.second) }
+        run.map.grid[ny][nx] = type
+        run.arrive(nx, ny)
+        return run
+    }
+
+    @Test
+    fun campamento() = shot("campamento") {
+        val run = androidx.compose.runtime.remember { runAt(NodeType.REST).also { it.player.hp = 40 } }
+        RestScreen(run, null, {}, {}, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun campamentoMadurar() = shot("campamento_madurar") {
+        val run = androidx.compose.runtime.remember { runAt(NodeType.REST).also { it.setPicker("upgrade") } }
+        RestScreen(run, null, {}, {}, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun tienda() = shot("tienda") {
+        val run = androidx.compose.runtime.remember { runAt(NodeType.SHOP).also { it.player.gold = 120 } }
+        ShopScreen(run, null, {}, {}, {}, {}, {}, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun tiendaQuitar() = shot("tienda_quitar") {
+        val run = androidx.compose.runtime.remember { runAt(NodeType.SHOP).also { it.player.gold = 120; it.startShopRemoval() } }
+        ShopScreen(run, null, {}, {}, {}, {}, {}, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun tesoro() = shot("tesoro") {
+        val run = androidx.compose.runtime.remember { runAt(NodeType.TREASURE) }
+        NodeResultScreen(run, {}, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun llaveDorada() = shot("llave") {
+        val run = androidx.compose.runtime.remember { runAt(NodeType.KEY) }
+        NodeResultScreen(run, {}, {}, {})
+        HudBar(hudStateOf(run), {}, {}, {}, {})
+    }
+
+    @Test
+    fun cofreConLlave() = shot("cofre") {
+        val run = androidx.compose.runtime.remember { runAt(NodeType.VAULT, key = true) }
+        NodeResultScreen(run, {}, {}, {})
         HudBar(hudStateOf(run), {}, {}, {}, {})
     }
 

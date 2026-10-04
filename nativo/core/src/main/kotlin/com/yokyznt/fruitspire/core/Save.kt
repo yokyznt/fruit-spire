@@ -163,6 +163,8 @@ object Save {
             RunScreen.BOSS_RELIC -> run.openBossRelics() // se vuelven a sortear las opciones
             else -> {}
         }
+        // fuera de las recompensas, lo que quedó sin recoger (tesoro, cofre…) se da solo
+        if (run.screen != RunScreen.REWARD) run.grantAllLoot()
         run
     } catch (e: Exception) { null }
 

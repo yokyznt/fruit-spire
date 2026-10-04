@@ -55,6 +55,11 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
       Las casillas que no son combate (tienda, campamento, tesoro, misterio, mesa de juegos, llave, cofre) muestran «llega en la siguiente etapa» y se siguen de largo.
       Se adelantó de la etapa 3 solo el objeto de jefe (el premio del jefe de castillo lo necesita).
 - [ ] 3. Tienda, campamento, tesoro, eventos, llave/cofre, pozo, reglas de piso (ya salen en combate), calabozo, dado del destino, mochila y semillas en combate, mazo.
+      **Hecho (3A):** campamento (descansar / madurar / despegar), tienda (5 cartas con una en oferta, objetos, semillas, quitar carta con precio creciente),
+      tesoro, Llave Dorada y Cofre Sellado. `Run.kt` (`restHeal`, `restUpgrade`, `restRemove`, `buyShop*`, `shopRemoveCard`, `leaveNode`), `Shop.kt` (surtido y precios),
+      `ui/NodeScreens.kt` (`RestScreen`, `DeckPickerScreen`, `ShopScreen`, `NodeResultScreen`), `NodesTest` (14 pruebas). Estas pantallas no se reanudan al continuar
+      (igual que en la web): lo que quedó sin recoger se da solo al cargar (`Run.grantAllLoot`).
+      **Falta (3B):** misterio (eventos), mesa de juegos, pozo, calabozo, dado del destino, mochila (objetos y semillas usables en combate).
 - [ ] 4. Minijuegos, pase de batalla, vestidor, colección, bestiario, notas.
 - [ ] 5. Tutorial, historia y final.
 - [ ] 6. Pulido, compilación de lanzamiento y relevo de la app web.

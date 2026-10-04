@@ -48,7 +48,7 @@ import com.yokyznt.fruitspire.core.data.World
 
 /** Pantalla "de papel": ocupa todo el teléfono, con un título a mano y su contenido centrado. */
 @Composable
-private fun PaperScreen(title: String, modifier: Modifier = Modifier, art: (@Composable () -> Unit)? = null, content: @Composable () -> Unit) {
+fun PaperScreen(title: String, modifier: Modifier = Modifier, art: (@Composable () -> Unit)? = null, content: @Composable () -> Unit) {
     Column(
         modifier.fillMaxSize().background(Ink.paper2).padding(top = HUD_H.dp, start = 24.dp, end = 24.dp, bottom = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)

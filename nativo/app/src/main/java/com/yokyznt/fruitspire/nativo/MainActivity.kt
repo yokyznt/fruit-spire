@@ -49,10 +49,13 @@ import com.yokyznt.fruitspire.nativo.ui.HudBar
 import com.yokyznt.fruitspire.nativo.ui.Ink
 import com.yokyznt.fruitspire.nativo.ui.MapScreen
 import com.yokyznt.fruitspire.nativo.ui.MenuScreen
+import com.yokyznt.fruitspire.nativo.ui.NodeResultScreen
 import com.yokyznt.fruitspire.nativo.ui.NodeStubScreen
 import com.yokyznt.fruitspire.nativo.ui.OutlinedText
+import com.yokyznt.fruitspire.nativo.ui.RestScreen
 import com.yokyznt.fruitspire.nativo.ui.RewardScreen
 import com.yokyznt.fruitspire.nativo.ui.SettingsWindow
+import com.yokyznt.fruitspire.nativo.ui.ShopScreen
 import com.yokyznt.fruitspire.nativo.ui.Sprite
 import com.yokyznt.fruitspire.nativo.ui.SpriteStore
 import com.yokyznt.fruitspire.nativo.ui.ToastState
@@ -119,6 +122,7 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
     BackHandler(enabled = vm.screen != AppScreen.MENU || showSettings) {
         if (showSettings) showSettings = false
         else if (vm.deckView != null) vm.deckView = null
+        else if (vm.screen == AppScreen.RUN && vm.run?.pickerMode != null) vm.setPicker(null)
         else vm.toMenu()
     }
 }
@@ -148,6 +152,12 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
             }
             RunScreen.REWARD -> RewardScreen(run, vm::collectLoot, vm::dropLoot, vm::pickRewardCard, vm::continueReward)
             RunScreen.BOSS_RELIC -> BossRelicScreen(run, vm::pickBossRelic, vm::skipBossRelic)
+            RunScreen.REST -> RestScreen(run, vm.flash, vm::restHeal, vm::setPicker, vm::pickCard, vm::leaveNode)
+            RunScreen.SHOP -> ShopScreen(
+                run, vm.flash, vm::buyShopCard, vm::buyShopRelic, vm::buyShopSeed,
+                vm::startShopRemoval, vm::pickCard, onClosePicker = { vm.setPicker(null) }, onLeave = vm::leaveNode
+            )
+            RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT -> NodeResultScreen(run, vm::collectLoot, vm::dropLoot, vm::leaveNode)
             RunScreen.NODE_STUB -> NodeStubScreen(run, vm::leaveStub)
             RunScreen.GAME_OVER -> GameOverScreen(run, vm::toMenu)
             RunScreen.VICTORY -> VictoryScreen(run, vm::toMenu)

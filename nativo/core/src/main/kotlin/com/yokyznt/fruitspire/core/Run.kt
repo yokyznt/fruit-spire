@@ -1,6 +1,7 @@
 package com.yokyznt.fruitspire.core
 
 import com.yokyznt.fruitspire.core.data.CastleDef
+import com.yokyznt.fruitspire.core.data.Cards
 import com.yokyznt.fruitspire.core.data.CharacterHooks
 import com.yokyznt.fruitspire.core.data.Difficulty
 import com.yokyznt.fruitspire.core.data.EnemyDef
@@ -11,6 +12,7 @@ import com.yokyznt.fruitspire.core.data.Relics
 import com.yokyznt.fruitspire.core.data.Seeds
 import com.yokyznt.fruitspire.core.data.World
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -23,7 +25,16 @@ enum class RunScreen {
     REWARD,
     /** Elegir un objeto de jefe (tras el jefe de un castillo). */
     BOSS_RELIC,
-    /** Casilla cuyo contenido llega en la etapa 3 (tienda, campamento, tesoro, misterio…). */
+    /** Campamento: descansar, madurar o despegar una carta. */
+    REST,
+    SHOP,
+    /** Tesoro: un objeto por recoger. */
+    TREASURE,
+    /** Se encontró la Llave Dorada. */
+    KEY_FOUND,
+    /** Cofre Sellado (con o sin llave). */
+    VAULT,
+    /** Casilla cuyo contenido llega en la etapa 3 (misterio, mesa de juegos…). */
     NODE_STUB,
     GAME_OVER,
     VICTORY
@@ -68,6 +79,14 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     var lastBossId: String? = null
     /** Tipo de casilla que se está mostrando en NODE_STUB. */
     var stubNode: String? = null
+
+    // ---------- campamento, tienda, tesoro y cofre ----------
+    /** Selector de cartas abierto en el campamento o la tienda: upgrade | remove (null = ninguno). */
+    var pickerMode: String? = null
+    var shopStock: ShopStock? = null
+    /** Texto del resultado de un tesoro o cofre. */
+    var nodeMessage = ""
+    var vaultOpened = false
 
     val difficulty: Difficulty get() = World.difficulty(player.difficulty)
     val castle: CastleDef get() = World.castles[player.act.coerceIn(1, World.castles.size) - 1]
@@ -155,6 +174,11 @@ class Run(val player: Player, val progress: Progress = Progress()) {
                 return PendingCombat(encounterFor(kind, pos.x.toDouble() / (map.cols - 1)), kind)
             }
             NodeType.EMPTY, NodeType.BLOCKED -> screen = RunScreen.MAP
+            NodeType.REST -> { pickerMode = null; screen = RunScreen.REST }
+            NodeType.SHOP -> openShop()
+            NodeType.TREASURE -> openTreasure()
+            NodeType.KEY -> { player.hasGoldenKey = true; screen = RunScreen.KEY_FOUND }
+            NodeType.VAULT -> openVault()
             else -> { stubNode = type; screen = RunScreen.NODE_STUB }
         }
         return null
@@ -162,6 +186,153 @@ class Run(val player: Player, val progress: Progress = Progress()) {
 
     /** Sigue de largo una casilla que aún no tiene contenido. */
     fun leaveStub() { stubNode = null; screen = RunScreen.MAP }
+
+    /**
+     * Sale de una casilla con contenido (campamento, tienda, tesoro, llave, cofre) y vuelve al mapa.
+     * Falso si todavía queda algún premio por recoger.
+     */
+    fun leaveNode(): Boolean {
+        if (lootPending()) return false
+        loot.clear()
+        pickerMode = null
+        shopStock = null
+        nodeMessage = ""
+        screen = RunScreen.MAP
+        return true
+    }
+
+    // ---------- campamento ----------
+    /** Vida que se recupera al descansar: una fracción de la vida máxima (según el grado) más lo que dan los objetos. */
+    fun restHealAmount(): Int {
+        val p = player
+        val extra = p.relics.sumOf { Relics.hooks(it)?.onRest?.invoke(p) ?: 0 }
+        return floor(p.maxHp * difficulty.restHeal).toInt() + extra
+    }
+
+    fun canRest(): Boolean = player.relics.none { Relics.get(it)?.noRest == true }
+
+    /** Descansa y sigue. Falso si no se puede (no estás en el campamento o un objeto lo impide). */
+    fun restHeal(): Boolean {
+        if (screen != RunScreen.REST || !canRest()) return false
+        player.heal(restHealAmount())
+        return leaveNode()
+    }
+
+    fun setPicker(mode: String?) { pickerMode = mode }
+
+    /** Madura la copia [deckIndex] del mazo. No sale del campamento: la interfaz anima y luego llama a [leaveNode]. */
+    fun restUpgrade(deckIndex: Int): Boolean {
+        if (screen != RunScreen.REST) return false
+        val id = player.deck.getOrNull(deckIndex) ?: return false
+        if (Cards.get(id)?.canUpgrade != true) return false
+        player.deck[deckIndex] = "$id+"
+        return true
+    }
+
+    /** Despega (quita) la copia [deckIndex] del mazo. */
+    fun restRemove(deckIndex: Int): Boolean {
+        if (screen != RunScreen.REST || deckIndex !in player.deck.indices) return false
+        player.deck.removeAt(deckIndex)
+        return true
+    }
+
+    // ---------- tienda ----------
+    private fun openShop() {
+        val stock = Shop.stock(player)
+        progress.discover(stock.cards.map { it.cardId })
+        shopStock = stock
+        pickerMode = null
+        screen = RunScreen.SHOP
+    }
+
+    fun removalPrice(): Int = Shop.removalPrice(player)
+
+    fun buyShopCard(index: Int): BuyResult {
+        val s = shopStock ?: return BuyResult.INVALID
+        val item = s.cards.getOrNull(index) ?: return BuyResult.INVALID
+        if (player.gold < item.price) return BuyResult.NO_GOLD
+        player.gold -= item.price
+        player.deck.add(item.cardId)
+        s.cards.removeAt(index)
+        progress.discover(listOf(item.cardId))
+        return BuyResult.OK
+    }
+
+    fun buyShopRelic(index: Int): BuyResult {
+        val s = shopStock ?: return BuyResult.INVALID
+        val item = s.relics.getOrNull(index) ?: return BuyResult.INVALID
+        if (player.gold < item.price) return BuyResult.NO_GOLD
+        val relic = Relics.get(item.relicId) ?: return BuyResult.INVALID
+        player.gold -= item.price
+        Rewards.giveRelic(player, relic)
+        s.relics.removeAt(index)
+        return BuyResult.OK
+    }
+
+    fun buyShopSeed(index: Int): BuyResult {
+        val s = shopStock ?: return BuyResult.INVALID
+        val item = s.seeds.getOrNull(index) ?: return BuyResult.INVALID
+        if (player.gold < item.price) return BuyResult.NO_GOLD
+        if (Rewards.seedsFull(player)) return BuyResult.BAG_FULL
+        player.gold -= item.price
+        Rewards.addSeed(player, item.seedId)
+        s.seeds.removeAt(index)
+        return BuyResult.OK
+    }
+
+    /** Abre el selector para quitar una carta (cuesta oro, y solo una vez por tienda). */
+    fun startShopRemoval(): Boolean {
+        val s = shopStock ?: return false
+        if (screen != RunScreen.SHOP || s.removeUsed || player.gold < removalPrice()) return false
+        pickerMode = "remove"
+        return true
+    }
+
+    /** Quita la copia [deckIndex], cobra y sube el precio de la próxima vez. */
+    fun shopRemoveCard(deckIndex: Int): Boolean {
+        val s = shopStock ?: return false
+        val price = removalPrice()
+        if (pickerMode != "remove" || s.removeUsed || player.gold < price || deckIndex !in player.deck.indices) return false
+        player.deck.removeAt(deckIndex)
+        player.gold -= price
+        player.removals += 1
+        s.removeUsed = true
+        pickerMode = null
+        return true
+    }
+
+    // ---------- tesoro, llave y cofre sellado ----------
+    private val RELIC_TIERS = listOf("common", "uncommon", "rare")
+
+    /** Pone un objeto al azar en la fila de premios y devuelve su texto ("Nombre: descripción"). */
+    private fun offerRandomRelic(): String {
+        val relic = Rewards.randomRelic(player, RELIC_TIERS, lootRelicIds()) ?: return "Ya tienes todos los objetos disponibles."
+        loot.add(LootItem("relic", id = relic.id))
+        return "${relic.name}: ${relic.description}"
+    }
+
+    private fun openTreasure() {
+        loot.clear()
+        nodeMessage = offerRandomRelic()
+        screen = RunScreen.TREASURE
+    }
+
+    private fun openVault() {
+        loot.clear()
+        if (player.hasGoldenKey) {
+            player.hasGoldenKey = false
+            val gold = 40 + Rng.int(20)
+            loot.add(LootItem("gold", n = gold))
+            nodeMessage = "${offerRandomRelic()} Además, $gold de oro brillante."
+            vaultOpened = true
+        } else {
+            val gold = 15 + Rng.int(10)
+            loot.add(LootItem("gold", n = gold))
+            nodeMessage = "El cofre está sellado. Sin la Llave Dorada solo puedes forzar la cerradura: consigues $gold de oro."
+            vaultOpened = false
+        }
+        screen = RunScreen.VAULT
+    }
 
     // ---------- combate ----------
     fun startCombat(pc: PendingCombat, onUpdate: () -> Unit = {}, onEnd: (String) -> Unit = {}): Combat {
@@ -246,6 +417,12 @@ class Run(val player: Player, val progress: Progress = Progress()) {
 
     /** Deja una semilla que no cabe en la bolsa. */
     fun dropLoot(i: Int) { loot.getOrNull(i)?.takeIf { it.isOpen }?.dropped = true }
+
+    /** Al cargar una partida: lo que quedó sin recoger fuera de las recompensas se da solo (menos semillas sin sitio). */
+    fun grantAllLoot() {
+        loot.filter { it.isOpen && (it.k != "seed" || !Rewards.seedsFull(player)) }.forEach { grant(it); it.taken = true }
+        loot.clear()
+    }
 
     fun pickRewardCard(cardId: String) {
         if (rewardCardPicked || cardId !in rewardCards) return
