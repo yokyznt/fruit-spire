@@ -16,11 +16,24 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
     sola vez por tamaño (queda en caché).
   - `ui/Widgets.kt`: botón sticker, panel, logo de letras, avisos.
 
+## Port del motor (core/)
+- `tools/export-core-data.js` (Node, desde la raíz) lee `js/data/*.js` y genera `core/.../data/gen/Gen*.kt`: estados, cartas, objetos, semillas,
+  brotes, 121 enemigos con sus jugadas, 12 temas, 3 castillos, personajes y dificultades. Se vuelve a correr si cambia un dato en la versión web.
+- A mano (funciones): `data/Logic.kt` (efectos de las 73 cartas, ganchos de los 51 objetos, 20 semillas, 5 brotes, reglas de piso,
+  habilidades de personaje), `data/EnemyAi.kt` (IA de 30 enemigos; los 14 que solo recorren una lista salen generados con `cycle(...)`).
+- `Entities.kt` (azar con semilla mulberry32 = el de las pruebas web, entidades), `Combat.kt` (port de `js/engine/combat.js`, incluida la vista previa).
+- Pendiente de portar: `engine/map.js` (generador de mapas), flujo de partida (`js/game.js`), guardado, mascotas (`PetHooks` ya es el enganche).
+- Para cuidar que las reglas sean idénticas: comparación cruzada con semilla (ver `tools/crosscheck-combat.js` y `CrossCheckTest`).
+
 ## Etapas
 - [x] 0. Tutorial arreglado en la app web (v2.9).
 - [ ] 1. Cimientos: proyecto, dibujos y letras exportados, base visual, menú y ajustes **(hecho)**;
-      sonido exportado y port del motor (`engine` + `data`) con pruebas **(pendiente)**.
-- [ ] 2. Partida base: elegir fruta, portada de piso, mapa, combate, recompensas, guardar.
+      port del motor de combate y de todos los datos **(hecho, 3000 combates idénticos a JS)**;
+      sonido exportado **(pendiente)**.
+- [ ] 2. Partida base. Hecho: motor de combate y datos. **Pendiente (siguiente paso)**: port de `js/engine/map.js` (mapas, con la
+      misma comparación cruzada), flujo de partida y guardado de `js/game.js` (elegir fruta, portada de piso, casillas de enemigo/élite/jefe,
+      recompensas de combate, derrota/victoria, siguiente piso), y las pantallas Compose (elegir fruta, portada, mapa con arrastre y zoom,
+      combate con cartas arrastrables, recompensas).
 - [ ] 3. Tienda, campamento, tesoro, eventos, llave/cofre, pozo, objeto de jefe, reglas de piso, calabozo, dado, mochila, mazo.
 - [ ] 4. Minijuegos, pase de batalla, vestidor, colección, bestiario, notas.
 - [ ] 5. Tutorial, historia y final.

@@ -14,4 +14,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     testImplementation(kotlin("test"))
 }
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+    // la comparación cruzada con el motor JS lee este archivo (lo genera `node tools/crosscheck-combat.js`)
+    inputs.files(layout.buildDirectory.file("crosscheck.txt")).optional()
+    testLogging { showStandardStreams = true }
+}
