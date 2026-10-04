@@ -17,6 +17,6 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
     // la comparación cruzada con el motor JS lee este archivo (lo genera `node tools/crosscheck-combat.js`)
-    inputs.files(layout.buildDirectory.file("crosscheck.txt")).optional()
+    inputs.files(layout.buildDirectory.file("crosscheck.txt"), layout.buildDirectory.file("crosscheck-map.txt")).optional()
     testLogging { showStandardStreams = true }
 }

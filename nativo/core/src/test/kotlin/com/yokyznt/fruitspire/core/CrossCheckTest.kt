@@ -105,4 +105,40 @@ class CrossCheckTest {
         }
         println("CrossCheckTest: ${expected.size} combates, $stepsCompared pasos idénticos")
     }
+
+    /** Un mapa con la misma semilla y opciones que el script de Node, en el mismo formato de texto. */
+    private fun mapLines(k: Int): Pair<MapData, List<String>> {
+        Rng.seed(5000 + k)
+        val cols = 9 + (k % 7)
+        val rows = 5 + (k % 4)
+        val startY = k % rows
+        val variantIds = MapGen.variants.keys.toList()
+        val m = MapGen.generate(startY, elites = 3 + (k % 3), cols = cols, rows = rows, variant = variantIds[k % variantIds.size], games = 1 + (k % 3))
+        val out = ArrayList<String>()
+        m.grid.forEachIndexed { y, r -> out.add("g$y ${r.joinToString(" ") { it.take(2) }}") }
+        m.wallsV.forEachIndexed { y, r -> out.add("v$y ${r.joinToString("") { if (it) "1" else "0" }}") }
+        m.wallsH.forEachIndexed { y, r -> out.add("h$y ${r.joinToString("") { if (it) "1" else "0" }}") }
+        out.add("meta boss=${m.bossY} rivers=${m.rivers.joinToString(";") { "${it.col}:${it.bridge}" }} ${m.cols}x${m.rows} ${m.variant} seed=${m.seed}")
+        return Pair(m, out)
+    }
+
+    @Test
+    fun mapsMatchTheJsEngine() {
+        val file = File("build/crosscheck-map.txt")
+        if (!file.exists()) { println("CrossCheckTest: falta ${file.absolutePath} (node tools/crosscheck-combat.js)"); return }
+        val expected = LinkedHashMap<Int, MutableList<String>>()
+        var current: MutableList<String>? = null
+        file.readLines().forEach { line ->
+            if (line.startsWith("#")) { current = ArrayList<String>().also { expected[line.substring(1).toInt()] = it } }
+            else if (line.isNotEmpty()) current!!.add(line)
+        }
+        for ((k, exp) in expected) {
+            val (map, got) = try { mapLines(k) } catch (e: Throwable) { fail("mapa $k: ${e::class.simpleName}: ${e.message}\n${e.stackTraceToString().lines().take(6).joinToString("\n")}") }
+            assertEquals(exp.size, got.size, "mapa $k: distinta cantidad de líneas")
+            for (i in exp.indices) if (exp[i] != got[i]) fail("mapa $k, línea $i difiere\n  JS : ${exp[i]}\n  Kt : ${got[i]}")
+            val sound = MapGen.isSound(map, k % (5 + (k % 4)))
+            if (!sound.first) fail("mapa $k: se puede quedar atorado en ${sound.second?.joinToString(",")}")
+        }
+        println("CrossCheckTest: ${expected.size} mapas idénticos y sin trampas")
+    }
 }

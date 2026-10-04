@@ -83,3 +83,22 @@ const dest = path.join(root, 'nativo/core/build/crosscheck.txt');
 fs.mkdirSync(path.dirname(dest), { recursive: true });
 fs.writeFileSync(dest, out.join('\n') + '\n');
 console.log(`${N} combates, ${out.length} líneas → ${dest}`);
+
+// ---------- mapas ----------
+require(path.join(root, 'js/engine/map.js'));
+const variantIds = Object.keys(MAP_VARIANTS);
+const mapOut = [];
+const MAPS = Number(process.argv[3]) || 1000;
+for (let k = 0; k < MAPS; k++) {
+    Math.random = mulberry32(5000 + k);
+    const cols = 9 + (k % 7), rows = 5 + (k % 4), startY = k % rows;
+    const m = generateMap(startY, { cols, rows, variant: variantIds[k % variantIds.length], elites: 3 + (k % 3), games: 1 + (k % 3) });
+    mapOut.push(`#${k}`);
+    m.grid.forEach((r, y) => mapOut.push(`g${y} ${r.map((t) => t.slice(0, 2)).join(' ')}`));
+    m.wallsV.forEach((r, y) => mapOut.push(`v${y} ${r.map((b) => (b ? 1 : 0)).join('')}`));
+    m.wallsH.forEach((r, y) => mapOut.push(`h${y} ${r.map((b) => (b ? 1 : 0)).join('')}`));
+    mapOut.push(`meta boss=${m.bossY} rivers=${m.rivers.map((r) => r.col + ':' + r.bridge).join(';')} ${m.cols}x${m.rows} ${m.variant} seed=${m.seed}`);
+}
+const mapDest = path.join(root, 'nativo/core/build/crosscheck-map.txt');
+fs.writeFileSync(mapDest, mapOut.join('\n') + '\n');
+console.log(`${MAPS} mapas, ${mapOut.length} líneas → ${mapDest}`);
