@@ -7,6 +7,7 @@ reemplaza a la app web empaquetada (`android/`).
 Compilar y probar: `JAVA_HOME=~/.jdks/jdk-21.0.12.1+1 ./gradlew.bat :core:test :app:assembleDebug`
 Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regenera `app/src/main/assets/sprites`.
 Sonido: `node tools/export-audio.js` regenera `app/src/main/assets/audio` y `GenAudio.kt`.
+Historia y final: `node tools/export-cine.js` regenera `app/src/main/assets/cine` (46 videos).
 
 ## Cómo está armado
 - `core/`: reglas del juego en Kotlin puro (port de `js/engine`, `js/data` y el flujo de `js/game.js`). Sin Android.
@@ -59,6 +60,13 @@ Sonido: `node tools/export-audio.js` regenera `app/src/main/assets/audio` y `Gen
   `LocalAudio`, `Modifier.tapButton`). Enlaces: `CombatController(audio)`, `TableController(audio)`, `GameViewModel.audio`/`musicPlace()` (la raíz cambia de canción con `LaunchedEffect`), `Settings.onChanged`, `StickerButton` y los
   botones de barra, selección de fruta y ajustes hacen «tap» como todo `<button>` de la web. Los controladores reciben un reenviador del ViewModel, así que sobreviven a que la actividad se recree.
   Pruebas: `AudioTest` (core, 8), `AndroidAudioTest` (4), `AudioHooksTest` (24, con un `RecordingAudio`), `TableAudioTest` (11), `ButtonTapTest` (3). Sin probar a oído en el teléfono.
+- Historia y final (etapa 5B): en vez de portar a mano ~2000 líneas de escenas CSS, `tools/export-cine.js` (`node tools/export-cine.js [story|ending] [filtro]`; Node 22 + Chrome + ffmpeg con libx264) dibuja cada escena de
+  `js/story.js`/`js/ending.js` en un contenedor de 1920×810, pausa TODAS las animaciones CSS (`document.getAnimations`), fija el tiempo de cada cuadro y lo captura; cada escena arranca desde el final de la anterior (el fundido queda dentro del video).
+  Salen 46 MP4 de 30 cuadros, ~31 MB, en `app/src/main/assets/cine/` (`s<escena>_<fruta>`, `s3`/`s4` sin fruta, `e0_<fruta>_<jefe final>`, `e<escena>_<fruta>`) porque las escenas dibujan a la fruta elegida y a las otras tres, y la 0 del final al jefe vencido.
+  Límite: el héroe sale sin ropa del vestidor (los videos se hicieron con el aspecto básico). `core/Cine.kt` (escenas, duraciones, textos con el nombre, sonidos, nombre del video, `CineTimeline` con el guardia de 350 ms) y `Progress.endingSeen`;
+  app: `ui/CinePlayer.kt` (un `MediaPlayer` y una `TextureView` que se reutilizan, recorte para llenar la pantalla) y `ui/CineScreen.kt` (texto que se escribe a 26 ms por letra, puntos, atrás/saltar/siguiente, botón final, sonidos).
+  `play()` va a la historia y la fanfarria de la portada sale al terminarla (`finishStory`); vencer al último jefe lleva al final (`startEnding`) y luego a la victoria; Notas tiene «Ver la historia otra vez» y, si ya la viste, «Ver el final otra vez».
+  Las pruebas que arrancan partida llaman `vm.finishStory()` tras `vm.play()`. `CineTest` (núcleo, 12) y `CineFlowTest` (9).
 - Gotcha de los dibujos: volver a correr `node tools/export-sprites.js` regraba ~12 `.webp` viejos con bytes distintos (carta_marcada, flor_imperial, guardia_hielo…); si no vienen al caso, restaurarlos con `git checkout` y dejar solo los nuevos y `sprites.json`.
 - Para cuidar que las reglas sean idénticas: comparación cruzada con semilla (`node tools/crosscheck-combat.js 3000 1000` genera las trazas de JS en `core/build/`, y `gradlew :core:test` exige que Kotlin salga idéntico).
 
@@ -68,8 +76,8 @@ Sonido: `node tools/export-audio.js` regenera `app/src/main/assets/audio` y `Gen
   `Hud.kt`, `CharacterSelect.kt`, `ActIntro.kt`, `MapScreen.kt`, `CombatController.kt` (modelos inmutables, poses de ataque = keyframes del CSS, tiempos de `js/fx.js`),
   `CombatScreen.kt`, `RewardScreens.kt`, `DeckModal.kt`.
 - Las animaciones del combate necesitan el reloj de cuadros de Compose: el controlador usa el scope de la composición (`vm.uiScope`), NO `viewModelScope`.
-- Pruebas: `gradlew :core:test` (111 pruebas, con el motor idéntico a JS) y `gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`
-  (109 pruebas; capturas en `app/build/capturas/`; `FlowSmokeTest` monta `GameRoot` y juega con las pantallas reales; `TableScreenshotTest` captura cada mesa y prueba
+- Pruebas: `gradlew :core:test` (123 pruebas, con el motor idéntico a JS) y `gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`
+  (122 pruebas; capturas en `app/build/capturas/`; `FlowSmokeTest` monta `GameRoot` y juega con las pantallas reales; `TableScreenshotTest` captura cada mesa y prueba
   toques y arrastres reales en el tablero).
 - Mesas de juego en pantalla: `ui/TableController.kt` (tiempos de las animaciones y toques; `busy` ignora toques) y `ui/TableScreens.kt` (tapete, crupier con globo, fichas,
   dados y cartas dibujados con Canvas, rodillos, ruleta, tablero de ajedrez que se toca o se arrastra). Las piezas de ajedrez son dibujos exportados `mgp_<pieza><equipo>`
@@ -105,5 +113,5 @@ Sonido: `node tools/export-audio.js` regenera `app/src/main/assets/audio` y `Gen
       **Hecho (4A):** las cinco mesas de juego (dados, póker, ajedrez, tragamonedas, ruleta), desde las casillas del mapa y desde los eventos de misterio.
       **Hecho (4B):** pase de batalla, vestidor (con la fruta vestida en el mapa, el combate, la barra de arriba y la selección) y mascotitas con sus retos y efectos.
       **Hecho (4C):** colección (cartas, objetos, semillas), bestiario y notas, con sus pantallas conectadas al menú. **Con esto la etapa 4 queda completa.**
-- [ ] 5. Sonido, historia y final, tutorial. **Hecho (5A):** sonido (efectos, música por pantalla, vibración, volumen de Ajustes). Faltan 5B (historia y final) y 5C (tutorial).
+- [ ] 5. Sonido, historia y final, tutorial. **Hecho (5A):** sonido (efectos, música por pantalla, vibración, volumen de Ajustes). **Hecho (5B):** historia y final animados (videos exportados de la web). Falta 5C (tutorial).
 - [ ] 6. Pulido, compilación de lanzamiento y relevo de la app web.

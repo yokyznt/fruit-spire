@@ -71,7 +71,7 @@ private class ProgressSave(
     val passXp: Int = 0, val passClaimed: List<Int> = emptyList(),
     val owned: List<String> = emptyList(), val equipped: Map<String, Map<String, String?>> = emptyMap(),
     val foundRelics: List<String> = emptyList(), val foundSeeds: List<String> = emptyList(),
-    val bestiary: Map<String, Int> = emptyMap(), val notesSeen: String = ""
+    val bestiary: Map<String, Int> = emptyMap(), val notesSeen: String = "", val endingSeen: Boolean = false
 )
 
 object Save {
@@ -202,7 +202,7 @@ object Save {
             ProgressSave(
                 p.unlocked.toMap(), p.discovered.toList(), p.passXp, p.passClaimed.toList(), p.owned.toList(),
                 p.equipped.toSortedMap().mapValues { (_, slots) -> slots.toSortedMap() },
-                p.foundRelics.toList(), p.foundSeeds.toList(), p.bestiary.toMap(), p.notesSeen
+                p.foundRelics.toList(), p.foundSeeds.toList(), p.bestiary.toMap(), p.notesSeen, p.endingSeen
             )
         )
 
@@ -220,6 +220,7 @@ object Save {
             d.foundSeeds.filter { Seeds.get(it) != null }.forEach { out.foundSeeds.add(it) }
             d.bestiary.forEach { (id, kills) -> if (Enemies.get(id) != null) out.bestiary[id] = maxOf(0, kills) }
             out.notesSeen = d.notesSeen
+            out.endingSeen = d.endingSeen
             val slots = setOf("skin", "head", "face", "neck", "pet")
             d.equipped.forEach { (char, worn) ->
                 if (World.character(char) == null) return@forEach

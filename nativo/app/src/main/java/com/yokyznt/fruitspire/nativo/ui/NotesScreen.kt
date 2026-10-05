@@ -48,7 +48,7 @@ import com.yokyznt.fruitspire.core.data.gen.GEN_PATCH_NOTES
 // A la izquierda el título y el creador; a la derecha las notas, la más nueva primero.
 // ---------------------------------------------------------------------------------------------------------------
 @Composable
-fun NotesScreen(onBack: () -> Unit) {
+fun NotesScreen(onBack: () -> Unit, endingSeen: Boolean = false, onReplayStory: () -> Unit = {}, onReplayEnding: () -> Unit = {}) {
     val uri = LocalUriHandler.current
     Row(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
         Column(
@@ -59,6 +59,9 @@ fun NotesScreen(onBack: () -> Unit) {
             BasicText("Notas de la versión", style = Fonts.hand(38f).copy(textAlign = TextAlign.Center))
             BasicText("Estás en la versión $GAME_VERSION", style = Fonts.body(15f, color = Ink.inkSoft))
             CreatorCard { uri.openUri(CREATOR_URL) }
+            // repetir la historia y, si ya la viste, el final (js/notes.js)
+            StickerButton("Ver la historia otra vez", onReplayStory, color = Ink.banana, fontSize = 18f, padding = PaddingValues(horizontal = 22.dp, vertical = 8.dp))
+            if (endingSeen) StickerButton("Ver el final otra vez", onReplayEnding, color = Ink.mint, fontSize = 18f, padding = PaddingValues(horizontal = 22.dp, vertical = 8.dp))
             StickerButton("Volver", onBack, secondary = true, fontSize = 18f, padding = PaddingValues(horizontal = 26.dp, vertical = 6.dp))
         }
         LazyColumn(

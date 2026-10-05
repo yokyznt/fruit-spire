@@ -238,7 +238,7 @@ class CollectionScreenTest {
     fun loQueLlevasAlGuardarQuedaAnotadoEnLaColeccion() {
         val app = ApplicationProvider.getApplicationContext<Application>()
         val vm = GameViewModel(app)
-        vm.newGame(); vm.play()
+        vm.newGame(); vm.play(); vm.finishStory()
         val run = vm.run!!
         val relic = Relics.db.values.first { it.tier == "common" }
         run.player.relics.add(relic.id)

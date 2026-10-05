@@ -36,7 +36,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.yokyznt.fruitspire.core.CineKind
 import com.yokyznt.fruitspire.core.RunScreen
+import com.yokyznt.fruitspire.nativo.ui.CineScreen
 import com.yokyznt.fruitspire.nativo.ui.ActIntroScreen
 import com.yokyznt.fruitspire.nativo.ui.BossRelicScreen
 import com.yokyznt.fruitspire.nativo.ui.CharacterSelectScreen
@@ -146,7 +148,12 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
                 onSettings = { showSettings = true }, passBadge = Pass.unclaimed(vm.progress), notesBadge = vm.progress.notesAreNew()
             )
             AppScreen.COLLECTION -> CollectionScreen(vm.progress, vm.collection, onInfo = { toast.show(it) }, onBack = vm::toMenu)
-            AppScreen.NOTES -> NotesScreen(onBack = vm::toMenu)
+            AppScreen.NOTES -> NotesScreen(
+                onBack = vm::toMenu, endingSeen = vm.progress.endingSeen,
+                onReplayStory = { vm.startStory(replay = true) }, onReplayEnding = { vm.startEnding(replay = true) }
+            )
+            AppScreen.STORY -> CineScreen(CineKind.STORY, vm.cineHeroId(), vm.cineHeroName(), null, vm.cineReplay, vm.audio, vm::finishStory)
+            AppScreen.ENDING -> CineScreen(CineKind.ENDING, vm.cineHeroId(), vm.cineHeroName(), vm.cineBossId(), vm.cineReplay, vm.audio, vm::finishEnding)
             AppScreen.PASS -> PassScreen(vm.progress, vm.tick, vm::claimPassLevel, vm::claimAllPass, onWardrobe = vm::openWardrobe, onBack = vm::toMenu)
             AppScreen.WARDROBE -> WardrobeScreen(
                 vm.progress, vm.wardrobeChar, vm.tick, vm::wardrobeSelect, vm::wardrobeEquip, vm::wardrobeClear, onBack = vm::toMenu
@@ -165,6 +172,8 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
     BackHandler(enabled = vm.screen != AppScreen.MENU || showSettings) {
         if (showSettings) showSettings = false
         else if (vm.bagOpen) vm.closeBag()
+        else if (vm.screen == AppScreen.STORY) vm.finishStory()
+        else if (vm.screen == AppScreen.ENDING) vm.finishEnding()
         else if (vm.deckView != null) vm.deckView = null
         else if (vm.screen == AppScreen.RUN && vm.run?.pickerMode != null) vm.setPicker(null)
         else vm.toMenu()
