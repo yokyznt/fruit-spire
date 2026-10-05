@@ -1,5 +1,7 @@
 # Fruit Spire nativo — estado del port
 
+> **Para retomar el trabajo en otra conversación: leer `nativo/PLAN_SIGUIENTE.md`** (lo que pidió el usuario y falta: UIs más grandes, estados con colores y descripción extra, personaje a la derecha, mesas a pantalla completa, animaciones; luego tutorial y lanzamiento).
+
 Plan completo: versión nativa en Kotlin + Jetpack Compose, por etapas, como app aparte
 («Fruit Spire Nativo», `com.yokyznt.fruitspire.nativo`) hasta que tenga todo; entonces
 reemplaza a la app web empaquetada (`android/`).
