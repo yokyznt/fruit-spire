@@ -3,8 +3,10 @@ package com.yokyznt.fruitspire.nativo
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yokyznt.fruitspire.core.BuyResult
@@ -25,14 +27,20 @@ import com.yokyznt.fruitspire.core.data.World
 import com.yokyznt.fruitspire.core.data.gen.Sfx
 import com.yokyznt.fruitspire.nativo.ui.CollectionState
 import com.yokyznt.fruitspire.nativo.ui.CombatController
+import com.yokyznt.fruitspire.nativo.ui.Flight
 import com.yokyznt.fruitspire.nativo.ui.GameAudio
+import com.yokyznt.fruitspire.nativo.ui.HudAnchors
 import com.yokyznt.fruitspire.nativo.ui.MapPan
 import com.yokyznt.fruitspire.nativo.ui.NoAudio
 import com.yokyznt.fruitspire.nativo.ui.PickFlash
 import com.yokyznt.fruitspire.nativo.ui.TableController
 import com.yokyznt.fruitspire.nativo.ui.intro
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/** Cuánto espera una pantalla de premios, tras recoger el último, para seguir sola (lo que tarda en llegar a la barra). */
+const val SOON_MS = 1200L
 
 /** Pantalla de más arriba de la app: menú, elegir fruta o una partida en curso. */
 enum class AppScreen { MENU, CHARACTER_SELECT, RUN, PASS, WARDROBE, COLLECTION, NOTES, STORY, ENDING }
@@ -116,6 +124,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---------- menú ----------
     fun toMenu() {
+        soonJob?.cancel(); soonJob = null
+        flights.clear()
         combat = null
         intro = null
         moving = null
@@ -370,38 +380,80 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (r.screen == RunScreen.VICTORY) startEnding(replay = false) // vencer al jefe final: el final animado y luego la victoria
     }
 
+    // ---------- premios que vuelan a la barra ----------
+    /** Dónde está cada casilla de la barra de arriba (la barra las anota). */
+    val hudAnchors = HudAnchors()
+    /** Premios en el aire: la barra muestra lo real menos lo que aún vuela, y sube al llegar. */
+    val flights = mutableStateListOf<Flight>()
+    /** Dónde está cada premio por recoger en la pantalla ("loot:N", "card:ID"); lo anotan las pantallas de premios. */
+    val lootRects = HashMap<String, Rect>()
+    private var flightSeq = 0
+    private var soonJob: Job? = null
+    /** Cuánto espera [continueSoon] (las pruebas lo cambian). */
+    var soonMs: Long = SOON_MS
+
+    /** Lo que tenía la partida antes de recoger un premio: la diferencia es lo que vuela. */
+    private class Snap(r: Run) { val gold = r.player.gold; val hp = r.player.hp; val maxHp = r.player.maxHp; val deck = r.player.deck.size }
+
+    private fun launchFlight(r: Run, kind: String, itemId: String?, key: String, before: Snap) {
+        val from = lootRects[key] ?: return
+        val p = r.player
+        flights.add(Flight(++flightSeq, kind, itemId, from, p.gold - before.gold, p.hp - before.hp, p.maxHp - before.maxHp, p.deck.size - before.deck))
+    }
+
+    fun landFlight(id: Int) { flights.removeAll { it.id == id } }
+
     // ---------- recompensas ----------
     fun collectLoot(i: Int) {
         val r = run ?: return
         val item = r.loot.getOrNull(i)
         val open = item?.isOpen == true
+        val before = Snap(r)
         if (!r.collectLoot(i)) {
             if (item?.k == "seed") { if (open) audio.play(Sfx.DENIED); toast("Tu bolsa de semillas está llena: tira una o deja esta") }
             return
         }
         audio.play(when (item?.k) { "gold" -> Sfx.COIN; "relic" -> Sfx.RELIC_GET; else -> Sfx.POP })
-        persist(); bump(); finishRewardSoon()
+        if (item != null) launchFlight(r, item.k, item.id, "loot:$i", before)
+        persist(); bump(); continueSoon()
     }
 
-    fun dropLoot(i: Int) { run?.dropLoot(i); persist(); bump(); finishRewardSoon() }
+    fun dropLoot(i: Int) { run?.dropLoot(i); persist(); bump(); continueSoon() }
 
     fun pickRewardCard(id: String) {
         val r = run ?: return
+        val before = Snap(r)
         r.pickRewardCard(id)
-        persist(); bump(); finishRewardSoon()
+        launchFlight(r, "card", id, "card:$id", before)
+        persist(); bump(); continueSoon()
     }
 
-    /** Cuando ya se recogió todo (y se eligió carta), se sigue solo, como en la versión web. */
-    private fun finishRewardSoon() {
+    /**
+     * Cuando ya se recogió todo el premio, la pantalla sigue sola ~1,2 s después (lo que tarda el último en llegar a la barra),
+     * salvo que antes toques «Continuar». Solo en recompensas, tesoro, cofre y evento con premios; nunca en pozo, tienda,
+     * campamento, objeto de jefe, evento con opciones, dado, calabozo ni mesas.
+     */
+    private fun continueSoon() {
         val r = run ?: return
-        if (r.screen != RunScreen.REWARD || r.rewardCards.isEmpty() || !r.canFinishReward()) return
-        viewModelScope.launch {
-            delay(450)
-            if (run === r && r.screen == RunScreen.REWARD && r.canFinishReward()) continueReward()
+        val screen = r.screen
+        val ready = when (screen) {
+            RunScreen.REWARD -> r.rewardCards.isNotEmpty() && r.canFinishReward()
+            RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT -> r.loot.isNotEmpty() && !r.lootPending()
+            RunScreen.EVENT_RESULT -> r.loot.isNotEmpty() && !r.lootPending() && r.deckChanges.isEmpty()
+            else -> false
+        }
+        if (!ready) return
+        soonJob?.cancel()
+        soonJob = viewModelScope.launch {
+            delay(soonMs)
+            if (run !== r || r.screen != screen) return@launch
+            soonJob = null
+            if (screen == RunScreen.REWARD) { if (r.canFinishReward()) continueReward() } else if (!r.lootPending()) leaveNode()
         }
     }
 
     fun continueReward() {
+        soonJob?.cancel(); soonJob = null
         val r = run ?: return
         if (!r.canFinishReward()) { audio.play(Sfx.DENIED); toast("¡Primero recoge tus premios!"); return }
         r.finishReward()
@@ -471,6 +523,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun leaveNode() {
         val r = run ?: return
         if (flash != null) return
+        soonJob?.cancel(); soonJob = null
         if (!r.leaveNode()) { toast("¡Primero recoge tus premios!"); return }
         persist(); bump()
     }

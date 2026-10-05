@@ -82,6 +82,7 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
                     if (item.taken) drawRoundRect(Color(0xFFEFE6D6), cornerRadius = CornerRadius(r))
                     else drawRoundRect(Brush.radialGradient(listOf(c1, c2), Offset(size.width / 2, size.height * .38f), size.maxDimension * .7f), cornerRadius = CornerRadius(r))
                 }
+                .noteLootRect(LocalLootRects.current, "loot:$index")
                 .clickable(remember { MutableInteractionSource() }, null, enabled = item.isOpen) { onCollect() },
             contentAlignment = Alignment.Center
         ) {
@@ -171,6 +172,7 @@ fun RewardScreen(
                     Cards.get(id)?.let { card ->
                         Box(
                             Modifier.graphicsLayer { rotationZ = if (i % 2 == 0) -1.5f else 1.5f }
+                                .noteLootRect(LocalLootRects.current, "card:$id")
                                 .clickable(remember { MutableInteractionSource() }, null) { onPickCard(id) }
                         ) { CardView(card) }
                     }
@@ -178,7 +180,7 @@ fun RewardScreen(
             }
         }
         if (run.rewardCards.isEmpty() || run.rewardCardPicked) {
-            StickerButton("Continuar", onContinue, secondary = true, enabled = run.canFinishReward(), fontSize = 20f)
+            ContinueButton(onContinue, enabled = run.canFinishReward())
         }
     }
 }
@@ -196,7 +198,7 @@ fun BossRelicScreen(run: Run, onPick: (String) -> Unit, onSkip: () -> Unit) {
             }
             if (run.bossRelicChoices.isEmpty()) BasicText("…no quedan objetos de jefe", style = Fonts.hand(26f, Ink.inkSoft))
         }
-        StickerButton("Omitir", onSkip, secondary = true, fontSize = 18f)
+        StickerButton("Omitir", onSkip, secondary = true, fontSize = 24f)
     }
 }
 

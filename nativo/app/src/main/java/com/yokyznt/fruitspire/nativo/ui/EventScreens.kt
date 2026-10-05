@@ -136,7 +136,7 @@ fun EventResultScreen(run: Run, onCollect: (Int) -> Unit, onDrop: (Int) -> Unit,
         Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Bottom) {
             run.loot.forEachIndexed { i, it -> if (!it.dropped) LootItemView(it, i, full, { onCollect(i) }, { onDrop(i) }) }
         }
-        StickerButton("Continuar", onContinue, color = Ink.mint, enabled = !run.lootPending(), fontSize = 21f)
+        ContinueButton(onContinue, enabled = !run.lootPending())
     }
 }
 
@@ -160,7 +160,7 @@ fun WellScreen(run: Run, onToss: () -> Unit, onCollect: (Int) -> Unit, onDrop: (
                 "Tirar moneda ($cost)", onToss, color = Ink.mint, enabled = run.player.gold >= cost && !pending, fontSize = 20f,
                 leading = { Sprite("ui_coin", 26.dp) }
             )
-            StickerButton("Irme", onLeave, secondary = true, enabled = !pending, fontSize = 18f)
+            StickerButton("Irme", onLeave, secondary = true, enabled = !pending, fontSize = 24f)
         }
     }
 }

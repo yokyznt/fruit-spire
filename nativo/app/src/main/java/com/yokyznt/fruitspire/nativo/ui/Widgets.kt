@@ -58,6 +58,15 @@ fun DrawScope.stickerShape(fill: Color, radius: Float, inkWidth: Float, edgeWidt
  * Botón sticker en forma de píldora (el <button> del juego web): se levanta sobre su
  * sombra de tinta y se hunde al tocarlo. [secondary] es la versión de papel con borde punteado.
  */
+/** El «Continuar» de las pantallas de premios: grande, para tocarlo con el pulgar sin fallar. */
+@Composable
+fun ContinueButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, text: String = "Continuar") {
+    StickerButton(
+        text, onClick, modifier.defaultMinSize(minWidth = 240.dp, minHeight = 56.dp), color = Ink.mint, enabled = enabled,
+        fontSize = 26f, padding = PaddingValues(horizontal = 56.dp, vertical = 16.dp)
+    )
+}
+
 @Composable
 fun StickerButton(
     text: String,

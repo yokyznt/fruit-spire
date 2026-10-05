@@ -112,7 +112,7 @@ fun RestScreen(
             RestOption("rayito_sol", "Madurar", "Mejora una carta", Ink.mint) { onPicker("upgrade") }
             RestOption("compostar", "Despegar", "Quita una carta", Ink.grapeBtn) { onPicker("remove") }
         }
-        StickerButton("Seguir sin hacer nada", onLeave, secondary = true, fontSize = 18f)
+        StickerButton("Seguir sin hacer nada", onLeave, secondary = true, fontSize = 24f)
     }
 }
 
@@ -173,7 +173,7 @@ fun DeckPickerScreen(
                 }
             }
         }
-        StickerButton("Volver", onBack, secondary = true, fontSize = 18f, enabled = flash == null)
+        StickerButton("Volver", onBack, secondary = true, fontSize = 24f, enabled = flash == null)
     }
 }
 
@@ -284,7 +284,7 @@ fun ShopScreen(
             ShopItem(if (stock.removeUsed) null else rp, gold >= rp, enabled = !stock.removeUsed, onClick = onRemoval) { ServiceCardView(stock.removeUsed, gold < rp) }
             if (stock.isSoldOut) BasicText("…¡lo compraste todo!", style = Fonts.hand(26f, Ink.inkSoft), modifier = Modifier.align(Alignment.CenterVertically))
         }
-        StickerButton("Salir", onLeave, secondary = true, fontSize = 18f)
+        StickerButton("Salir", onLeave, secondary = true, fontSize = 24f)
     }
 }
 
@@ -298,7 +298,7 @@ fun NodeResultScreen(run: Run, onCollect: (Int) -> Unit, onDrop: (Int) -> Unit, 
     if (run.screen == RunScreen.KEY_FOUND) {
         PaperScreen("¡Llave Dorada!", art = { Sprite("node_key", 120.dp) }) {
             BasicText("Abre el Cofre Sellado de este piso.", style = Fonts.body(19f, color = Ink.inkSoft))
-            StickerButton("Continuar", onContinue, color = Ink.mint, fontSize = 21f)
+            ContinueButton(onContinue)
         }
         return
     }
@@ -312,6 +312,6 @@ fun NodeResultScreen(run: Run, onCollect: (Int) -> Unit, onDrop: (Int) -> Unit, 
         Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Bottom) {
             run.loot.forEachIndexed { i, it -> if (!it.dropped) LootItemView(it, i, full, { onCollect(i) }, { onDrop(i) }) }
         }
-        StickerButton("Continuar", onContinue, color = Ink.mint, enabled = !run.lootPending(), fontSize = 21f)
+        ContinueButton(onContinue, enabled = !run.lootPending())
     }
 }

@@ -53,7 +53,10 @@ import com.yokyznt.fruitspire.nativo.ui.FateScreen
 import com.yokyznt.fruitspire.nativo.ui.Fonts
 import com.yokyznt.fruitspire.nativo.ui.GameAudio
 import com.yokyznt.fruitspire.nativo.ui.GameOverScreen
+import com.yokyznt.fruitspire.nativo.ui.FlyLayer
 import com.yokyznt.fruitspire.nativo.ui.HudBar
+import com.yokyznt.fruitspire.nativo.ui.LocalHudAnchors
+import com.yokyznt.fruitspire.nativo.ui.LocalLootRects
 import com.yokyznt.fruitspire.nativo.ui.Ink
 import com.yokyznt.fruitspire.nativo.ui.InventoryModal
 import com.yokyznt.fruitspire.nativo.ui.LocalAudio
@@ -187,6 +190,7 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
     vm.uiScope = androidx.compose.runtime.rememberCoroutineScope()
     val run = vm.run ?: return
     val ctl = vm.combat
+    CompositionLocalProvider(LocalHudAnchors provides vm.hudAnchors, LocalLootRects provides vm.lootRects) {
     Box(Modifier.fillMaxSize()) {
         when (run.screen) {
             RunScreen.ACT_INTRO -> ActIntroScreen(run, vm::beginFloor)
@@ -223,13 +227,15 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
         if (run.screen != RunScreen.GAME_OVER && run.screen != RunScreen.VICTORY) {
             val seedReady = run.screen == RunScreen.COMBAT && ctl?.canUseSeedNow() == true && run.player.seeds.any { it != null }
             HudBar(
-                hudStateOf(run, seedReady), onMenu = vm::toMenu, onBag = onBag, onDeck = vm::showDeck, onSettings = onSettings,
+                hudStateOf(run, seedReady, vm.flights.toList()), onMenu = vm::toMenu, onBag = onBag, onDeck = vm::showDeck, onSettings = onSettings,
                 modifier = Modifier.align(Alignment.TopStart), compact = run.screen == RunScreen.COMBAT
             )
+            FlyLayer(vm.flights.toList(), vm.hudAnchors, vm::landFlight)
         }
         if (vm.bagOpen) InventoryModal(run, ctl?.canUseSeedNow() == true, vm::useSeedFromBag, vm::dropSeed, vm::closeBag)
         vm.intro?.let { CombatIntroOverlay(it) }
         vm.deckView?.let { (title, note, ids) -> DeckModal(title, note, ids) { vm.deckView = null } }
+    }
     }
 }
 

@@ -155,7 +155,7 @@ private fun TableIntro(run: Run, table: Table, onStart: (Int) -> Unit, onLeave: 
             }
             BasicText("Gratis: si ganas, la casa te da 8 de oro; si pierdes, no pierdes nada.", style = Fonts.body(14f, color = Ink.inkSoft))
         }
-        StickerButton("Irme sin jugar", onLeave, secondary = true, fontSize = 18f)
+        StickerButton("Irme sin jugar", onLeave, secondary = true, fontSize = 24f)
     }
 }
 
@@ -282,7 +282,7 @@ private fun ResultBlock(run: Run, table: Table, onCollect: (Int) -> Unit, onDrop
                 }
             }
         }
-        StickerButton("Continuar", onLeave, color = Ink.mint, enabled = !run.lootPending(), fontSize = 20f)
+        ContinueButton(onLeave, enabled = !run.lootPending())
     }
 }
 
@@ -629,7 +629,7 @@ private fun ChessBody(ctl: TableController, run: Run, onCollect: (Int) -> Unit, 
                         run.loot.forEachIndexed { i, it -> if (!it.dropped) Scaled(.6f, 128f, 182f) { LootItemView(it, i, full, { onCollect(i) }, { onDrop(i) }) } }
                     }
                 }
-                StickerButton("Continuar", onLeave, color = Ink.mint, enabled = !run.lootPending(), fontSize = 20f)
+                ContinueButton(onLeave, enabled = !run.lootPending())
             } else {
                 BasicText(t.note, style = Fonts.hand(21f, CREAM).copy(textAlign = TextAlign.Center), modifier = Modifier.height(86.dp))
                 StickerButton(
