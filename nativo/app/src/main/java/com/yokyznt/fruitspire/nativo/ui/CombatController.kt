@@ -41,7 +41,9 @@ data class StatusUi(val id: String, val n: Int, val sprite: String, val debuff: 
 @Immutable
 data class IntentUi(
     val cls: String, val sprite: String, val label: String, val extras: List<Pair<String, String>>,
-    val frozen: Boolean = false, val unknown: Boolean = false, val title: String = "", val tip: String = ""
+    val frozen: Boolean = false, val unknown: Boolean = false, val title: String = "", val tip: String = "",
+    /** las burbujas que se abren al tocarla (jugada con etiquetas de color + cada estado que nombra) */
+    val sections: List<InfoSection> = emptyList()
 )
 
 @Immutable
@@ -89,13 +91,14 @@ private fun statusSprite(id: String) = Statuses.get(id)?.sprite ?: "ui_up"
 
 /** Lo que hará un enemigo en su turno, con el daño real calculado (intentInfo de js/render.js). */
 fun intentOf(c: Combat, e: EnemyInstance): IntentUi {
-    if (e.getStatus("frozen") != 0) return IntentUi("frozen", "st_frozen", "", emptyList(), frozen = true, title = "Congelado", tip = "Pierde su próxima acción.")
+    if (e.getStatus("frozen") != 0) return IntentUi("frozen", "st_frozen", "", emptyList(), frozen = true, title = "Congelado", tip = "Pierde su próxima acción.", sections = listOf(statusSection("frozen", null)))
     val m = e.nextMove ?: return IntentUi("buff", "ui_up", "", emptyList())
     var cls = ""
     var sprite = ""
     var label = ""
     val extras = ArrayList<Pair<String, String>>()
-    val lines = ArrayList<String>()
+    val lines = ArrayList<InfoLine>()
+    val amounts = LinkedHashMap<String, Int>()
     fun set(c2: String, s2: String, l2: String, value: String?) {
         if (cls.isEmpty()) { cls = c2; sprite = s2; label = l2 } else if (value != null) extras.add(s2 to value)
     }
@@ -103,34 +106,36 @@ fun intentOf(c: Combat, e: EnemyInstance): IntentUi {
         val d = c.previewDamage(e, c.player, m.damage)
         val hits = if (m.hits > 0) m.hits else 1
         set("attack", "ui_sword", if (hits > 1) "$d×$hits" else "$d", null)
-        lines.add("Ataca $d de daño" + if (hits > 1) " × $hits" else "")
+        lines.add(InfoLine(InfoTags.attack("Ataca"), "$d de daño" + if (hits > 1) " × $hits" else ""))
     }
     if (m.block != 0) {
         val blk = if (e.getStatus("frail") != 0) floor(m.block * 0.75).toInt() else m.block
         set("defend", "ui_shield", "$blk", "$blk")
-        lines.add("Se cubre $blk de cáscara")
+        lines.add(InfoLine(InfoTags.defend("Se cubre"), "$blk de cáscara"))
     }
-    if (m.allyBlock != 0) lines.add("Cubre ${m.allyBlock} de cáscara a sus aliados")
-    m.apply?.forEach { (id, n) -> lines.add("Te aplica $n de ${statusName(id)}"); set("debuff", statusSprite(id), "$n", "$n") }
-    m.self?.forEach { (id, n) -> lines.add("Gana $n de ${statusName(id)}"); set("buff", statusSprite(id), "$n", "$n") }
-    m.allies?.forEach { (id, n) -> lines.add("Todos ganan $n de ${statusName(id)}"); set("buff", statusSprite(id), "$n", "$n") }
-    if (m.heal != 0) { set("heal", "ui_heal", "+${m.heal}", "${m.heal}"); lines.add("Se cura ${m.heal} ❤️") }
-    if (m.healAll != 0) lines.add("Cura ${m.healAll} ❤️ a todos")
-    if (m.drain) lines.add("Vampírico: se cura con el daño")
-    if (m.stealGold != 0) { set("debuff", "ui_coin", "${m.stealGold}", "${m.stealGold}"); lines.add("Roba ${m.stealGold} de oro (vuelve si lo derrotas)") }
-    if (m.stealCard != 0) { set("debuff", "st_thief", "${m.stealCard}", "${m.stealCard}"); lines.add("Roba ${if (m.stealCard == 1) "1 carta" else "${m.stealCard} cartas"} (vuelve si lo derrotas)") }
+    if (m.allyBlock != 0) lines.add(InfoLine(InfoTags.defend("Cubre"), "${m.allyBlock} de cáscara a sus aliados"))
+    m.apply?.forEach { (id, n) -> amounts[id] = n; lines.add(InfoLine(InfoTags.curse("Te aplica"), "$n de ${statusName(id)}")); set("debuff", statusSprite(id), "$n", "$n") }
+    m.self?.forEach { (id, n) -> amounts[id] = n; lines.add(InfoLine(InfoTags.gain("Gana"), "$n de ${statusName(id)}")); set("buff", statusSprite(id), "$n", "$n") }
+    m.allies?.forEach { (id, n) -> amounts[id] = n; lines.add(InfoLine(InfoTags.gain("Todos ganan"), "$n de ${statusName(id)}")); set("buff", statusSprite(id), "$n", "$n") }
+    if (m.heal != 0) { set("heal", "ui_heal", "+${m.heal}", "${m.heal}"); lines.add(InfoLine(InfoTags.heal("Se cura"), "${m.heal} ❤️")) }
+    if (m.healAll != 0) lines.add(InfoLine(InfoTags.heal("Cura"), "${m.healAll} ❤️ a todos"))
+    if (m.drain) lines.add(InfoLine(InfoTags.heal("Vampírico"), "se cura con el daño"))
+    if (m.stealGold != 0) { set("debuff", "ui_coin", "${m.stealGold}", "${m.stealGold}"); lines.add(InfoLine(InfoTags.steal("Roba"), "${m.stealGold} de oro (vuelve si lo derrotas)")) }
+    if (m.stealCard != 0) { set("debuff", "st_thief", "${m.stealCard}", "${m.stealCard}"); lines.add(InfoLine(InfoTags.steal("Roba"), "${if (m.stealCard == 1) "1 carta" else "${m.stealCard} cartas"} (vuelve si lo derrotas)")) }
     m.addCard?.let { ac ->
         val card = Cards.get(ac.id)
         set("debuff", card?.sprite ?: ac.id, "", "")
-        lines.add("Mete ${card?.name ?: "una maldición"} en tu mazo")
+        lines.add(InfoLine(InfoTags.curse("Mete"), "${card?.name ?: "una maldición"} en tu mazo"))
     }
     m.summon?.let { ids ->
         set("summon", "node_mystery", "", "")
-        lines.add("Invoca " + ids.joinToString(" y ") { com.yokyznt.fruitspire.core.data.Enemies.get(it)?.name ?: it })
+        lines.add(InfoLine(InfoTags.summon("Invoca"), ids.joinToString(" y ") { com.yokyznt.fruitspire.core.data.Enemies.get(it)?.name ?: it }))
     }
+    if (lines.isEmpty()) lines.add(InfoLine(InfoTags.summon("¿?"), "Nadie sabe qué hará"))
+    val sections = listOf(InfoSection(m.name.ifEmpty { "Intención" }, Ink.ink, lines)) + statusSectionsFull(amounts.map { (id, n) -> id to n })
     return IntentUi(
         cls.ifEmpty { "buff" }, sprite.ifEmpty { "ui_up" }, label, extras.take(3),
-        title = m.name, tip = lines.joinToString("\n").ifEmpty { "Nadie sabe qué hará" }
+        title = m.name, tip = lines.joinToString("\n") { "${it.tag?.label.orEmpty()} ${it.text}".trim() }, sections = sections
     )
 }
 
@@ -297,7 +302,7 @@ class CombatController(
     var discarding by mutableStateOf(false)
         private set
     /** Explicación de algo (estado, intención, regla): título y texto; se cierra tocando. */
-    var info by mutableStateOf<Pair<String, String>?>(null)
+    var info by mutableStateOf<List<InfoSection>?>(null)
     /** Pila que se quiere ver ("draw" | "discard" | "exhaust"). */
     var pileView by mutableStateOf<String?>(null)
 
@@ -478,7 +483,8 @@ class CombatController(
         selected = if (selected == i) -1 else i
     }
 
-    fun showInfo(title: String, text: String) { info = title to text }
+    fun showInfo(title: String, text: String) { info = listOf(InfoSection(title, text)) }
+    fun showSections(sections: List<InfoSection>) { info = sections }
     fun showPile(which: String) { pileView = which }
 
     private fun handCard(idx: Int): Card? = Cards.get(combat.player.hand.getOrNull(idx))

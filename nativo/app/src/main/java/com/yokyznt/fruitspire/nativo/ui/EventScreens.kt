@@ -73,25 +73,25 @@ private fun ArtOrEmoji(id: String, emoji: String, size: Dp) {
 }
 
 @Composable
-private fun EventArt(ev: EventDef, size: Dp = 110.dp) = ArtOrEmoji(ev.sprite ?: ev.id, ev.icon, size)
+private fun EventArt(ev: EventDef, size: Dp = 140.dp) = ArtOrEmoji(ev.sprite ?: ev.id, ev.icon, size)
 
 @Composable
 fun EventScreen(run: Run, onOption: (Int) -> Unit) {
     val ev = run.currentEvent ?: return
     PaperScreen(ev.title, art = { EventArt(ev) }) {
-        BasicText(ev.desc, style = Fonts.body(18f, color = Ink.inkSoft).copy(textAlign = TextAlign.Center), modifier = Modifier.width(720.dp))
-        Column(Modifier.width(580.dp).padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        BasicText(ev.desc, style = Fonts.body(23f, color = Ink.inkSoft).copy(textAlign = TextAlign.Center), modifier = Modifier.width(980.dp))
+        Column(Modifier.width(820.dp).padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ev.options.forEachIndexed { i, o ->
                 val locked = o.locked?.invoke(run.player).orEmpty()
                 Box(
                     Modifier.fillMaxWidth().graphicsLayer { alpha = if (locked.isEmpty()) 1f else .5f }
                         .stickerCard(16.dp, fill = toneColor(optionTone(o)))
                         .let { m -> if (locked.isEmpty()) m.tap { onOption(i) } else m }
-                        .padding(horizontal = 18.dp, vertical = 12.dp)
+                        .padding(horizontal = 22.dp, vertical = 14.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GameText(o.text, Fonts.body(17f, FontWeight.Medium))
-                        if (locked.isNotEmpty()) BasicText("($locked)", style = Fonts.body(13f, color = Ink.inkSoft))
+                        GameText(o.text, Fonts.body(23f, FontWeight.Medium))
+                        if (locked.isNotEmpty()) BasicText("($locked)", style = Fonts.body(17f, color = Ink.inkSoft))
                     }
                 }
             }
@@ -130,8 +130,8 @@ private fun DeckChangesRow(changes: List<DeckChange>) {
 fun EventResultScreen(run: Run, onCollect: (Int) -> Unit, onDrop: (Int) -> Unit, onContinue: () -> Unit) {
     val ev = run.currentEvent
     val full = Rewards.seedsFull(run.player)
-    PaperScreen(ev?.title ?: "Misterio", art = { ev?.let { EventArt(it, 96.dp) } }) {
-        GameText(run.nodeMessage, Fonts.hand(24f).copy(textAlign = TextAlign.Center), Modifier.width(760.dp))
+    PaperScreen(ev?.title ?: "Misterio", art = { ev?.let { EventArt(it, 120.dp) } }) {
+        GameText(run.nodeMessage, Fonts.hand(32f).copy(textAlign = TextAlign.Center), Modifier.width(980.dp))
         DeckChangesRow(run.deckChanges)
         Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Bottom) {
             run.loot.forEachIndexed { i, it -> if (!it.dropped) LootItemView(it, i, full, { onCollect(i) }, { onDrop(i) }) }

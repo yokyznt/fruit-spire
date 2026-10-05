@@ -262,10 +262,10 @@ fun CombatIntroOverlay(intro: IntroUi) {
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                intro.sprites.forEach { Sprite(it, if (intro.sprites.size > 1) 120.dp else 150.dp) }
+                intro.sprites.forEach { Sprite(it, if (intro.sprites.size > 2) 170.dp else if (intro.sprites.size > 1) 200.dp else 250.dp) }
             }
-            OutlinedText(intro.title, Fonts.display(62f, titleColor), inkWidth = 3.dp, edgeWidth = 3.dp)
-            BasicText(intro.names, style = Fonts.hand(34f).copy(textAlign = TextAlign.Center))
+            OutlinedText(intro.title, Fonts.display(66f, titleColor), inkWidth = 3.dp, edgeWidth = 3.dp)
+            BasicText(intro.names, style = Fonts.hand(52f).copy(textAlign = TextAlign.Center))
         }
     }
 }

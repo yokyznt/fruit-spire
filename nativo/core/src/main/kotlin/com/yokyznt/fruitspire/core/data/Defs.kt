@@ -30,12 +30,21 @@ typealias EnemyAiFn = (EnemyInstance, Combat) -> String?
 // ---------- estados ----------
 class StatusDef(
     val id: String, val name: String, val word: String, val icon: String, val sprite: String,
-    val kind: String, val cls: String, val help: String, val noCount: Boolean = false
+    val kind: String, val cls: String, val help: String, val noCount: Boolean = false,
+    /** desc(n) de la web con {n} en lugar de la cantidad; descOne si en singular cambia el texto. */
+    val descTpl: String? = null, val descOne: String? = null
 )
 
 object Statuses {
     val db: Map<String, StatusDef> by lazy { GEN_STATUSES.associateBy { it.id } }
     fun get(id: String): StatusDef? = db[id]
+
+    /** Lo que hace el estado con [n] puntos (statusTip de js/render.js); sin cantidad, la regla general. */
+    fun describe(id: String, n: Int?): String {
+        val s = db[id] ?: return ""
+        if (n == null || s.descTpl == null) return s.help
+        return if (n == 1 && s.descOne != null) s.descOne else s.descTpl.replace("{n}", n.toString())
+    }
 }
 
 // ---------- cartas ----------

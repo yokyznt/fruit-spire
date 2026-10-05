@@ -108,8 +108,9 @@ fun HudBar(
     compact: Boolean = false
 ) {
     val scale = if (compact) 1f else 1.17f
+    val safe = LocalSafeInsets.current
     Row(
-        modifier.fillMaxWidth().height((58 * scale).dp).padding(horizontal = 22.dp),
+        modifier.fillMaxWidth().height((58 * scale).dp).padding(start = (22f + safe.left).dp, end = (22f + safe.right).dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy((12 * scale).dp)
     ) {

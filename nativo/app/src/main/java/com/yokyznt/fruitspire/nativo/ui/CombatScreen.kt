@@ -251,13 +251,13 @@ private fun Plate(c: CombatantUi, ctl: CombatController, multi: Boolean, modifie
                 if (c.block > 0) BlockBadge(c.block, Modifier.align(Alignment.CenterStart).offset((-22).dp, 0.dp))
             }
             Row(Modifier.padding(top = 7.dp).height(36.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                c.statuses.forEach { s -> StatusChip(s) { ctl.showInfo(s.name + if (s.noCount) "" else " ${s.n}", (if (s.debuff) "Perjuicio. " else "Mejora. ") + s.help) } }
+                c.statuses.forEach { s -> StatusChip(s) { ctl.showSections(statusSectionsFull(listOf(s.id to s.n))) } }
             }
         }
         Box(
             Modifier.graphicsLayer { rotationZ = -2f * tilt }.chip(8.dp).padding(horizontal = 16.dp, vertical = 1.dp)
         ) {
-            BasicText(c.name + if (c.tier == "boss") " ♛" else if (c.tier == "elite") " ✦" else "", style = Fonts.display(if (multi) 21f else 25f))
+            BasicText(c.name + if (c.tier == "boss") " ♛" else if (c.tier == "elite") " ✦" else "", style = Fonts.display(if (multi) 26f else 32f))
         }
     }
 }
@@ -351,7 +351,7 @@ private fun CombatantView(
         // globo de intención
         c.intent?.let { intent ->
             IntentBubble(
-                intent, ctl.acting == index - 1 && !player, { ctl.showInfo(intent.title.ifEmpty { "Intención" }, intent.tip) },
+                intent, ctl.acting == index - 1 && !player, { ctl.showSections(intent.sections.ifEmpty { listOf(InfoSection(intent.title.ifEmpty { "Intención" }, intent.tip)) }) },
                 Modifier.align(Alignment.TopStart).offset(10.dp, 0.dp)
             )
         }
@@ -708,17 +708,6 @@ private fun FlyingCardView(f: FlyingCard, ctl: CombatController) {
 }
 
 /** La explicación de algo (estado, intención, pila…): se cierra tocando. */
-@Composable
-private fun InfoPanel(title: String, text: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier.width(420.dp).stickerCard(16.dp, Ink.paper2).padding(horizontal = 18.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        BasicText(title, style = Fonts.body(19f, FontWeight.Bold))
-        GameText(text, Fonts.body(16f, color = Ink.ink))
-    }
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // La pantalla
 // ---------------------------------------------------------------------------------------------------------------
@@ -813,14 +802,19 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
         }
 
         // escenario: la fruta a la izquierda y los enemigos a la derecha
+        // la cámara del teléfono tapa el borde: todo el escenario empieza después del recorte (y un poco más a la derecha)
+        val safe = LocalSafeInsets.current
         Row(
-            Modifier.fillMaxSize().padding(start = if (multi) 16.dp else 60.dp, end = if (multi) 16.dp else 60.dp, top = 56.dp, bottom = 248.dp),
+            Modifier.fillMaxSize().padding(
+                start = (if (multi) 16f else 60f).dp + (safe.left + 44f).dp, end = (if (multi) 16f else 60f).dp + safe.right.dp,
+                top = 56.dp, bottom = 248.dp
+            ),
             verticalAlignment = Alignment.Bottom
         ) {
             val me = ui.player
             val meW = if (multi) 330f else 400f
             Box {
-                CombatantView(me, ctl.actors[0], ctl, clock, meW, if (multi) 118f else 140f, multi, 0)
+                CombatantView(me, ctl.actors[0], ctl, clock, meW, if (multi) 128f else 164f, multi, 0)
                 if (ui.showGarden) Garden(ui.garden, Modifier.align(Alignment.TopCenter))
             }
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
@@ -829,7 +823,7 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Bottom) {
                 ui.enemies.forEachIndexed { i, e ->
                     key(i) {
-                        val size = if (multi) 118f else if (e.tier == "boss") 160f else 140f
+                        val size = if (multi) 140f else if (e.tier == "boss") 214f else 184f
                         CombatantView(e, ctl.actors[1 + i], ctl, clock, if (multi) 262f else 400f, size, multi, i + 1)
                     }
                 }
@@ -886,8 +880,8 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
                     StickerButton("Cancelar", { ctl.cancelSeedAim() }, secondary = true, fontSize = 15f, padding = PaddingValues(horizontal = 14.dp, vertical = 3.dp))
                 }
             }
-            ctl.info?.let { (title, text) ->
-                InfoPanel(title, text, Modifier.align(Alignment.Center))
+            ctl.info?.let { sections ->
+                InfoStack(sections, Modifier.align(Alignment.Center), width = 460.dp, titleSize = 22f, textSize = 18f)
             }
         }
     }

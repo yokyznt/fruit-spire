@@ -41,8 +41,17 @@ function chunked(name, type, items, size) {
 const write = (file, text) => { fs.mkdirSync(OUT, { recursive: true }); fs.writeFileSync(path.join(OUT, file), text); console.log('escrito', file); };
 
 // ---------- estados ----------
+// desc(n) de la web ("Dura 3 turnos más") pasa a plantilla con {n}; si la forma singular (n = 1) cambia, se guarda aparte.
+function statusDescArgs(s) {
+    if (typeof s.desc !== 'function') return '';
+    const tpl = s.desc(7777).split('7777').join('{n}');
+    const one = s.desc(1);
+    let out = `, descTpl = ${ks(tpl)}`;
+    if (one !== tpl.split('{n}').join('1')) out += `, descOne = ${ks(one)}`;
+    return out;
+}
 write('GenStatuses.kt', HEAD() + chunked('GEN_STATUSES', 'StatusDef', Object.values(window.STATUS_DB).map((s) =>
-    `StatusDef(${ks(s.id)}, ${ks(s.name)}, ${ks(s.word)}, ${ks(s.icon)}, ${ks(s.sprite)}, ${ks(s.kind)}, ${ks(s.cls)}, ${ks(s.help || '')}${s.noCount ? ', noCount = true' : ''})`), 20));
+    `StatusDef(${ks(s.id)}, ${ks(s.name)}, ${ks(s.word)}, ${ks(s.icon)}, ${ks(s.sprite)}, ${ks(s.kind)}, ${ks(s.cls)}, ${ks(s.help || '')}${s.noCount ? ', noCount = true' : ''}${statusDescArgs(s)})`), 20));
 
 // ---------- cartas ----------
 write('GenCards.kt', HEAD() + chunked('GEN_CARDS', 'CardDef', Object.values(window.CARD_DEFS).map((c) =>
