@@ -38,6 +38,12 @@ android {
 kotlin {
     compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }
+// La partida (`Run`) es un objeto mutable que Compose no observa: las pantallas se redibujan porque `GameViewModel.tick` sube.
+// Con «strong skipping» (el valor por defecto desde Kotlin 2.0.20) una pantalla que recibe la misma instancia de `Run` se salta
+// al recomponer y se queda con lo viejo (el premio recogido seguía por recoger), así que se desactiva.
+composeCompiler {
+    featureFlags = setOf(org.jetbrains.kotlin.compose.compiler.gradle.ComposeFeatureFlag.StrongSkipping.disabled())
+}
 
 dependencies {
     implementation(project(":core"))

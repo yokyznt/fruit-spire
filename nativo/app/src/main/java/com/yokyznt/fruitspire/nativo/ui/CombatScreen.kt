@@ -87,12 +87,8 @@ private fun CombatBackground(bg: String, modifier: Modifier = Modifier) {
     Box(
         modifier.fillMaxSize().drawBehind {
             val k = density
-            val r = 26f * k
-            val border = 5f * k
-            drawRoundRect(Ink.ink, Offset(-2f * k, -2f * k), Size(size.width + 4f * k, size.height + 4f * k), CornerRadius(r + 2f * k))
-            drawRoundRect(Ink.edge, Offset.Zero, size, CornerRadius(r))
-            val inner = Size(size.width - border * 2, size.height - border * 2)
-            val clip = Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(border, border, border + inner.width, border + inner.height, CornerRadius(r - border))) }
+            // la mesa llena toda la pantalla, sin marco: el borde blanco con contorno se veía en los cuatro bordes
+            val clip = Path().apply { addRect(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height)) }
             clipPath(clip) {
                 when (bg) {
                     "picnic" -> {

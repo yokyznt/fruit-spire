@@ -73,7 +73,7 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
     }
     Column(Modifier.graphicsLayer { scaleX = .7f + .3f * appear.value; scaleY = scaleX; alpha = appear.value.coerceIn(0f, 1f); translationY = (1f - appear.value) * 18f * density }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
-            Modifier.width(if (item.k == "card") 118.dp else 128.dp).height(132.dp).alpha(if (item.taken) .45f else 1f)
+            Modifier.width(if (item.k == "card") 118.dp else 128.dp).height(132.dp)
                 .drawBehind {
                     val k = density; val r = 20f * k
                     drawRoundRect(Color(0x404A3428), Offset(0f, 6f * k), size, CornerRadius(r))
@@ -84,7 +84,8 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
                 .clickable(remember { MutableInteractionSource() }, null, enabled = item.isOpen) { onCollect() },
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            // solo el contenido se atenúa: el alfa de una capa en la caja recortaba su contorno y la palomita
+            Column(Modifier.alpha(if (item.taken) .45f else 1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 when (item.k) {
                     "gold" -> Box(Modifier.size(96.dp, 72.dp)) {
                         Sprite("ui_coin", 52.dp, Modifier.align(Alignment.BottomStart).graphicsLayer { rotationZ = -12f })
@@ -95,7 +96,7 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
                     "maxhp" -> Box { Sprite("ui_heart", 80.dp); BasicText("+", style = Fonts.display(30f, Ink.leaf), modifier = Modifier.align(Alignment.TopEnd)) }
                     "relic" -> Sprite(item.id ?: "", 80.dp)
                     "seed" -> Seeds.get(item.id ?: "")?.let { SeedArt(it, 80.dp) }
-                    "card" -> Cards.get(item.id)?.let { Box(Modifier.size(88.dp, 118.dp)) { Box(Modifier.graphicsLayer { scaleX = .5f; scaleY = .5f; translationX = -44f * density; translationY = -63f * density }) { CardView(it) } } }
+                    "card" -> Cards.get(item.id)?.let { Scaled(.42f, CARD_W, CARD_H) { CardView(it) } }
                 }
                 val label = when (item.k) {
                     "gold" -> "+${item.n} de oro"; "heal" -> "+${item.n} ❤️"; "maxhp" -> "+${item.n} ❤️ máx."

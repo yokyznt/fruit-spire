@@ -76,9 +76,16 @@ fun StickerButton(
     val lift = if (secondary) 2.dp else 5.dp
     Box(
         modifier
-            .graphicsLayer { translationY = press.value * lift.toPx(); alpha = if (enabled) 1f else .45f }
+            // el alfa NO va aquí: una capa con alfa se recorta a los límites del botón y cortaba el contorno y la sombra de arriba y abajo
+            .graphicsLayer { translationY = press.value * lift.toPx() }
             .drawBehind {
                 val ink = 2.dp.toPx()
+                val pad = 12.dp.toPx()
+                val dim = !enabled
+                if (dim) drawContext.canvas.saveLayer(
+                    androidx.compose.ui.geometry.Rect(-pad, -pad, size.width + pad, size.height + pad),
+                    androidx.compose.ui.graphics.Paint().apply { alpha = .45f }
+                )
                 if (secondary) {
                     stickerShape(Ink.paper2, size.height / 2f, 0f, 2.dp.toPx(), dashed = true)
                 } else {
@@ -87,6 +94,7 @@ fun StickerButton(
                     drawRoundRect(Ink.ink, Offset(-ink, -ink + drop), Size(size.width + ink * 2, size.height + ink * 2), CornerRadius(size.height / 2f + ink))
                     stickerShape(color, size.height / 2f, ink, 3.dp.toPx())
                 }
+                if (dim) drawContext.canvas.restore()
             }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
@@ -105,11 +113,8 @@ fun StickerButton(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             if (leading != null) { leading(); Spacer(Modifier.width(8.dp)) }
-            BasicText(
-                text,
-                style = if (secondary) Fonts.hand(fontSize * 1.2f) else Fonts.body(fontSize, FontWeight.SemiBold),
-                maxLines = 1
-            )
+            val textStyle = if (secondary) Fonts.hand(fontSize * 1.2f) else Fonts.body(fontSize, FontWeight.SemiBold)
+            BasicText(text, style = if (enabled) textStyle else textStyle.copy(color = textStyle.color.copy(alpha = .45f)), maxLines = 1)
         }
     }
 }

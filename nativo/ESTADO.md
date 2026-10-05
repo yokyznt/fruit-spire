@@ -74,6 +74,9 @@ Sonido: `node tools/export-audio.js` regenera `app/src/main/assets/audio` y `Gen
 - Mesas de juego en pantalla: `ui/TableController.kt` (tiempos de las animaciones y toques; `busy` ignora toques) y `ui/TableScreens.kt` (tapete, crupier con globo, fichas,
   dados y cartas dibujados con Canvas, rodillos, ruleta, tablero de ajedrez que se toca o se arrastra). Las piezas de ajedrez son dibujos exportados `mgp_<pieza><equipo>`
   (con carita) y `mgp_<pieza><equipo>_s` (sin ella, para las bandejas); salen de `MG.fruitPiece` de js/minigames.js (se expuso solo para el exportador).
+- Cuidado (compilador de Compose): `Run` es mutable y las pantallas se redibujan solo por `GameViewModel.tick`, así que `app/build.gradle.kts` DESACTIVA «strong skipping» (`composeCompiler.featureFlags`);
+  con él, una pantalla que recibe la misma instancia de `Run` se salta y se queda vieja (premios ya recogidos que seguían por recoger, casillas del mapa que desaparecían). `LootCollectTest` lo vigila.
+  Tampoco poner `alpha`/`.alpha()` en un elemento que dibuja fuera de sus límites (contornos, sombras): la capa se recorta y los botones salían partidos; se atenúa el contenido o se usa `saveLayer` (ver `StickerButton`).
 - Cuidado: un `return@key` dentro del lambda de `key(...)` de Compose generó una clase inválida (`Illegal method name "<anonymous>"`) que compila pero revienta al cargarse;
   `TableScreen` lo evita separando en otra función. Si una prueba de pantalla dice `ClassFormatError`, buscar un retorno anticipado dentro de un lambda inline composable.
 - Sin hacer todavía: tooltips de objetos, explicaciones de intención y estados salen al tocar.
