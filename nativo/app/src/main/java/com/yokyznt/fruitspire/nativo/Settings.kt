@@ -19,10 +19,13 @@ class Settings(context: Context) {
     var motion by mutableStateOf(prefs.getString("motion", "todas") ?: "todas"); private set
     var awake by mutableStateOf(prefs.getBoolean("awake", true)); private set
 
-    fun putMusic(v: Int) { music = v.coerceIn(0, 100); prefs.edit().putInt("music", music).apply() }
-    fun putSfx(v: Int) { sfx = v.coerceIn(0, 100); prefs.edit().putInt("sfx", sfx).apply() }
-    fun putVibrate(v: Boolean) { vibrate = v; prefs.edit().putBoolean("vibrate", v).apply() }
-    fun putMapZoom(v: String) { mapZoom = v; prefs.edit().putString("mapZoom", v).apply() }
-    fun putMotion(v: String) { motion = v; prefs.edit().putString("motion", v).apply() }
-    fun putAwake(v: Boolean) { awake = v; prefs.edit().putBoolean("awake", v).apply() }
+    /** Se llama con la clave del ajuste que cambió ("music", "sfx", "vibrate"…): el sonido aplica el volumen al momento. */
+    var onChanged: (String) -> Unit = {}
+
+    fun putMusic(v: Int) { music = v.coerceIn(0, 100); prefs.edit().putInt("music", music).apply(); onChanged("music") }
+    fun putSfx(v: Int) { sfx = v.coerceIn(0, 100); prefs.edit().putInt("sfx", sfx).apply(); onChanged("sfx") }
+    fun putVibrate(v: Boolean) { vibrate = v; prefs.edit().putBoolean("vibrate", v).apply(); onChanged("vibrate") }
+    fun putMapZoom(v: String) { mapZoom = v; prefs.edit().putString("mapZoom", v).apply(); onChanged("mapZoom") }
+    fun putMotion(v: String) { motion = v; prefs.edit().putString("motion", v).apply(); onChanged("motion") }
+    fun putAwake(v: Boolean) { awake = v; prefs.edit().putBoolean("awake", v).apply(); onChanged("awake") }
 }

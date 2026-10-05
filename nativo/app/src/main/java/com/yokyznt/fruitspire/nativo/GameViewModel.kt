@@ -9,6 +9,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yokyznt.fruitspire.core.BuyResult
 import com.yokyznt.fruitspire.core.Cosmetics
+import com.yokyznt.fruitspire.core.MusicContext
+import com.yokyznt.fruitspire.core.NodeType
 import com.yokyznt.fruitspire.core.Pass
 import com.yokyznt.fruitspire.core.PendingCombat
 import com.yokyznt.fruitspire.core.Pos
@@ -17,13 +19,18 @@ import com.yokyznt.fruitspire.core.Rng
 import com.yokyznt.fruitspire.core.Run
 import com.yokyznt.fruitspire.core.RunScreen
 import com.yokyznt.fruitspire.core.Save
+import com.yokyznt.fruitspire.core.data.Cards
 import com.yokyznt.fruitspire.core.data.Enemies
 import com.yokyznt.fruitspire.core.data.World
+import com.yokyznt.fruitspire.core.data.gen.Sfx
 import com.yokyznt.fruitspire.nativo.ui.CollectionState
 import com.yokyznt.fruitspire.nativo.ui.CombatController
+import com.yokyznt.fruitspire.nativo.ui.GameAudio
 import com.yokyznt.fruitspire.nativo.ui.MapPan
+import com.yokyznt.fruitspire.nativo.ui.NoAudio
 import com.yokyznt.fruitspire.nativo.ui.PickFlash
 import com.yokyznt.fruitspire.nativo.ui.TableController
+import com.yokyznt.fruitspire.nativo.ui.intro
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -79,7 +86,33 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
      */
     var uiScope: kotlinx.coroutines.CoroutineScope? = null
 
+    /** El sonido (lo pone la actividad; sin él, como en las pruebas y las vistas previas, no suena nada). */
+    var audio: GameAudio = NoAudio
+
+    /** Lo que se les da a los controladores de combate y de mesa: siempre habla con el sonido de ahora, aunque la actividad se recree. */
+    private val sound = object : GameAudio {
+        override fun play(sfx: Sfx, variant: Int) = audio.play(sfx, variant)
+        override fun music(place: String?) = audio.music(place)
+        override fun pause() = audio.pause()
+        override fun resume() = audio.resume()
+        override fun settingChanged(key: String) = audio.settingChanged(key)
+        override fun release() = audio.release()
+    }
+
+    /**
+     * Qué lista de canciones toca ahora (`musicContextFor` de la web): la del menú fuera de una partida, y dentro la de la
+     * pantalla en que vas. La pantalla de la raíz la lee para cambiar de canción cuando cambia.
+     */
+    fun musicPlace(): String {
+        tick // la partida cambia sin que Compose se entere: se vuelve a calcular con cada cambio
+        val r = run
+        return if (screen == AppScreen.RUN && r != null) MusicContext.forRun(r.screen, r.combatKind, r.player.act) else MusicContext.MENU
+    }
+
     private fun bump() { tick++ }
+
+    /** La portada de un piso nuevo (el primero, o el que sigue al subir) suena con su fanfarria. */
+    private fun fanfareIfNewFloor(r: Run) { if (r.screen == RunScreen.ACT_INTRO) audio.play(Sfx.ACT_FANFARE) }
 
     // ---------- menú ----------
     fun toMenu() {
@@ -110,6 +143,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = Run.start(selectedChar, selectedDiff, progress)
         enter(r)
         persistProgress()
+        fanfareIfNewFloor(r)
     }
 
     fun continueGame() {
@@ -179,6 +213,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun claimPassLevel(level: Int) {
         val c = Pass.claim(progress, level) ?: return
+        audio.play(Sfx.EQUIP)
         persistProgress(); bump()
         toast("¡${c.name} desbloqueado!")
     }
@@ -186,6 +221,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun claimAllPass() {
         val got = Pass.claimAll(progress)
         if (got.isEmpty()) return
+        audio.play(Sfx.RELIC_GET)
         persistProgress(); bump()
         toast("¡${got.size} premio${if (got.size > 1) "s" else ""} reclamado${if (got.size > 1) "s" else ""}!")
     }
@@ -199,6 +235,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             toast(if (c.type == "pet") "Bloqueada. Para desbloquearla: ${Cosmetics.petHowText(c)}" else "Aún no lo tienes. Se gana subiendo de nivel en el Pase de Batalla.")
             return
         }
+        audio.play(Sfx.EQUIP)
         progress.equip(wardrobeChar, id)
         persistProgress(); bump()
     }
@@ -206,7 +243,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun wardrobeClear(slot: String) { progress.unequipSlot(wardrobeChar, slot); persistProgress(); bump() }
 
     /** «Llevarla» en el aviso de una mascotita nueva. */
-    fun wearPet(id: String) { run?.wearPet(id); persistProgress(); bump() }
+    fun wearPet(id: String) { run?.wearPet(id); audio.play(Sfx.EQUIP); persistProgress(); bump() }
 
     // ---------- portada y mapa ----------
     fun beginFloor() {
@@ -220,13 +257,26 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return
         if (moving != null || intro != null || combat != null || !r.isReachable(x, y)) return
         moving = Pos(x, y)
+        audio.play(Sfx.MAP_MOVE)
+        val type = r.map.grid[y][x] // al llegar la casilla se consume: se lee antes
         viewModelScope.launch {
             delay(460)
             val pc = r.arrive(x, y)
             moving = null
+            arrivalSound(type, r)
             if (pc != null) startIntro(pc) else persist()
             bump()
         }
+    }
+
+    /** Lo que suena al pisar una casilla (`enterNode` de js/game.js); los combates suenan en [startIntro]. */
+    private fun arrivalSound(type: String, r: Run) {
+        when (type) {
+            NodeType.TREASURE, NodeType.VAULT -> audio.play(Sfx.CHEST_OPEN)
+            NodeType.KEY -> audio.play(Sfx.SPARKLE)
+            NodeType.MYSTERY -> audio.play(Sfx.EVENT_OPEN)
+        }
+        if (r.screen == RunScreen.MINIGAME) audio.play(Sfx.EVENT_OPEN) // las mesas suenan al abrirse, vengan de donde vengan
     }
 
     // ---------- mesas de juego ----------
@@ -237,7 +287,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return null
         val t = r.table ?: return null
         tableCtl?.let { if (it.table === t && it.run === r) return it }
-        return TableController(r, t, uiScope ?: viewModelScope, { persist() }, { bump() }, { toast(it) }).also { tableCtl = it }
+        return TableController(r, t, uiScope ?: viewModelScope, { persist() }, { bump() }, { toast(it) }, sound).also { tableCtl = it }
     }
 
     // ---------- combate ----------
@@ -246,6 +296,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun startIntro(pc: PendingCombat) {
         val r = run ?: return
+        audio.intro(strong = pc.kind == "elite" || pc.kind == "boss")
         val defs = pc.enemyIds.mapNotNull { Enemies.get(it) }
         val final = pc.kind == "boss" && defs.firstOrNull()?.final == true
         val title = if (final) "¡Jefe final!" else if (pc.kind == "boss") "¡Jefe!" else if (pc.kind == "elite") "¡Élite!" else "¡A pelear!"
@@ -268,7 +319,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         var ctl: CombatController? = null
         var earlyResult: String? = null
         val c = r.startCombat(pc, onEnd = { res -> val k = ctl; if (k != null) k.onEnd(res) else earlyResult = res })
-        val made = CombatController(r, c, uiScope ?: viewModelScope, { toast(it) }, { result -> finishCombat(result) })
+        val made = CombatController(r, c, uiScope ?: viewModelScope, { toast(it) }, { result -> finishCombat(result) }, sound)
         ctl = made
         earlyResult?.let { made.onEnd(it) }
         combat = made
@@ -278,9 +329,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private fun finishCombat(result: String) {
         val r = run ?: return
         combat = null
+        val dungeonFight = r.combatKind == "dungeon"
         r.finishCombat(result)
         // casilla de calabozo vencida: aviso del oro que dio
         if (r.screen == RunScreen.DUNGEON && r.dungeonGold > 0) toast("+${r.dungeonGold} de oro")
+        if (dungeonFight && r.screen == RunScreen.TREASURE) audio.play(Sfx.CHEST_OPEN) // la escalera de salida da un cofre
         persist()
         bump()
     }
@@ -288,7 +341,13 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- recompensas ----------
     fun collectLoot(i: Int) {
         val r = run ?: return
-        if (!r.collectLoot(i)) { if (r.loot.getOrNull(i)?.k == "seed") toast("Tu bolsa de semillas está llena: tira una o deja esta"); return }
+        val item = r.loot.getOrNull(i)
+        val open = item?.isOpen == true
+        if (!r.collectLoot(i)) {
+            if (item?.k == "seed") { if (open) audio.play(Sfx.DENIED); toast("Tu bolsa de semillas está llena: tira una o deja esta") }
+            return
+        }
+        audio.play(when (item?.k) { "gold" -> Sfx.COIN; "relic" -> Sfx.RELIC_GET; else -> Sfx.POP })
         persist(); bump(); finishRewardSoon()
     }
 
@@ -312,13 +371,27 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun continueReward() {
         val r = run ?: return
-        if (!r.canFinishReward()) { toast("¡Primero recoge tus premios!"); return }
+        if (!r.canFinishReward()) { audio.play(Sfx.DENIED); toast("¡Primero recoge tus premios!"); return }
         r.finishReward()
+        fanfareIfNewFloor(r)
         persist(); bump()
     }
 
-    fun pickBossRelic(id: String) { run?.pickBossRelic(id); persist(); bump() }
-    fun skipBossRelic() { run?.skipBossRelic(); persist(); bump() }
+    fun pickBossRelic(id: String) {
+        val r = run ?: return
+        val had = r.player.relics.size
+        r.pickBossRelic(id)
+        if (r.player.relics.size > had) audio.play(Sfx.RELIC_GET)
+        fanfareIfNewFloor(r)
+        persist(); bump()
+    }
+
+    fun skipBossRelic() {
+        val r = run ?: return
+        r.skipBossRelic()
+        fanfareIfNewFloor(r)
+        persist(); bump()
+    }
 
     // ---------- campamento ----------
     /** Carta del selector que se está madurando o quitando (la pantalla la anima antes de cambiar el mazo). */
@@ -329,6 +402,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return
         if (flash != null) return
         if (!r.restHeal()) { toast("No puedes descansar"); return }
+        audio.play(Sfx.REST_HEAL)
         persist(); bump()
     }
 
@@ -343,6 +417,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return
         val mode = r.pickerMode ?: return
         if (flash != null) return
+        // suena al elegir la carta, no al terminar el dibujo (como la web); una carta que no madura no suena
+        if (mode != "upgrade") audio.play(Sfx.REMOVE_CARD)
+        else if (Cards.get(r.player.deck.getOrNull(index) ?: "")?.canUpgrade == true) audio.play(Sfx.UPGRADE)
         flash = PickFlash(mode, index)
         viewModelScope.launch {
             delay(if (mode == "upgrade") 900 else 560)
@@ -367,24 +444,29 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---------- tienda ----------
-    private fun bought(res: BuyResult) {
+    private fun bought(res: BuyResult, relic: Boolean = false) {
         when (res) {
-            BuyResult.NO_GOLD -> toast("¡No te alcanza el oro!")
+            BuyResult.NO_GOLD -> { audio.play(Sfx.DENIED); toast("¡No te alcanza el oro!") }
             BuyResult.BAG_FULL -> toast("Tu bolsa de semillas está llena")
-            BuyResult.OK -> persist()
+            BuyResult.OK -> { audio.play(Sfx.COIN); if (relic) audio.play(Sfx.RELIC_GET); persist() }
             BuyResult.INVALID -> {}
         }
         bump()
     }
 
     fun buyShopCard(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopCard(i)) }
-    fun buyShopRelic(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopRelic(i)) }
+    fun buyShopRelic(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopRelic(i), relic = true) }
     fun buyShopSeed(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopSeed(i)) }
 
     fun startShopRemoval() {
         val r = run ?: return
         if (flash != null) return
-        if (!r.startShopRemoval()) { toast(if (r.shopStock?.removeUsed == true) "Ya usaste este servicio" else "¡No te alcanza el oro!"); return }
+        if (!r.startShopRemoval()) {
+            val used = r.shopStock?.removeUsed == true
+            if (!used) audio.play(Sfx.DENIED)
+            toast(if (used) "Ya usaste este servicio" else "¡No te alcanza el oro!")
+            return
+        }
         bump()
     }
 
@@ -393,6 +475,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return
         val pc = r.resolveEventOption(i)
         r.trapMessage?.let { toast(it); r.trapMessage = null }
+        if (r.screen == RunScreen.MINIGAME || r.screen == RunScreen.DUNGEON) audio.play(Sfx.EVENT_OPEN) // la mesa o la trampilla que abre la opción
         persist()
         if (pc != null) startIntro(pc)
         bump()
@@ -401,7 +484,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- pozo de los deseos ----------
     fun tossWell() {
         val r = run ?: return
-        if (!r.tossWellCoin()) { toast(if (r.lootPending()) "¡Primero recoge tus premios!" else "No te alcanza el oro"); return }
+        if (!r.tossWellCoin()) { audio.play(Sfx.DENIED); toast(if (r.lootPending()) "¡Primero recoge tus premios!" else "No te alcanza el oro"); return }
+        audio.play(Sfx.SPARKLE)
         persist(); bump()
     }
 
@@ -428,10 +512,12 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             for (i in 0 until 16) {
                 fateShown = 1 + Rng.int(20)
+                audio.play(Sfx.TAP)
                 delay(60L + i * 8)
                 if (run !== r || r.screen != RunScreen.FATE) { fateRolling = false; return@launch }
             }
-            r.rollFate()
+            val roll = r.rollFate()
+            audio.play(if (roll >= 14) Sfx.WIN else if (roll <= 7) Sfx.DENIED else Sfx.POP) // buena, mala o regular
             fateShown = r.fateRoll
             fateRolling = false
             persist(); bump()
@@ -450,7 +536,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     var bagOpen by mutableStateOf(false)
         private set
 
-    fun openBag() { if (run != null) bagOpen = true }
+    fun openBag() { if (run != null) { bagOpen = true; audio.play(Sfx.POP) } }
     fun closeBag() { bagOpen = false }
 
     /** «Usar» en una semilla de la mochila: en combate y en tu turno; con varios enemigos hay que tocar uno. */

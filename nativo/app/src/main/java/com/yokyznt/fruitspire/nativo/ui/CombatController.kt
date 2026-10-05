@@ -23,6 +23,7 @@ import com.yokyznt.fruitspire.core.data.Cards
 import com.yokyznt.fruitspire.core.data.Seeds
 import com.yokyznt.fruitspire.core.data.Sprouts
 import com.yokyznt.fruitspire.core.data.Statuses
+import com.yokyznt.fruitspire.core.data.gen.Sfx
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -277,7 +278,7 @@ class CombatController(
     private val scope: CoroutineScope,
     private val toast: (String) -> Unit,
     private val onFinished: (String) -> Unit,
-    private val vibrate: (Int) -> Unit = {}
+    private val audio: GameAudio = NoAudio
 ) {
     /** Una animación está en curso: no se aceptan más jugadas. */
     var busy by mutableStateOf(true)
@@ -342,7 +343,10 @@ class CombatController(
     }
 
     /** Se llama desde el motor cuando el combate termina (gana o pierde). */
-    fun onEnd(r: String) { result = r }
+    fun onEnd(r: String) {
+        result = r
+        audio.play(if (r == "lose") Sfx.LOSE else Sfx.WIN)
+    }
 
     private fun id() = nextId++
 
@@ -400,7 +404,10 @@ class CombatController(
                 scope.launch { a.dying.snapTo(0f); a.spawn.snapTo(0f); a.spawn.animateTo(1f, tween(600, easing = CubicBezierEasing(.34f, 1.36f, .64f, 1f))) }
             }
             val now = e.isAlive()
-            if (alive[1 + i] && !now) scope.launch { a.dying.snapTo(0f); a.dying.animateTo(1f, tween(900, easing = EaseIO)) }
+            if (alive[1 + i] && !now) {
+                audio.play(Sfx.ENEMY_DEATH)
+                scope.launch { a.dying.snapTo(0f); a.dying.animateTo(1f, tween(900, easing = EaseIO)) }
+            }
             alive[1 + i] = now
         }
         ui = buildUi()
@@ -411,12 +418,13 @@ class CombatController(
         actors.forEach { a -> a.enter.snapTo(0f) }
         actors.forEachIndexed { i, a -> scope.launch { delay(100L + max(0, i - 1) * 100L); a.enter.animateTo(1f, tween(1100, easing = LinearEasing)) } }
         delay(1250)
-        showTurn("¡Tu turno!")
+        showTurn("¡Tu turno!", yours = true)
         busy = false
         checkFinish()
     }
 
-    private fun showTurn(text: String) {
+    private fun showTurn(text: String, yours: Boolean) {
+        audio.play(if (yours) Sfx.TURN_PLAYER else Sfx.TURN_ENEMY)
         val key = id()
         turnBanner = key to text
         scope.launch { delay(1300); if (turnBanner?.first == key) turnBanner = null }
@@ -466,6 +474,7 @@ class CombatController(
     /** Tocar una carta la selecciona (no la juega). */
     fun select(i: Int) {
         if (!canPlayNow()) return
+        audio.play(Sfx.SELECT)
         selected = if (selected == i) -1 else i
     }
 
@@ -507,13 +516,13 @@ class CombatController(
     fun tryPlay(handIndex: Int, targetIdx: Int?, from: Rect?) {
         if (!canPlayNow()) return
         val card = Cards.get(combat.player.hand.getOrNull(handIndex) ?: return) ?: return
-        if (card.unplayable) { toast("Esa carta no se puede jugar"); return }
-        if (card.cost > combat.player.energy) { orangeNope++; toast("¡No te alcanza la energía!"); return }
+        if (card.unplayable) { audio.play(Sfx.DENIED); toast("Esa carta no se puede jugar"); return }
+        if (card.cost > combat.player.energy) { audio.play(Sfx.DENIED); orangeNope++; toast("¡No te alcanza la energía!"); return }
         var target = targetIdx
         val needs = needsTarget(card)
         val alive = aliveEnemyIndexes()
         if (needs && target == null) {
-            if (alive.size != 1) { toast("Arrastra la carta hacia el enemigo que quieras atacar"); return }
+            if (alive.size != 1) { audio.play(Sfx.DENIED); toast("Arrastra la carta hacia el enemigo que quieras atacar"); return }
             target = alive[0]
         }
         // Provocación: el golpe se desvía al enemigo que provoca
@@ -530,6 +539,7 @@ class CombatController(
         selected = -1
         hover = null
         dropPreview = null
+        audio.play(when (card.type) { "attack" -> Sfx.CARD_ATTACK; "power" -> Sfx.CARD_POWER; else -> Sfx.CARD_SKILL })
         val flySide = if (needs) "enemy-$target" else "player"
         val slotKey = slots.getOrNull(i)?.first ?: -1L
         hiddenSlot = slotKey
@@ -595,6 +605,7 @@ class CombatController(
         val id = run.player.seeds.getOrNull(slot) ?: return
         val seed = Seeds.get(id) ?: return
         busy = true
+        audio.play(Sfx.SEED_USE)
         run.player.seeds[slot] = null
         banner("player", seed.name, null)
         playAnim("player", "cast", null)
@@ -631,7 +642,7 @@ class CombatController(
         spawnFx(c.lastEvents, null)
         if (afterEngine()) return
         // 2) turno enemigo
-        showTurn(if (c.aliveEnemies().size > 1) "Turno de los enemigos" else "Turno del enemigo")
+        showTurn(if (c.aliveEnemies().size > 1) "Turno de los enemigos" else "Turno del enemigo", yours = false)
         delay(900)
         for (k in 0 until c.enemies.size) {
             if (c.ended) return
@@ -668,7 +679,7 @@ class CombatController(
         refresh()
         spawnFx(c.lastEvents, null)
         if (afterEngine()) return
-        showTurn("¡Tu turno!")
+        showTurn("¡Tu turno!", yours = true)
         delay(400)
         if (!c.ended) busy = false
     }
@@ -727,7 +738,6 @@ class CombatController(
         scope.launch { a.flash.snapTo(.9f); a.flash.animateTo(0f, tween(500)) }
         a.hurtFace = true
         scope.launch { delay(600); a.hurtFace = false }
-        if (key == "player") vibrate(if (poison) 20 else 35)
     }
 
     private suspend fun spawnOne(ev: CombatEvent, fx: String?) {
@@ -735,7 +745,7 @@ class CombatController(
         val target = ev.target
         when (t) {
             "seed" -> return
-            "reshuffle" -> { toast("¡Barajeando! ${ev.amount} cartas vuelven a la pila de robo"); deckBump++; return }
+            "reshuffle" -> { audio.play(Sfx.SHUFFLE); toast("¡Barajeando! ${ev.amount} cartas vuelven a la pila de robo"); deckBump++; return }
             "rule" -> { ev.str("text")?.let { toast(it) }; return }
             "taunt" -> { toast("¡Provocación! Tu golpe tiene que ir contra este enemigo"); return }
             "stealcard" -> { floatText("player", "-1 ${Cards.get(ev.str("cardId"))?.name ?: "carta"}", "st_thief", FxDamage); return }
@@ -750,8 +760,8 @@ class CombatController(
                 deckBump++
                 return
             }
-            "steal" -> { floatText("player", "-${ev.amount} oro", "ui_coin", FxDamage); return }
-            "gold" -> { floatText("player", "+${ev.amount} oro", "ui_coin", FxHeal); return }
+            "steal" -> { floatText("player", "-${ev.amount} oro", "ui_coin", FxDamage); audio.play(Sfx.COIN); return }
+            "gold" -> { floatText("player", "+${ev.amount} oro", "ui_coin", FxHeal); audio.play(Sfx.COIN); return }
             "skip" -> { hitFx(target, "ice"); floatText(target, "¡Congelado!", "st_frozen", FxStatus); return }
             "plant", "harvest" -> {
                 if (t == "harvest") Sprouts.get(ev.str("sprout") ?: "")?.let { floatText("player", "¡Cosecha! ${it.name}", it.sprite, FxHeal) }
@@ -773,6 +783,7 @@ class CombatController(
             if (ev.flag("thorns")) hitFx(target, "sting")
             floatText(target, "-${ev.int("blocked")} cáscara", "ui_shield", FxBlock)
             scope.launch { a.ring.snapTo(0f); a.ringColor = Color(0xFF5CC9A7); a.ring.animateTo(1f, tween(550)) }
+            audio.play(Sfx.BLOCK)
             val rest = ev.amount - ev.int("blocked")
             if (rest > 0) {
                 delay(520)
@@ -801,12 +812,19 @@ class CombatController(
                 if (!ev.flag("poison") && !ev.flag("thorns") && ev.str("from") != null) hitFx(target, if (ev.str("from") == "player") (fx ?: "punch") else (fx ?: "claw"))
                 if (ev.flag("thorns")) hitFx(target, "sting")
                 if (ev.int("blocked") > 0 && ev.int("blocked") >= ev.amount) {
+                    audio.play(Sfx.BLOCK)
                     scope.launch { a.ring.snapTo(0f); a.ringColor = Color(0xFF5CC9A7); a.ring.animateTo(1f, tween(550)) }
-                } else hurt(target, ev.flag("poison"))
+                } else {
+                    audio.play(if (ev.flag("poison")) Sfx.POISON_TICK else Sfx.HIT)
+                    hurt(target, ev.flag("poison"))
+                }
             }
-            "block" -> scope.launch { a.ring.snapTo(0f); a.ringColor = Color(0xFF5CC9A7); a.ring.animateTo(1f, tween(550)) }
-            "heal" -> scope.launch { a.ring.snapTo(0f); a.ringColor = Color(0xFF7BBF5A); a.ring.animateTo(1f, tween(550)) }
-            "status" -> if (frozenStatus) hitFx(target, "ice")
+            "block" -> { audio.play(Sfx.BLOCK); scope.launch { a.ring.snapTo(0f); a.ringColor = Color(0xFF5CC9A7); a.ring.animateTo(1f, tween(550)) } }
+            "heal" -> { audio.play(Sfx.HEAL); scope.launch { a.ring.snapTo(0f); a.ringColor = Color(0xFF7BBF5A); a.ring.animateTo(1f, tween(550)) } }
+            "status" -> {
+                if (frozenStatus) hitFx(target, "ice")
+                audio.play(if (Statuses.get(ev.str("statusId") ?: "")?.kind == "debuff") Sfx.DEBUFF else Sfx.BUFF)
+            }
         }
     }
 }

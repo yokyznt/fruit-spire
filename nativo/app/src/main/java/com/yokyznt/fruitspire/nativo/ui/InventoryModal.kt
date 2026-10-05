@@ -39,6 +39,7 @@ import com.yokyznt.fruitspire.core.data.RelicDef
 import com.yokyznt.fruitspire.core.data.Relics
 import com.yokyznt.fruitspire.core.data.SEED_SLOTS
 import com.yokyznt.fruitspire.core.data.Seeds
+import com.yokyznt.fruitspire.core.data.gen.Sfx
 
 private class Tier(val name: String, val order: Int, val fill: Color)
 
@@ -75,6 +76,7 @@ internal fun RelicSprite(r: RelicDef, size: Int, silhouette: Boolean = false) {
 @Composable
 fun InventoryModal(run: Run, usable: Boolean, onUseSeed: (Int) -> Unit, onDropSeed: (Int) -> Unit, onClose: () -> Unit) {
     val p = run.player
+    val audio = LocalAudio.current
     var sel by remember { mutableStateOf<String?>(null) }
     var sort by remember { mutableStateOf(Sort.RECENT) }
     var confirmDrop by remember { mutableIntStateOf(-1) }
@@ -165,7 +167,7 @@ fun InventoryModal(run: Run, usable: Boolean, onUseSeed: (Int) -> Unit, onDropSe
                         items(list, key = { it.id }) { r ->
                             Column(
                                 Modifier.stickerCard(14.dp, fill = tierOf(r).fill, glow = if (sel == r.id) Ink.banana else null)
-                                    .clickable(remember { MutableInteractionSource() }, null) { sel = if (sel == r.id) null else r.id }
+                                    .clickable(remember { MutableInteractionSource() }, null) { audio.play(Sfx.SELECT); sel = if (sel == r.id) null else r.id }
                                     .padding(horizontal = 6.dp, vertical = 8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
