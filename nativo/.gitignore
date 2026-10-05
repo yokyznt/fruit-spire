@@ -3,6 +3,10 @@ build/
 local.properties
 *.apk
 *.aab
+# la llave de subida a Google Play y sus contraseñas nunca van al repositorio
+keystore.properties
+*.jks
+*.keystore
 .kotlin/
 .idea/
 captures/

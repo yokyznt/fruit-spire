@@ -47,13 +47,16 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35], qualifiers = "w911dp-h411dp-land-xxhdpi")
-class ScreenshotTest {
+open class ScreenshotTest {
     @get:Rule
     val compose = createComposeRule()
 
+    /** Dónde caen las capturas (la prueba de la ficha de Play las saca en 16:9 a otra carpeta). */
+    protected open val dir = "build/capturas"
+
     private fun shot(name: String, content: @Composable () -> Unit) {
         compose.setContent { DesignCanvas { Box(Modifier.fillMaxSize().notebookPaper()) { content() } } }
-        compose.onRoot().captureRoboImage("build/capturas/$name.png")
+        compose.onRoot().captureRoboImage("$dir/$name.png")
     }
 
     @Test

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,25 +7,57 @@ plugins {
     id("io.github.takahirom.roborazzi")
 }
 
+// La llave de subida a Google Play NO está en el repositorio: va en `nativo/keystore.properties` (storeFile, storePassword,
+// keyAlias, keyPassword) o en las variables FRUITSPIRE_STOREFILE, FRUITSPIRE_STOREPASSWORD, FRUITSPIRE_KEYALIAS y FRUITSPIRE_KEYPASSWORD.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun signingValue(name: String): String? = keystoreProps.getProperty(name) ?: System.getenv("FRUITSPIRE_" + name.uppercase())
+val releaseKey: File? = signingValue("storeFile")?.let { rootProject.file(it) }?.takeIf { it.exists() }
+
 android {
     namespace = "com.yokyznt.fruitspire.nativo"
     compileSdk = 36
 
     defaultConfig {
-        // app aparte mientras se construye; al final pasa a ser com.yokyznt.fruitspire
-        applicationId = "com.yokyznt.fruitspire.nativo"
+        // Id de la app en Play. `-PappIdSuffix=.rc` deja instalar una versión de lanzamiento de prueba junto a la web.
+        applicationId = "com.yokyznt.fruitspire" + (project.findProperty("appIdSuffix") ?: "")
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "3.0-etapa1"
+        versionCode = 3
+        versionName = "3.0.0"
+    }
+    signingConfigs {
+        if (releaseKey != null) {
+            create("release") {
+                storeFile = releaseKey
+                storePassword = signingValue("storePassword")
+                keyAlias = signingValue("keyAlias")
+                keyPassword = signingValue("keyPassword")
+            }
+        }
     }
     buildTypes {
+        debug {
+            // la de pruebas sigue siendo una app aparte («Fruit Spire Nativo»): no pisa a la web instalada en el teléfono
+            applicationIdSuffix = ".nativo"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (releaseKey != null) signingConfigs.getByName("release") else {
+                logger.warn("¡Sin llave de subida (keystore.properties): el release sale firmado con la de pruebas y Play no lo aceptará!")
+                signingConfigs.getByName("debug")
+            }
         }
+    }
+    // el juego solo tiene textos en español (y un poco de inglés de las librerías): no se empaquetan los demás idiomas
+    androidResources { localeFilters += listOf("es", "en") }
+    packaging {
+        resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "/META-INF/*.version", "DebugProbesKt.bin", "kotlin-tooling-metadata.json")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
