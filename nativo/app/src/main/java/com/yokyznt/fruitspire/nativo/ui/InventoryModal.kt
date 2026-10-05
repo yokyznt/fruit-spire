@@ -116,7 +116,7 @@ fun InventoryModal(run: Run, usable: Boolean, onUseSeed: (Int) -> Unit, onDropSe
                                 }
                                 GameText(seed.desc, Fonts.body(12.5f).copy(lineHeight = 15.sp), maxLines = 3)
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    StickerButton("Usar", { onUseSeed(i) }, color = Ink.mint, enabled = usable, fontSize = 14f, padding = PaddingValues(horizontal = 16.dp, vertical = 2.dp))
+                                    StickerButton("Usar", { onUseSeed(i) }, Modifier.tutAnchor("inv-use"), color = Ink.mint, enabled = usable, fontSize = 14f, padding = PaddingValues(horizontal = 16.dp, vertical = 2.dp))
                                     if (confirmDrop == i) {
                                         StickerButton("¿Tirar?", { onDropSeed(i); confirmDrop = -1 }, color = Ink.strawberryBtn, fontSize = 14f, padding = PaddingValues(horizontal = 12.dp, vertical = 2.dp))
                                     } else {

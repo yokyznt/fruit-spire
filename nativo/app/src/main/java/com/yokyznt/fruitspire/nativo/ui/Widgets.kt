@@ -63,7 +63,7 @@ fun DrawScope.stickerShape(fill: Color, radius: Float, inkWidth: Float, edgeWidt
 fun ContinueButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, text: String = "Continuar") {
     val nudge = LocalLootNudge.current
     StickerButton(
-        text, onClick, modifier.defaultMinSize(minWidth = 240.dp, minHeight = 56.dp), color = Ink.mint, enabled = enabled,
+        text, onClick, modifier.defaultMinSize(minWidth = 240.dp, minHeight = 56.dp).tutAnchor("leave").tutAnchor("continue"), color = Ink.mint, enabled = enabled,
         fontSize = 26f, padding = PaddingValues(horizontal = 56.dp, vertical = 16.dp), onDisabledTap = { nudge.hit() }
     )
 }

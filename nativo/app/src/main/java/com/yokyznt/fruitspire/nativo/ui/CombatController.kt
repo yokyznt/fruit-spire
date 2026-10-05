@@ -18,6 +18,7 @@ import com.yokyznt.fruitspire.core.CombatEvent
 import com.yokyznt.fruitspire.core.EnemyInstance
 import com.yokyznt.fruitspire.core.PreviewResult
 import com.yokyznt.fruitspire.core.Run
+import com.yokyznt.fruitspire.core.TutAction
 import com.yokyznt.fruitspire.core.data.Card
 import com.yokyznt.fruitspire.core.data.Cards
 import com.yokyznt.fruitspire.core.data.Seeds
@@ -277,6 +278,14 @@ val FxGold = Color(0xFFC98A00)
  * Reproduce un combate: cada acción llama al motor en el momento del golpe y anima lo que pasó, con los
  * mismos tiempos de la versión web (ANIMS, playCard, endTurn). La pantalla solo lee estas propiedades.
  */
+/** Lo que el tutorial le pide al combate: qué deja hacer, el aviso de «eso no» y qué avisar cuando algo pasa. */
+interface TutorialGate {
+    fun allows(action: String): Boolean
+    fun allowsCard(type: String?): Boolean
+    fun denied()
+    fun notify(evt: String)
+}
+
 class CombatController(
     private val run: Run,
     val combat: Combat,
@@ -285,6 +294,17 @@ class CombatController(
     private val onFinished: (String) -> Unit,
     private val audio: GameAudio = NoAudio
 ) {
+    /** Solo en el tutorial: lo que se deja hacer en cada paso. */
+    var gate: TutorialGate? = null
+
+    /** ¿El tutorial deja usar la carta de la mano [i]? (si no, suena el «no» y el globo se sacude) */
+    fun cardAllowed(i: Int): Boolean {
+        val g = gate ?: return true
+        if (g.allowsCard(handCard(i)?.type)) return true
+        g.denied()
+        return false
+    }
+
     /** Una animación está en curso: no se aceptan más jugadas. */
     var busy by mutableStateOf(true)
         private set
@@ -479,13 +499,35 @@ class CombatController(
     /** Tocar una carta la selecciona (no la juega). */
     fun select(i: Int) {
         if (!canPlayNow()) return
+        if (!cardAllowed(i)) return
         audio.play(Sfx.SELECT)
         selected = if (selected == i) -1 else i
     }
 
-    fun showInfo(title: String, text: String) { info = listOf(InfoSection(title, text)) }
-    fun showSections(sections: List<InfoSection>) { info = sections }
-    fun showPile(which: String) { pileView = which }
+    /** Explicación al tocar algo; [tip] ("intent" o "rule") avisa al tutorial de que ya se leyó. */
+    private fun tipOk(): Boolean {
+        val g = gate ?: return true
+        if (g.allows(TutAction.TIP)) return true
+        g.denied()
+        return false
+    }
+
+    fun showInfo(title: String, text: String, tip: String? = null) {
+        if (!tipOk()) return
+        info = listOf(InfoSection(title, text))
+        tip?.let { gate?.notify("tip:$it") }
+    }
+
+    fun showSections(sections: List<InfoSection>, tip: String? = null) {
+        if (!tipOk()) return
+        info = sections
+        tip?.let { gate?.notify("tip:$it") }
+    }
+
+    fun showPile(which: String) {
+        gate?.let { it.denied(); return }
+        pileView = which
+    }
 
     private fun handCard(idx: Int): Card? = Cards.get(combat.player.hand.getOrNull(idx))
 
@@ -521,6 +563,7 @@ class CombatController(
 
     fun tryPlay(handIndex: Int, targetIdx: Int?, from: Rect?) {
         if (!canPlayNow()) return
+        if (!cardAllowed(handIndex)) { selected = -1; return }
         val card = Cards.get(combat.player.hand.getOrNull(handIndex) ?: return) ?: return
         if (card.unplayable) { audio.play(Sfx.DENIED); toast("Esa carta no se puede jugar"); return }
         if (card.cost > combat.player.energy) { audio.play(Sfx.DENIED); orangeNope++; toast("¡No te alcanza la energía!"); return }
@@ -572,6 +615,7 @@ class CombatController(
         spawnFx(c.lastEvents, card.fx ?: "punch")
         delay(max(260, info.dur - info.hit - 120).toLong())
         if (!c.ended) busy = false
+        gate?.notify("card:${card.type}")
         afterEngine()
     }
 
@@ -600,6 +644,7 @@ class CombatController(
     fun useSeedOn(enemyIdx: Int) {
         val slot = seedAiming
         if (slot < 0) return
+        gate?.let { if (!it.allows(TutAction.SEED)) { it.denied(); return } }
         seedAiming = -1
         if (canUseSeedNow()) scope.launch { useSeedSeq(slot, enemyIdx) }
     }
@@ -621,16 +666,19 @@ class CombatController(
         spawnFx(c.lastEvents, "burst")
         delay(400)
         if (!c.ended) busy = false
+        gate?.notify("seed-use")
         afterEngine()
     }
 
     /** Terminar el turno: la mano se descarta y cada enemigo vivo actúa, uno detrás de otro. */
     fun endTurn() {
+        gate?.let { if (!it.allows(TutAction.END_TURN)) { it.denied(); return } }
         if (!canPlayNow()) {
             if (busy && !combat.ended && combat.turn == "player") wantsEndTurn = true
             return
         }
         wantsEndTurn = false
+        gate?.notify("turn-end")
         scope.launch { endTurnSeq() }
     }
 

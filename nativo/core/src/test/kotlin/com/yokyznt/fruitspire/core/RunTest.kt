@@ -115,7 +115,7 @@ class RunTest {
                 run.pickBossRelic(run.bossRelicChoices[0])
             }
             RunScreen.COMBAT -> fail("el bot no deja un combate a medias")
-            RunScreen.GAME_OVER, RunScreen.VICTORY -> {}
+            RunScreen.GAME_OVER, RunScreen.VICTORY, RunScreen.TUTORIAL_END -> {}
         }
         log.add(run.screen.name)
     }

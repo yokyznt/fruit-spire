@@ -77,7 +77,7 @@ internal fun Scaled(scale: Float, w: Float, h: Float, modifier: Modifier = Modif
 @Composable
 private fun RestOption(sprite: String, title: String, text: String, color: Color, enabled: Boolean = true, onClick: () -> Unit) {
     Column(
-        Modifier.width(230.dp).height(176.dp).graphicsLayer { alpha = if (enabled) 1f else .5f }
+        Modifier.width(230.dp).height(176.dp).tutAnchor("rest").graphicsLayer { alpha = if (enabled) 1f else .5f }
             .stickerCard(radius = 22.dp, fill = color).tap(enabled, onClick).padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically)
     ) {
@@ -127,7 +127,7 @@ private fun PickCard(card: Card, flashMode: String?, onClick: () -> Unit) {
                 "upgrade" -> { val s = 1f + .16f * sin(PI.toFloat() * t.value); scaleX = s; scaleY = s }
                 "remove" -> { val s = 1f - .85f * t.value; scaleX = s; scaleY = s; rotationZ = -22f * t.value; alpha = 1f - t.value }
             }
-        }.tap(flashMode == null, onClick)
+        }.tutAnchor(if (LocalTutorialPicker.current == "shop") "shop-items" else "rest").tap(flashMode == null, onClick)
     ) { CardView(card, glow = if (flashMode == "upgrade") Ink.mint else null) }
 }
 
@@ -173,9 +173,12 @@ fun DeckPickerScreen(
                 }
             }
         }
-        StickerButton("Volver", onBack, secondary = true, fontSize = 24f, enabled = flash == null)
+        StickerButton("Volver", onBack, Modifier.tutAnchor(if (LocalTutorialPicker.current == "shop") "shop-items" else "rest"), secondary = true, fontSize = 24f, enabled = flash == null)
     }
 }
+
+/** Qué pantalla abrió el selector de cartas ("shop" o "rest"): el tutorial ilumina sus cartas bajo el nombre de esa pantalla. */
+internal val LocalTutorialPicker = androidx.compose.runtime.compositionLocalOf { "rest" }
 
 // ---------------------------------------------------------------------------------------------------------------
 // Tienda
@@ -237,7 +240,7 @@ private fun PriceTag(price: Int, affordable: Boolean, sale: Boolean = false) {
 
 @Composable
 private fun ShopItem(price: Int?, affordable: Boolean, sale: Boolean = false, enabled: Boolean = true, onClick: () -> Unit, content: @Composable () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.tutAnchor("shop-items"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Scaled(SHOP_SCALE, CARD_W, CARD_H, Modifier.tap(enabled, onClick)) { content() }
         if (price != null) PriceTag(price, affordable, sale) else Box(Modifier.height(32.dp))
     }
@@ -250,7 +253,9 @@ fun ShopScreen(
 ) {
     val stock = run.shopStock ?: return
     if (run.pickerMode == "remove") {
-        DeckPickerScreen("Quitar una carta", "", run, "remove", flash, run.removalPrice(), onPick, onBack = onClosePicker)
+        androidx.compose.runtime.CompositionLocalProvider(LocalTutorialPicker provides "shop") {
+            DeckPickerScreen("Quitar una carta", "", run, "remove", flash, run.removalPrice(), onPick, onBack = onClosePicker)
+        }
         return
     }
     val gold = run.player.gold
@@ -284,7 +289,7 @@ fun ShopScreen(
             ShopItem(if (stock.removeUsed) null else rp, gold >= rp, enabled = !stock.removeUsed, onClick = onRemoval) { ServiceCardView(stock.removeUsed, gold < rp) }
             if (stock.isSoldOut) BasicText("…¡lo compraste todo!", style = Fonts.hand(26f, Ink.inkSoft), modifier = Modifier.align(Alignment.CenterVertically))
         }
-        StickerButton("Salir", onLeave, secondary = true, fontSize = 24f)
+        StickerButton("Salir", onLeave, Modifier.tutAnchor("shop-leave"), secondary = true, fontSize = 24f)
     }
 }
 

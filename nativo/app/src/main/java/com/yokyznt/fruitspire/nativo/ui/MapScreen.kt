@@ -56,7 +56,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -634,6 +637,29 @@ fun MapScreen(
         }
     }
 
+    // tutorial: dónde caen en la pantalla la ficha, los muros, las casillas alcanzables, las élites y la guarida
+    // (el tablero se desplaza y se acerca, así que se calcula con el mismo desplazamiento y zoom con que se dibuja)
+    val tutAnchors = LocalTutorialAnchors.current
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    if (tutAnchors != null) {
+        val owner = remember { Any() }
+        val shown = pan.anim.value
+        val k = zoom * base.density
+        fun box(x: Float, y: Float, w: Float, h: Float) = Rect(origin.x + shown.x + x * k, origin.y + shown.y + y * k, origin.x + shown.x + (x + w) * k, origin.y + shown.y + (y + h) * k)
+        fun cell(cx: Int, cy: Int) = box(cellPos(cx), cellPos(cy), MAP_CELL, MAP_CELL)
+        val groups = HashMap<String, List<Rect>>()
+        groups["token"] = listOf(cell(view.posX, view.posY))
+        groups["reachable"] = view.reachable.map { cell(it % 1000, it / 1000) }
+        groups["elites"] = view.grid.flatMapIndexed { y, row -> row.mapIndexedNotNull { x, t -> if (t == NodeType.ELITE) cell(x, y) else null } }
+        groups["lair"] = listOf(box(cellPos(view.cols - 1), cellPos(0), MAP_CELL + MAP_LAIR_EXTRA, view.rows * MAP_CELL + (view.rows - 1) * MAP_GAP))
+        val walls = ArrayList<Rect>()
+        for (y in 0 until view.rows) for (x in 0 until view.cols - 2) if (view.wallsV[y][x]) walls.add(box(cellPos(x) + MAP_CELL - 6f, cellPos(y), MAP_GAP + 12f, MAP_CELL))
+        for (y in 0 until view.rows - 1) for (x in 0 until view.cols - 1) if (view.wallsH[y][x]) walls.add(box(cellPos(x), cellPos(y) + MAP_CELL - 6f, MAP_CELL, MAP_GAP + 12f))
+        // los que están junto a la ficha primero (las cintas del tutorial son muchas)
+        groups["walls"] = walls.sortedBy { kotlin.math.abs(it.center.x - groups.getValue("token")[0].center.x) }.take(6)
+        TutAnchorGroup(owner, groups)
+    }
+
     val currentView by rememberUpdatedState(view)
     val currentMoving by rememberUpdatedState(moving)
     fun cellAt(p: Offset): Pair<Int, Int>? {
@@ -647,6 +673,8 @@ fun MapScreen(
 
     Box(
         modifier.fillMaxSize().background(pal.viewport).clipToBounds().onSizeChanged { vp = it }
+            .onGloballyPositioned { origin = it.positionInRoot() }
+            .onGloballyPositioned { origin = it.positionInRoot() }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { p ->

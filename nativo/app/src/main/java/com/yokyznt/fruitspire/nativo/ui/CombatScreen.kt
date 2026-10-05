@@ -248,7 +248,7 @@ private fun Plate(c: CombatantUi, ctl: CombatController, multi: Boolean, modifie
         ) {
             Box(Modifier.fillMaxWidth()) {
                 HpBar(c.hp, c.maxHp, Modifier.fillMaxWidth(), height = 28.dp)
-                if (c.block > 0) BlockBadge(c.block, Modifier.align(Alignment.CenterStart).offset((-22).dp, 0.dp))
+                if (c.block > 0) BlockBadge(c.block, Modifier.align(Alignment.CenterStart).offset((-22).dp, 0.dp).then(if (c.key == "player") Modifier.tutAnchor("block") else Modifier))
             }
             Row(Modifier.padding(top = 7.dp).height(36.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 c.statuses.forEach { s -> StatusChip(s) { ctl.showSections(statusSectionsFull(listOf(s.id to s.n))) } }
@@ -279,6 +279,7 @@ private fun CombatantView(
     val targetable = !player && c.alive && (ctl.dragNeeds == true || aiming)
     Box(
         modifier.width(width.dp).onGloballyPositioned { ctl.anchors["zone-${c.key}"] = it.boundsInRoot() }
+            .then(if (player) Modifier else Modifier.tutAnchor("enemy"))
             .pointerInput(aiming) { if (aiming) detectTapGestures { ctl.useSeedOn(index - 1) } }
     ) {
         // marco de objetivo al arrastrar una carta
@@ -342,7 +343,7 @@ private fun CombatantView(
                 if (c.charId != null) FruitSprite(c.charId, spriteSize.dp, mood = mood, hurt = c.hurt) // tu fruta, vestida
                 else Sprite(c.sprite, spriteSize.dp, mood = mood, hurt = c.hurt)
             }
-            Plate(c, ctl, multi, Modifier.fillMaxWidth().padding(top = 0.dp))
+            Plate(c, ctl, multi, Modifier.fillMaxWidth().padding(top = 0.dp).then(if (player) Modifier.tutAnchor("plate") else Modifier))
         }
         // anillo de cáscara / curación / poder
         Box(Modifier.matchParentSize().graphicsLayer { alpha = if (actor.ring.value < 1f) 1f - actor.ring.value else 0f; val s = .6f + .7f * actor.ring.value; scaleX = s; scaleY = s }.drawBehind {
@@ -351,8 +352,8 @@ private fun CombatantView(
         // globo de intención
         c.intent?.let { intent ->
             IntentBubble(
-                intent, ctl.acting == index - 1 && !player, { ctl.showSections(intent.sections.ifEmpty { listOf(InfoSection(intent.title.ifEmpty { "Intención" }, intent.tip)) }) },
-                Modifier.align(Alignment.TopStart).offset(10.dp, 0.dp)
+                intent, ctl.acting == index - 1 && !player, { ctl.showSections(intent.sections.ifEmpty { listOf(InfoSection(intent.title.ifEmpty { "Intención" }, intent.tip)) }, tip = "intent") },
+                Modifier.align(Alignment.TopStart).offset(10.dp, 0.dp).tutAnchor("intent")
             )
         }
     }
@@ -759,6 +760,7 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
                         ch.consume()
                         pos = ch.position / density
                         if (!dragging && (pos - p0).getDistance() > 8f) {
+                            if (!ctl.cardAllowed(idx)) break // el tutorial no deja usar esa carta ahora
                             dragging = true
                             ctl.selected = idx
                             ctl.dragNeeds = ctl.needsTarget(card)
@@ -792,7 +794,8 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
         if (ui.ruleName != null) {
             Row(
                 Modifier.align(Alignment.TopStart).padding(start = 22.dp, top = 62.dp).chip(99.dp, Ink.paper2)
-                    .pointerInput(Unit) { detectTapGestures(onTap = { ctl.showInfo("Regla del piso: ${ui.ruleName}", ui.ruleDesc ?: "") }) }
+                    .tutAnchor("rule")
+                    .pointerInput(Unit) { detectTapGestures(onTap = { ctl.showInfo("Regla del piso: ${ui.ruleName}", ui.ruleDesc ?: "", tip = "rule") }) }
                     .padding(start = 6.dp, end = 14.dp, top = 3.dp, bottom = 3.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -832,7 +835,7 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
 
         // abajo: naranja y pila de robo | mano | pilas y botón
         Column(Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 12.dp).width(200.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            EnergyOrange(ui.energy, ui.maxEnergy, ctl.orangeNope, ctl)
+            Box(Modifier.tutAnchor("energy")) { EnergyOrange(ui.energy, ui.maxEnergy, ctl.orangeNope, ctl) }
             Pile("robo", ui.drawCount, "draw", ctl)
         }
         Column(Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 12.dp).width(200.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -840,11 +843,12 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
                 Pile("compost", ui.exhaustCount, "exhaust", ctl)
                 Pile("descarte", ui.discardCount, "discard", ctl)
             }
-            StickerButton("Terminar turno", { ctl.endTurn() }, enabled = ui.playerTurn, fontSize = 19f, padding = PaddingValues(horizontal = 18.dp, vertical = 9.dp))
+            StickerButton("Terminar turno", { ctl.endTurn() }, Modifier.tutAnchor("end-turn"), enabled = ui.playerTurn, fontSize = 19f, padding = PaddingValues(horizontal = 18.dp, vertical = 9.dp))
             BasicText("turno ${ui.turnNumber}", style = Fonts.hand(20f, Color(0xFF7A5634)))
         }
 
-        // la mano
+        // la mano (el recuadro de abajo es lo que ilumina el tutorial: las cartas giran en abanico y no se pueden medir sueltas)
+        Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = 230.dp).fillMaxWidth().height(236.dp).tutAnchor("hand"))
         Box(Modifier.fillMaxSize()) {
             ui.hand.forEachIndexed { i, h -> key(h.key) { HandCardView(h, i, ui.hand.size, ctl, designW, drag, discarding) } }
             val sel = ctl.selected

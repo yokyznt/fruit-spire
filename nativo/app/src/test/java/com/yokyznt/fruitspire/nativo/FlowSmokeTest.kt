@@ -176,7 +176,7 @@ class FlowSmokeTest {
                 }
                 RunScreen.FATE -> if (!vm.fateRolling && vm.intro == null) { if (r.fateRoll == null) vm.rollFate() else vm.fateFight() }
                 RunScreen.BOSS_RELIC -> vm.skipBossRelic()
-                RunScreen.GAME_OVER, RunScreen.VICTORY -> break
+                RunScreen.GAME_OVER, RunScreen.VICTORY, RunScreen.TUTORIAL_END -> break
             }
             advance(350)
             if (fights >= 6) break

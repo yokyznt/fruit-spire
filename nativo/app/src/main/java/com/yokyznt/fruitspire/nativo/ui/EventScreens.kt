@@ -84,7 +84,7 @@ fun EventScreen(run: Run, onOption: (Int) -> Unit) {
             ev.options.forEachIndexed { i, o ->
                 val locked = o.locked?.invoke(run.player).orEmpty()
                 Box(
-                    Modifier.fillMaxWidth().graphicsLayer { alpha = if (locked.isEmpty()) 1f else .5f }
+                    Modifier.fillMaxWidth().tutAnchor("event-options").graphicsLayer { alpha = if (locked.isEmpty()) 1f else .5f }
                         .stickerCard(16.dp, fill = toneColor(optionTone(o)))
                         .let { m -> if (locked.isEmpty()) m.tap { onOption(i) } else m }
                         .padding(horizontal = 22.dp, vertical = 14.dp)

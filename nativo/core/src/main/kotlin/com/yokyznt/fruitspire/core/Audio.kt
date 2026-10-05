@@ -19,7 +19,7 @@ object MusicContext {
         RunScreen.REST, RunScreen.GAME_OVER -> "rest"
         RunScreen.DUNGEON -> "dungeon"
         RunScreen.MINIGAME -> "casino"
-        RunScreen.VICTORY -> MENU
+        RunScreen.VICTORY, RunScreen.TUTORIAL_END -> MENU
         // portada, mapa, premios, eventos, tesoros, pozo, dado…: la del mapa de ese castillo
         else -> "map${act.coerceIn(1, 3)}"
     }
