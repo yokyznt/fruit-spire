@@ -8,7 +8,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.printToString
 import androidx.test.core.app.ApplicationProvider
 import com.yokyznt.fruitspire.core.LootItem
 import com.yokyznt.fruitspire.core.Rng
@@ -39,6 +41,7 @@ import java.time.Duration
 class LootCollectTest {
     @get:Rule
     val compose = createComposeRule()
+    private lateinit var lastVm: GameViewModel
 
     private fun advance(ms: Long) {
         compose.mainClock.advanceTimeBy(ms)
@@ -54,10 +57,12 @@ class LootCollectTest {
     }
 
     /** Una partida en la pantalla de resultado de un evento con [prize] por recoger. */
-    private fun eventResultWith(prize: LootItem): Run {
+    private fun eventResultWith(prize: LootItem, soonMs: Long = 600_000): Run {
         Rng.seed(11)
         val app = ApplicationProvider.getApplicationContext<Application>()
         val vm = GameViewModel(app)
+        lastVm = vm
+        vm.soonMs = soonMs // por defecto la pantalla no sigue sola durante la prueba
         compose.mainClock.autoAdvance = false
         compose.setContent { DesignCanvas { GameRoot(vm, Settings(app)) } }
         vm.newGame(); advance(100)
@@ -82,6 +87,8 @@ class LootCollectTest {
         settle()
         assertTrue("el premio quedó recogido", run.loot[0].taken)
         assertEquals(before + 1, run.player.deck.size)
+        advance(1500) // el premio llega a la barra
+        assertEquals(0, lastVm.flights.size)
         assertTrue("la barra de arriba cuenta la carta nueva", compose.onAllNodesWithText("${before + 1}").fetchSemanticsNodes().isNotEmpty())
         compose.onAllNodesWithText(name).onFirst().assertIsNotEnabled()
         compose.onNodeWithText("Continuar").assertIsEnabled()
@@ -96,9 +103,52 @@ class LootCollectTest {
         settle()
         assertTrue(run.loot[0].taken)
         assertEquals(before + 25, run.player.gold)
+        advance(1500) // el premio llega a la barra
+        assertEquals(0, lastVm.flights.size)
         assertTrue("la barra de arriba muestra el oro nuevo", compose.onAllNodesWithText("${before + 25}").fetchSemanticsNodes().isNotEmpty())
         compose.onNodeWithText("+25 de oro").assertIsNotEnabled() // ya no se puede volver a tocar
         compose.onNodeWithText("Continuar").assertIsEnabled()
+        Rng.unseed()
+    }
+
+    @Test
+    fun theBarKeepsTheOldGoldWhileThePrizeFliesAndShowsTheNewOneOnArrival() {
+        val run = eventResultWith(LootItem("gold", n = 25))
+        val before = run.player.gold
+        compose.onNodeWithText("+25 de oro").performClick()
+        advance(100)
+        assertEquals("el premio va en el aire", 1, lastVm.flights.size)
+        assertEquals(before + 25, run.player.gold)
+        assertEquals("la barra aún no lo cuenta", before, com.yokyznt.fruitspire.nativo.ui.hudStateOf(run, flights = lastVm.flights.toList()).gold)
+        advance(1500)
+        assertEquals(0, lastVm.flights.size)
+        assertEquals(before + 25, com.yokyznt.fruitspire.nativo.ui.hudStateOf(run, flights = lastVm.flights.toList()).gold)
+        Rng.unseed()
+    }
+
+    @Test
+    fun whenEverythingIsTakenTheScreenFollowsByItself() {
+        val run = eventResultWith(LootItem("gold", n = 25), soonMs = 300)
+        compose.onNodeWithText("+25 de oro").performClick()
+        settle()
+        advance(1500)
+        assertEquals("sigue sola al mapa", RunScreen.MAP, run.screen)
+        Rng.unseed()
+    }
+
+    @Test
+    fun tappingContinueFirstDoesNotLeaveTwice() {
+        val run = eventResultWith(LootItem("gold", n = 25), soonMs = 3000)
+        compose.onNodeWithText("+25 de oro").performClick()
+        advance(1000)
+        compose.onNodeWithText("Continuar").assertIsEnabled()
+        lastVm.leaveNode() // lo que hace el botón «Continuar»
+        advance(100)
+        val posAfter = run.pos
+        assertEquals(RunScreen.MAP, run.screen)
+        advance(5000) // el aviso de seguir solo ya no hace nada
+        assertEquals(RunScreen.MAP, run.screen)
+        assertEquals(posAfter, run.pos)
         Rng.unseed()
     }
 

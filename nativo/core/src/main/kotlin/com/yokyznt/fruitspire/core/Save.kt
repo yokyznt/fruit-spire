@@ -81,7 +81,7 @@ object Save {
     private val RESUMABLE = setOf(RunScreen.ACT_INTRO, RunScreen.REWARD, RunScreen.BOSS_RELIC, RunScreen.WELL, RunScreen.DUNGEON)
 
     /** ¿Tiene sentido guardar ahora? (no a mitad de un combate ni cuando la partida ya terminó). */
-    fun shouldSave(run: Run): Boolean = run.screen != RunScreen.COMBAT && !run.isOver
+    fun shouldSave(run: Run): Boolean = run.screen != RunScreen.COMBAT && !run.isOver && run.tutorial == null // ni a mitad de un combate ni en el tutorial
 
     fun encode(run: Run): String {
         val p = run.player

@@ -49,14 +49,21 @@ data class HudState(
     val relics: List<String>,
     val seeds: List<String?>,
     /** Hay semillas y es tu turno de combate: la mochila avisa. */
-    val seedReady: Boolean = false
+    val seedReady: Boolean = false,
+    /** Objetos + semillas que ya llegaron a la mochila (lo que aún vuela no cuenta): sube con el brinco de la casilla. */
+    val bag: Int = 0
 )
 
-fun hudStateOf(run: Run, seedReady: Boolean = false): HudState {
+/** Lo que muestra la barra: la partida real menos lo que todavía vuela hacia ella ([flights]), que se suma al llegar. */
+fun hudStateOf(run: Run, seedReady: Boolean = false, flights: List<Flight> = emptyList()): HudState {
     val p = run.player
+    val relics = p.relics.toList().let { all -> all.dropLast(flights.sumOf { it.relicGain }.coerceAtMost(all.size)) }
     return HudState(
-        p.characterId, p.act, p.floor, run.theme.name, run.difficulty.sprite, p.hp, p.maxHp, p.gold, p.deck.size,
-        p.relics.toList(), p.seeds.toList(), seedReady
+        p.characterId, p.act, p.floor, run.theme.name, run.difficulty.sprite,
+        maxOf(0, p.hp - flights.sumOf { it.hpGain }), maxOf(1, p.maxHp - flights.sumOf { it.maxHpGain }),
+        maxOf(0, p.gold - flights.sumOf { it.goldGain }), maxOf(0, p.deck.size - flights.sumOf { it.deckGain }),
+        relics, p.seeds.toList(), seedReady,
+        bag = maxOf(0, relics.size + p.seeds.count { it != null } - flights.count { it.kind == "seed" })
     )
 }
 
@@ -108,8 +115,9 @@ fun HudBar(
     compact: Boolean = false
 ) {
     val scale = if (compact) 1f else 1.17f
+    val safe = LocalSafeInsets.current
     Row(
-        modifier.fillMaxWidth().height((58 * scale).dp).padding(horizontal = 22.dp),
+        modifier.fillMaxWidth().height((58 * scale).dp).padding(start = (22f + safe.left).dp, end = (22f + safe.right).dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy((12 * scale).dp)
     ) {
@@ -125,53 +133,61 @@ fun HudBar(
             BasicText("Piso ${state.floor} · ${state.floorName}", style = Fonts.hand(19f * scale, Ink.inkSoft))
         }
         // vida
-        Row(
-            Modifier.rotate(-1.5f).chip().padding(start = 8.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Sprite("ui_heart", 24.dp)
-            BasicText("${state.hp}/${state.maxHp}", style = Fonts.body(18f * scale, FontWeight.Bold))
-            HpBar(state.hp, state.maxHp, Modifier.width(80.dp), height = 14.dp, showText = false)
+        HudGain(state.hp, Color(0xFFC8374F), "hp") {
+            Row(
+                Modifier.rotate(-1.5f).chip().padding(start = 8.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Sprite("ui_heart", 24.dp)
+                BasicText("${state.hp}/${state.maxHp}", style = Fonts.body(18f * scale, FontWeight.Bold))
+                HpBar(state.hp, state.maxHp, Modifier.width(80.dp), height = 14.dp, showText = false)
+            }
         }
         // oro
-        Row(
-            Modifier.rotate(1.5f).chip().padding(start = 8.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Sprite("ui_coin", 24.dp)
-            BasicText("${state.gold}", style = Fonts.body(18f * scale, FontWeight.Bold))
+        HudGain(state.gold, Color(0xFFC98A00), "gold") {
+            Row(
+                Modifier.rotate(1.5f).chip().padding(start = 8.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Sprite("ui_coin", 24.dp)
+                BasicText("${state.gold}", style = Fonts.body(18f * scale, FontWeight.Bold))
+            }
         }
         // mochila: cuántos objetos, los dos últimos y las semillas
-        Row(
-            Modifier.chip(14.dp, if (state.seedReady) Ink.mintSoft else Ink.edge).tapButton { onBag() }
-                .padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            Sprite("ui_bag", 28.dp)
-            BasicText("${state.relics.size}", style = Fonts.display(20f * scale))
-            state.relics.takeLast(2).reversed().forEach { rid ->
-                if (Relics.get(rid) != null) Sprite(rid, 24.dp)
-            }
-            state.seeds.forEach { id ->
-                val seed = id?.let { Seeds.get(it) }
-                if (seed != null) SeedArt(seed, 20.dp) else Box(Modifier.size(12.dp).drawBehind {
-                    drawCircle(Ink.inkSoft.copy(alpha = .5f), size.minDimension / 2f - 1f, style = Stroke(1.5.dp.toPx()))
-                })
+        HudGain(state.bag, Color(0xFF8C5A3C), "bag") {
+            Row(
+                Modifier.chip(14.dp, if (state.seedReady) Ink.mintSoft else Ink.edge).tapButton { onBag() }
+                    .padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Sprite("ui_bag", 28.dp)
+                BasicText("${state.relics.size}", style = Fonts.display(20f * scale))
+                state.relics.takeLast(2).reversed().forEach { rid ->
+                    if (Relics.get(rid) != null) Sprite(rid, 24.dp)
+                }
+                state.seeds.forEach { id ->
+                    val seed = id?.let { Seeds.get(it) }
+                    if (seed != null) SeedArt(seed, 20.dp) else Box(Modifier.size(12.dp).drawBehind {
+                        drawCircle(Ink.inkSoft.copy(alpha = .5f), size.minDimension / 2f - 1f, style = Stroke(1.5.dp.toPx()))
+                    })
+                }
             }
         }
         // mazo
-        Row(
-            Modifier.rotate(-1f).chip(14.dp).tapButton { onDeck() }
-                .padding(start = 10.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Box(Modifier.size(38.dp, 44.dp)) {
-                CardBack(28.dp, 40.dp, Modifier.offset(0.dp, 3.dp).rotate(-10f))
-                CardBack(28.dp, 40.dp, Modifier.offset(9.dp, 0.dp).rotate(6f))
-            }
-            BasicText("Mazo", style = Fonts.body(18f * scale, FontWeight.Medium))
-            Box(Modifier.chip(99.dp, Ink.banana).padding(horizontal = 10.dp)) {
-                BasicText("${state.deck}", style = Fonts.display(21f))
+        HudGain(state.deck, Color(0xFF4A7BD0), "deck") {
+            Row(
+                Modifier.rotate(-1f).chip(14.dp).tapButton { onDeck() }
+                    .padding(start = 10.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(Modifier.size(38.dp, 44.dp)) {
+                    CardBack(28.dp, 40.dp, Modifier.offset(0.dp, 3.dp).rotate(-10f))
+                    CardBack(28.dp, 40.dp, Modifier.offset(9.dp, 0.dp).rotate(6f))
+                }
+                BasicText("Mazo", style = Fonts.body(18f * scale, FontWeight.Medium))
+                Box(Modifier.chip(99.dp, Ink.banana).padding(horizontal = 10.dp)) {
+                    BasicText("${state.deck}", style = Fonts.display(21f))
+                }
             }
         }
         // ajustes

@@ -53,7 +53,17 @@ import com.yokyznt.fruitspire.nativo.ui.FateScreen
 import com.yokyznt.fruitspire.nativo.ui.Fonts
 import com.yokyznt.fruitspire.nativo.ui.GameAudio
 import com.yokyznt.fruitspire.nativo.ui.GameOverScreen
+import com.yokyznt.fruitspire.nativo.ui.FlyLayer
 import com.yokyznt.fruitspire.nativo.ui.HudBar
+import com.yokyznt.fruitspire.nativo.ui.LocalHudAnchors
+import com.yokyznt.fruitspire.nativo.ui.LocalLootNudge
+import com.yokyznt.fruitspire.nativo.ui.LocalLootRects
+import com.yokyznt.fruitspire.nativo.ui.LootNudge
+import com.yokyznt.fruitspire.nativo.ui.LocalTutorialAnchors
+import com.yokyznt.fruitspire.nativo.ui.TutorialEndScreen
+import com.yokyznt.fruitspire.nativo.ui.TutorialOverlay
+import com.yokyznt.fruitspire.core.TutorialCtx
+import androidx.compose.ui.geometry.Rect
 import com.yokyznt.fruitspire.nativo.ui.Ink
 import com.yokyznt.fruitspire.nativo.ui.InventoryModal
 import com.yokyznt.fruitspire.nativo.ui.LocalAudio
@@ -144,7 +154,7 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
         when (vm.screen) {
             AppScreen.MENU -> MenuScreen(
                 canContinue = vm.canContinue, onContinue = vm::continueGame, onNewGame = vm::newGame,
-                onTutorial = soon, onPass = vm::openPass, onWardrobe = vm::openWardrobe, onCollection = vm::openCollection, onNotes = vm::openNotes,
+                onTutorial = vm::startTutorial, onPass = vm::openPass, onWardrobe = vm::openWardrobe, onCollection = vm::openCollection, onNotes = vm::openNotes,
                 onSettings = { showSettings = true }, passBadge = Pass.unclaimed(vm.progress), notesBadge = vm.progress.notesAreNew()
             )
             AppScreen.COLLECTION -> CollectionScreen(vm.progress, vm.collection, onInfo = { toast.show(it) }, onBack = vm::toMenu)
@@ -171,6 +181,7 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
     // el botón de atrás cierra lo abierto o vuelve al menú (la partida ya está guardada)
     BackHandler(enabled = vm.screen != AppScreen.MENU || showSettings) {
         if (showSettings) showSettings = false
+        else if (vm.screen == AppScreen.RUN && vm.tutorial != null) vm.tutQuit(null) // el tutorial pregunta antes de salir
         else if (vm.bagOpen) vm.closeBag()
         else if (vm.screen == AppScreen.STORY) vm.finishStory()
         else if (vm.screen == AppScreen.ENDING) vm.finishEnding()
@@ -187,6 +198,11 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
     vm.uiScope = androidx.compose.runtime.rememberCoroutineScope()
     val run = vm.run ?: return
     val ctl = vm.combat
+    val tut = vm.tutorial
+    CompositionLocalProvider(
+        LocalHudAnchors provides vm.hudAnchors, LocalLootRects provides vm.lootRects, LocalLootNudge provides remember { LootNudge() },
+        LocalTutorialAnchors provides (if (tut != null) vm.tutorialAnchors else null)
+    ) {
     Box(Modifier.fillMaxSize()) {
         when (run.screen) {
             RunScreen.ACT_INTRO -> ActIntroScreen(run, vm::beginFloor)
@@ -217,19 +233,37 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
             RunScreen.DUNGEON -> DungeonScreen(run, vm::enterDungeonCell)
             RunScreen.FATE -> FateScreen(run, vm.fateShown, vm.fateRolling, vm::rollFate, vm::fateFight)
             RunScreen.MINIGAME -> vm.tableController()?.let { TableScreen(run, it, vm.tick, vm::collectLoot, vm::dropLoot, vm::leaveNode) }
+            RunScreen.TUTORIAL_END -> TutorialEndScreen(onPlay = vm::newGame, onRepeat = vm::startTutorial, onMenu = vm::toMenu)
             RunScreen.GAME_OVER -> GameOverScreen(run, vm::toMenu)
             RunScreen.VICTORY -> VictoryScreen(run, vm::toMenu, vm::wearPet)
         }
-        if (run.screen != RunScreen.GAME_OVER && run.screen != RunScreen.VICTORY) {
+        if (run.screen != RunScreen.GAME_OVER && run.screen != RunScreen.VICTORY && run.screen != RunScreen.TUTORIAL_END) {
             val seedReady = run.screen == RunScreen.COMBAT && ctl?.canUseSeedNow() == true && run.player.seeds.any { it != null }
             HudBar(
-                hudStateOf(run, seedReady), onMenu = vm::toMenu, onBag = onBag, onDeck = vm::showDeck, onSettings = onSettings,
+                hudStateOf(run, seedReady, vm.flights.toList()), onMenu = { if (tut != null) vm.tutQuit(null) else vm.toMenu() }, onBag = onBag, onDeck = vm::showDeck,
+                onSettings = { if (tut != null) vm.tutDeniedTap() else onSettings() },
                 modifier = Modifier.align(Alignment.TopStart), compact = run.screen == RunScreen.COMBAT
             )
+            FlyLayer(vm.flights.toList(), vm.hudAnchors, vm::landFlight)
         }
         if (vm.bagOpen) InventoryModal(run, ctl?.canUseSeedNow() == true, vm::useSeedFromBag, vm::dropSeed, vm::closeBag)
         vm.intro?.let { CombatIntroOverlay(it) }
         vm.deckView?.let { (title, note, ids) -> DeckModal(title, note, ids) { vm.deckView = null } }
+        // el tutorial: Profe Limón y lo que ilumina, por encima de todo
+        if (tut != null && run.screen != RunScreen.TUTORIAL_END) {
+            val ctx = TutorialCtx(run, tut.flags, vm.bagOpen, (ctl?.seedAiming ?: -1) >= 0)
+            fun rectsOf(id: String): List<Rect> = when (id) {
+                "bag" -> listOfNotNull(vm.hudAnchors.rects["bag"])
+                "loot" -> run.loot.indices.filter { run.loot[it].isOpen }.mapNotNull { vm.lootRects["loot:$it"] }
+                "reward-cards" -> if (run.rewardCardPicked) emptyList() else run.rewardCards.mapNotNull { vm.lootRects["card:$it"] }
+                else -> vm.tutorialAnchors.rects(id)
+            }
+            TutorialOverlay(
+                tut, tut.spots(ctx).flatMap { rectsOf(it) }, (tut.step?.avoid ?: emptyList()).flatMap { rectsOf(it) },
+                vm.tutPraise, vm.tutShake, vm::tutAdvance, { vm.tutQuit(null) }, vm::tutQuit
+            )
+        }
+    }
     }
 }
 
@@ -262,10 +296,10 @@ fun CombatIntroOverlay(intro: IntroUi) {
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                intro.sprites.forEach { Sprite(it, if (intro.sprites.size > 1) 120.dp else 150.dp) }
+                intro.sprites.forEach { Sprite(it, if (intro.sprites.size > 2) 170.dp else if (intro.sprites.size > 1) 200.dp else 250.dp) }
             }
-            OutlinedText(intro.title, Fonts.display(62f, titleColor), inkWidth = 3.dp, edgeWidth = 3.dp)
-            BasicText(intro.names, style = Fonts.hand(34f).copy(textAlign = TextAlign.Center))
+            OutlinedText(intro.title, Fonts.display(66f, titleColor), inkWidth = 3.dp, edgeWidth = 3.dp)
+            BasicText(intro.names, style = Fonts.hand(52f).copy(textAlign = TextAlign.Center))
         }
     }
 }

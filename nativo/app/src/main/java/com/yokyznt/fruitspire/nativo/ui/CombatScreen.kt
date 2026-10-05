@@ -248,16 +248,16 @@ private fun Plate(c: CombatantUi, ctl: CombatController, multi: Boolean, modifie
         ) {
             Box(Modifier.fillMaxWidth()) {
                 HpBar(c.hp, c.maxHp, Modifier.fillMaxWidth(), height = 28.dp)
-                if (c.block > 0) BlockBadge(c.block, Modifier.align(Alignment.CenterStart).offset((-22).dp, 0.dp))
+                if (c.block > 0) BlockBadge(c.block, Modifier.align(Alignment.CenterStart).offset((-22).dp, 0.dp).then(if (c.key == "player") Modifier.tutAnchor("block") else Modifier))
             }
             Row(Modifier.padding(top = 7.dp).height(36.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                c.statuses.forEach { s -> StatusChip(s) { ctl.showInfo(s.name + if (s.noCount) "" else " ${s.n}", (if (s.debuff) "Perjuicio. " else "Mejora. ") + s.help) } }
+                c.statuses.forEach { s -> StatusChip(s) { ctl.showSections(statusSectionsFull(listOf(s.id to s.n))) } }
             }
         }
         Box(
             Modifier.graphicsLayer { rotationZ = -2f * tilt }.chip(8.dp).padding(horizontal = 16.dp, vertical = 1.dp)
         ) {
-            BasicText(c.name + if (c.tier == "boss") " ♛" else if (c.tier == "elite") " ✦" else "", style = Fonts.display(if (multi) 21f else 25f))
+            BasicText(c.name + if (c.tier == "boss") " ♛" else if (c.tier == "elite") " ✦" else "", style = Fonts.display(if (multi) 26f else 32f))
         }
     }
 }
@@ -279,6 +279,7 @@ private fun CombatantView(
     val targetable = !player && c.alive && (ctl.dragNeeds == true || aiming)
     Box(
         modifier.width(width.dp).onGloballyPositioned { ctl.anchors["zone-${c.key}"] = it.boundsInRoot() }
+            .then(if (player) Modifier else Modifier.tutAnchor("enemy"))
             .pointerInput(aiming) { if (aiming) detectTapGestures { ctl.useSeedOn(index - 1) } }
     ) {
         // marco de objetivo al arrastrar una carta
@@ -342,7 +343,7 @@ private fun CombatantView(
                 if (c.charId != null) FruitSprite(c.charId, spriteSize.dp, mood = mood, hurt = c.hurt) // tu fruta, vestida
                 else Sprite(c.sprite, spriteSize.dp, mood = mood, hurt = c.hurt)
             }
-            Plate(c, ctl, multi, Modifier.fillMaxWidth().padding(top = 0.dp))
+            Plate(c, ctl, multi, Modifier.fillMaxWidth().padding(top = 0.dp).then(if (player) Modifier.tutAnchor("plate") else Modifier))
         }
         // anillo de cáscara / curación / poder
         Box(Modifier.matchParentSize().graphicsLayer { alpha = if (actor.ring.value < 1f) 1f - actor.ring.value else 0f; val s = .6f + .7f * actor.ring.value; scaleX = s; scaleY = s }.drawBehind {
@@ -351,8 +352,8 @@ private fun CombatantView(
         // globo de intención
         c.intent?.let { intent ->
             IntentBubble(
-                intent, ctl.acting == index - 1 && !player, { ctl.showInfo(intent.title.ifEmpty { "Intención" }, intent.tip) },
-                Modifier.align(Alignment.TopStart).offset(10.dp, 0.dp)
+                intent, ctl.acting == index - 1 && !player, { ctl.showSections(intent.sections.ifEmpty { listOf(InfoSection(intent.title.ifEmpty { "Intención" }, intent.tip)) }, tip = "intent") },
+                Modifier.align(Alignment.TopStart).offset(10.dp, 0.dp).tutAnchor("intent")
             )
         }
     }
@@ -708,17 +709,6 @@ private fun FlyingCardView(f: FlyingCard, ctl: CombatController) {
 }
 
 /** La explicación de algo (estado, intención, pila…): se cierra tocando. */
-@Composable
-private fun InfoPanel(title: String, text: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier.width(420.dp).stickerCard(16.dp, Ink.paper2).padding(horizontal = 18.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        BasicText(title, style = Fonts.body(19f, FontWeight.Bold))
-        GameText(text, Fonts.body(16f, color = Ink.ink))
-    }
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // La pantalla
 // ---------------------------------------------------------------------------------------------------------------
@@ -770,6 +760,7 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
                         ch.consume()
                         pos = ch.position / density
                         if (!dragging && (pos - p0).getDistance() > 8f) {
+                            if (!ctl.cardAllowed(idx)) break // el tutorial no deja usar esa carta ahora
                             dragging = true
                             ctl.selected = idx
                             ctl.dragNeeds = ctl.needsTarget(card)
@@ -803,7 +794,8 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
         if (ui.ruleName != null) {
             Row(
                 Modifier.align(Alignment.TopStart).padding(start = 22.dp, top = 62.dp).chip(99.dp, Ink.paper2)
-                    .pointerInput(Unit) { detectTapGestures(onTap = { ctl.showInfo("Regla del piso: ${ui.ruleName}", ui.ruleDesc ?: "") }) }
+                    .tutAnchor("rule")
+                    .pointerInput(Unit) { detectTapGestures(onTap = { ctl.showInfo("Regla del piso: ${ui.ruleName}", ui.ruleDesc ?: "", tip = "rule") }) }
                     .padding(start = 6.dp, end = 14.dp, top = 3.dp, bottom = 3.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -813,14 +805,19 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
         }
 
         // escenario: la fruta a la izquierda y los enemigos a la derecha
+        // la cámara del teléfono tapa el borde: todo el escenario empieza después del recorte (y un poco más a la derecha)
+        val safe = LocalSafeInsets.current
         Row(
-            Modifier.fillMaxSize().padding(start = if (multi) 16.dp else 60.dp, end = if (multi) 16.dp else 60.dp, top = 56.dp, bottom = 248.dp),
+            Modifier.fillMaxSize().padding(
+                start = (if (multi) 16f else 60f).dp + (safe.left + 44f).dp, end = (if (multi) 16f else 60f).dp + safe.right.dp,
+                top = 56.dp, bottom = 248.dp
+            ),
             verticalAlignment = Alignment.Bottom
         ) {
             val me = ui.player
             val meW = if (multi) 330f else 400f
             Box {
-                CombatantView(me, ctl.actors[0], ctl, clock, meW, if (multi) 118f else 140f, multi, 0)
+                CombatantView(me, ctl.actors[0], ctl, clock, meW, if (multi) 128f else 164f, multi, 0)
                 if (ui.showGarden) Garden(ui.garden, Modifier.align(Alignment.TopCenter))
             }
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
@@ -829,7 +826,7 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Bottom) {
                 ui.enemies.forEachIndexed { i, e ->
                     key(i) {
-                        val size = if (multi) 118f else if (e.tier == "boss") 160f else 140f
+                        val size = if (multi) 140f else if (e.tier == "boss") 214f else 184f
                         CombatantView(e, ctl.actors[1 + i], ctl, clock, if (multi) 262f else 400f, size, multi, i + 1)
                     }
                 }
@@ -838,7 +835,7 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
 
         // abajo: naranja y pila de robo | mano | pilas y botón
         Column(Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 12.dp).width(200.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            EnergyOrange(ui.energy, ui.maxEnergy, ctl.orangeNope, ctl)
+            Box(Modifier.tutAnchor("energy")) { EnergyOrange(ui.energy, ui.maxEnergy, ctl.orangeNope, ctl) }
             Pile("robo", ui.drawCount, "draw", ctl)
         }
         Column(Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 12.dp).width(200.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -846,11 +843,12 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
                 Pile("compost", ui.exhaustCount, "exhaust", ctl)
                 Pile("descarte", ui.discardCount, "discard", ctl)
             }
-            StickerButton("Terminar turno", { ctl.endTurn() }, enabled = ui.playerTurn, fontSize = 19f, padding = PaddingValues(horizontal = 18.dp, vertical = 9.dp))
+            StickerButton("Terminar turno", { ctl.endTurn() }, Modifier.tutAnchor("end-turn"), enabled = ui.playerTurn, fontSize = 19f, padding = PaddingValues(horizontal = 18.dp, vertical = 9.dp))
             BasicText("turno ${ui.turnNumber}", style = Fonts.hand(20f, Color(0xFF7A5634)))
         }
 
-        // la mano
+        // la mano (el recuadro de abajo es lo que ilumina el tutorial: las cartas giran en abanico y no se pueden medir sueltas)
+        Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = 230.dp).fillMaxWidth().height(236.dp).tutAnchor("hand"))
         Box(Modifier.fillMaxSize()) {
             ui.hand.forEachIndexed { i, h -> key(h.key) { HandCardView(h, i, ui.hand.size, ctl, designW, drag, discarding) } }
             val sel = ctl.selected
@@ -886,8 +884,8 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
                     StickerButton("Cancelar", { ctl.cancelSeedAim() }, secondary = true, fontSize = 15f, padding = PaddingValues(horizontal = 14.dp, vertical = 3.dp))
                 }
             }
-            ctl.info?.let { (title, text) ->
-                InfoPanel(title, text, Modifier.align(Alignment.Center))
+            ctl.info?.let { sections ->
+                InfoStack(sections, Modifier.align(Alignment.Center), width = 460.dp, titleSize = 22f, textSize = 18f)
             }
         }
     }

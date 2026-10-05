@@ -1,7 +1,10 @@
 package com.yokyznt.fruitspire.nativo.ui
 
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -76,15 +79,29 @@ val LocalDesignWidth = compositionLocalOf { 1180f }
  */
 @Composable
 fun DesignCanvas(content: @Composable () -> Unit) {
+    // el recorte de la pantalla (cámara) se mide con la densidad real, antes de pasar a px de diseño
+    val real = LocalDensity.current
+    val dir = LocalLayoutDirection.current
+    val cut = WindowInsets.displayCutout
+    val cutLeft = cut.getLeft(real, dir)
+    val cutRight = cut.getRight(real, dir)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val scale = constraints.maxHeight / DESIGN_H
         val width = constraints.maxWidth / scale
         CompositionLocalProvider(
             LocalDensity provides Density(density = scale, fontScale = 1f),
-            LocalDesignWidth provides width
+            LocalDesignWidth provides width,
+            LocalSafeInsets provides SafeInsets(cutLeft / scale, cutRight / scale)
         ) { content() }
     }
 }
+
+/** Lo que tapa el recorte de la pantalla (la cámara) a cada lado, en px de diseño. */
+class SafeInsets(val left: Float, val right: Float) {
+    companion object { val None = SafeInsets(0f, 0f) }
+}
+
+val LocalSafeInsets = compositionLocalOf { SafeInsets.None }
 
 /** Fondo de hoja de cuaderno: renglones azules y la línea roja del margen. */
 fun Modifier.notebookPaper(): Modifier = drawBehind {

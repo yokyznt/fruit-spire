@@ -49,7 +49,9 @@ enum class RunScreen {
     /** Mesa de juego (dados, póker, ajedrez, tragamonedas o ruleta). */
     MINIGAME,
     GAME_OVER,
-    VICTORY
+    VICTORY,
+    /** Pantalla final del tutorial «Cómo jugar». */
+    TUTORIAL_END
 }
 
 class Pos(val x: Int, val y: Int) {
@@ -125,7 +127,35 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     val isFinalFloor: Boolean get() = player.act >= World.castles.size && player.floor >= World.FLOORS_PER_CASTLE
     val isOver: Boolean get() = screen == RunScreen.GAME_OVER || screen == RunScreen.VICTORY
 
+    /** El tutorial «Cómo jugar» en curso (null = una partida de verdad). Usa un [Progress] desechable: no toca lo real ni se guarda. */
+    var tutorial: TutorialDirector? = null
+    /** Tras perder en el tutorial: el combate que se repite (la interfaz lo recoge y lo vuelve a empezar). */
+    var tutorialRetry: PendingCombat? = null
+
     companion object {
+        /** El tutorial: manzana, 130 de oro, grado «verde» y un mapa fijo de 7×3 (js/tutorial.js `startTutorial`). */
+        fun startTutorial(): Run {
+            val def = World.character("manzana")!!
+            val p = Player()
+            p.characterId = "manzana"
+            p.name = def.name
+            p.maxHp = def.baseHp
+            p.hp = def.baseHp
+            p.difficulty = "verde"
+            p.gold = 130
+            p.act = 1
+            p.floor = 1
+            p.plan = Plan.run()
+            p.deck = ArrayList(World.starterDeck("manzana"))
+            val run = Run(p, Progress())
+            run.map = buildTutorialMap()
+            run.pos = Pos(0, 1)
+            run.visited.add(run.pos.key)
+            run.screen = RunScreen.MAP
+            run.tutorial = TutorialDirector()
+            return run
+        }
+
         /** Partida nueva con una fruta y un grado (si el grado aún está bloqueado, se baja al más alto abierto). */
         fun start(charId: String, difficultyId: String, progress: Progress = Progress()): Run {
             val def = World.character(charId)!!
@@ -180,7 +210,9 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     fun isReachable(x: Int, y: Int): Boolean = MapGen.canMove(map, visited, pos.x, pos.y, x, y)
 
     private fun encounterFor(kind: String, progress: Double): List<String> =
-        Plan.encounter(player.act, progress, kind, map.bossId, map.themeId)
+        // tutorial: el primer combate es siempre contra una avispa sola (y así la portada «¡A pelear!» ya la muestra)
+        if (tutorial?.firstFight == true && kind != "boss") listOf("avispa_furiosa")
+        else Plan.encounter(player.act, progress, kind, map.bossId, map.themeId)
 
     /**
      * La ficha llegó a la casilla (x, y). Devuelve el combate por empezar si hay uno; si no, la pantalla
@@ -201,7 +233,7 @@ class Run(val player: Player, val progress: Progress = Progress()) {
             NodeType.ENEMY, NodeType.ELITE, NodeType.BOSS -> {
                 val kind = if (type == NodeType.ELITE) "elite" else if (type == NodeType.BOSS) "boss" else "enemy"
                 // antes de cada jefe se tira el dado del destino (una sola vez por piso)
-                if (kind == "boss" && map.fate == null) { fateRoll = null; screen = RunScreen.FATE; return null }
+                if (kind == "boss" && map.fate == null && tutorial == null) { fateRoll = null; screen = RunScreen.FATE; return null }
                 return PendingCombat(encounterFor(kind, pos.x.toDouble() / (map.cols - 1)), kind)
             }
             NodeType.MYSTERY -> openMystery()
@@ -475,7 +507,8 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         val pool = Events.all.filter { ev ->
             (ev.acts == null || player.act in ev.acts) && (ev.themes == null || themeId in ev.themes) && ev.id != lastEventId
         }
-        val ev = Events.pick(pool.ifEmpty { Events.all })
+        // en el tutorial siempre sale un evento tranquilo (sin peleas ni minijuegos)
+        val ev = if (tutorial != null) Events.all.first { it.id == "fuente_magica" } else Events.pick(pool.ifEmpty { Events.all })
         currentEvent = ev
         lastEventId = ev.id
         nodeMessage = ""
@@ -608,11 +641,27 @@ class Run(val player: Player, val progress: Progress = Progress()) {
         combatKind = pc.kind
         val diff = difficulty
         val mods = World.scaledMods(diff.hpMult, diff.dmgBonus, player.act, player.floor)
-        pc.enemyIds.forEach { progress.bestiarySee(it) }
-        val c = Combat(player, pc.enemyIds, onUpdate, onEnd, mods, theme.rule, Pets.hooks(progress.petFor(player.characterId)?.id))
+        val tut = tutorial
+        // tutorial: el primer combate es siempre contra un solo enemigo que solo ataca
+        val ids = if (tut != null && tut.firstFight && pc.kind != "boss") listOf("avispa_furiosa") else pc.enemyIds
+        ids.forEach { progress.bestiarySee(it) }
+        // tutorial: sin regla de piso, salvo en el jefe (la del huerto)
+        val rule = if (tut != null) (if (pc.kind == "boss") World.themes.getValue("huerto").rule else null) else theme.rule
+        val c = Combat(player, ids, onUpdate, onEnd, mods, rule, Pets.hooks(progress.petFor(player.characterId)?.id))
         combat = c
         // lo que salió en el dado del destino se aplica al combate contra el jefe
         if (pc.kind == "boss") map.fate?.let { Fate.apply(c, it) }
+        if (tut != null && tut.firstFight) {
+            tut.firstFight = false
+            // mano fija (3 golpes y 2 jugos) y un enemigo que aguanta lo suficiente para ver todos los pasos
+            val all = ArrayList<String>(c.player.hand); all.addAll(c.player.drawPile)
+            val fixed = listOf("golpe_cascara", "jugo_defensivo", "golpe_cascara", "jugo_defensivo", "golpe_cascara").mapNotNull { id ->
+                val k = all.indexOf(id); if (k >= 0) all.removeAt(k) else null
+            }
+            c.player.hand = ArrayList(fixed)
+            c.player.drawPile = all
+            c.enemies.forEach { it.maxHp = max(it.maxHp, 44); it.hp = it.maxHp }
+        }
         return c
     }
 
@@ -620,13 +669,22 @@ class Run(val player: Player, val progress: Progress = Progress()) {
     fun finishCombat(result: String) {
         val c = combat
         val p = player
-        lastCombatXp = min(160, c?.xpGained ?: 0)
+        val tut = tutorial
+        // el tutorial no suma experiencia ni bestiario (y su progreso es desechable de todos modos)
+        lastCombatXp = if (tut != null) 0 else min(160, c?.xpGained ?: 0)
         // gane o pierda, cada enemigo derrotado suma al pase y al bestiario
-        c?.let { progress.recordCombat(it.enemies) }
+        if (tut == null) c?.let { progress.recordCombat(it.enemies) }
         passGain = if (lastCombatXp > 0) gainPassXp(lastCombatXp) else null
         newPets = emptyList()
+        if (tut != null && result != "win") {
+            // en el tutorial no se puede perder: se restaura la vida y se repite el combate
+            p.hp = p.maxHp
+            tutorialRetry = PendingCombat(c?.enemies?.map { it.defId }?.distinct() ?: emptyList(), combatKind)
+            return
+        }
         if (result != "win") { screen = RunScreen.GAME_OVER; return }
         val kind = combatKind
+        if (tut != null && kind == "boss") { combat = null; screen = RunScreen.TUTORIAL_END; return }
         if (kind == "dungeon") { finishDungeonCombat(); return }
         CharacterHooks.onCombatEnd(p)
         p.relics.toList().forEach { Relics.hooks(it)?.onCombatEnd?.invoke(p) }
@@ -661,7 +719,8 @@ class Run(val player: Player, val progress: Progress = Progress()) {
             Rewards.randomRelic(p, listOf("common", "uncommon", "rare"), lootRelicIds())?.let { loot.add(LootItem("relic", id = it.id)) }
         }
         val seedChance = if (kind == "boss") 1.0 else if (kind == "elite") 0.45 else 0.25
-        if (Rng.next() < seedChance) loot.add(LootItem("seed", id = Seeds.roll().id))
+        if (tut != null) loot.add(LootItem("seed", id = "semilla_chile")) // el tutorial siempre da la semilla que se usa contra el jefe
+        else if (Rng.next() < seedChance) loot.add(LootItem("seed", id = Seeds.roll().id))
         afterReward = if (isCastleBoss) "boss-relic" else if (kind == "boss") "next-floor" else "map"
         screen = RunScreen.REWARD
     }

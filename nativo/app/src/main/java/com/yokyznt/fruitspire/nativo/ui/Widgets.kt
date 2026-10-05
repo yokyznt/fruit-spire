@@ -58,6 +58,16 @@ fun DrawScope.stickerShape(fill: Color, radius: Float, inkWidth: Float, edgeWidt
  * Botón sticker en forma de píldora (el <button> del juego web): se levanta sobre su
  * sombra de tinta y se hunde al tocarlo. [secondary] es la versión de papel con borde punteado.
  */
+/** El «Continuar» de las pantallas de premios: grande, para tocarlo con el pulgar sin fallar. */
+@Composable
+fun ContinueButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, text: String = "Continuar") {
+    val nudge = LocalLootNudge.current
+    StickerButton(
+        text, onClick, modifier.defaultMinSize(minWidth = 240.dp, minHeight = 56.dp).tutAnchor("leave").tutAnchor("continue"), color = Ink.mint, enabled = enabled,
+        fontSize = 26f, padding = PaddingValues(horizontal = 56.dp, vertical = 16.dp), onDisabledTap = { nudge.hit() }
+    )
+}
+
 @Composable
 fun StickerButton(
     text: String,
@@ -68,7 +78,9 @@ fun StickerButton(
     secondary: Boolean = false,
     fontSize: Float = 19f,
     padding: PaddingValues = PaddingValues(horizontal = 26.dp, vertical = 11.dp),
-    leading: (@Composable () -> Unit)? = null
+    leading: (@Composable () -> Unit)? = null,
+    /** Qué hacer si lo tocan estando apagado (con sonido de «no»); sin esto un botón apagado no responde. */
+    onDisabledTap: (() -> Unit)? = null
 ) {
     val press = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
@@ -97,7 +109,10 @@ fun StickerButton(
                 if (dim) drawContext.canvas.restore()
             }
             .pointerInput(enabled) {
-                if (!enabled) return@pointerInput
+                if (!enabled) {
+                    if (onDisabledTap != null) detectTapGestures(onTap = { audio.play(Sfx.DENIED); onDisabledTap() })
+                    return@pointerInput
+                }
                 detectTapGestures(
                     onPress = {
                         scope.launch { press.animateTo(1f, tween(70)) }

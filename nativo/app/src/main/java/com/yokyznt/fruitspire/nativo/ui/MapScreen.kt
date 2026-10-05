@@ -56,7 +56,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -492,8 +495,17 @@ private fun PlayerToken(charId: String, target: Pair<Int, Int>, moving: Boolean)
     val to = Offset(cellPos(target.first), cellPos(target.second))
     val at by animateOffsetAsState(to, tween(if (moving) 440 else 0, easing = HopEase), label = "ficha")
     val hop = remember { Animatable(0f) }
+    // el polvo que queda en la casilla de la que sales (puff de css/style.css): sube, crece y se desvanece en 0,5 s
+    val puff = remember { Animatable(1f) }
+    var lastTarget by remember { mutableStateOf(target) }
+    var puffFrom by remember { mutableStateOf(to) }
     LaunchedEffect(target, moving) {
-        if (moving) { hop.snapTo(0f); hop.animateTo(1f, tween(440, easing = androidx.compose.animation.core.EaseInOut)) }
+        if (moving) {
+            puffFrom = Offset(cellPos(lastTarget.first), cellPos(lastTarget.second))
+            lastTarget = target
+            launch { puff.snapTo(0f); puff.animateTo(1f, tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+            hop.snapTo(0f); hop.animateTo(1f, tween(440, easing = androidx.compose.animation.core.LinearEasing))
+        } else lastTarget = target
     }
     val idle by rememberInfiniteTransition(label = "respira").animateFloat(0f, 1f, infiniteRepeatable(tween(2200, easing = EaseInOut), RepeatMode.Reverse), label = "idle")
     Box(
@@ -502,19 +514,54 @@ private fun PlayerToken(charId: String, target: Pair<Int, Int>, moving: Boolean)
         },
         contentAlignment = Alignment.Center
     ) {
-        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp).size(70.dp, 14.dp).drawBehind {
+        if (puff.value < 1f) {
+            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp).size(54.dp).graphicsLayer {
+                translationX = (puffFrom.x - at.x) * density; translationY = (puffFrom.y - at.y - 8f * puff.value) * density
+                val s = .4f + 1.4f * puff.value
+                scaleX = s; scaleY = s; alpha = .9f * (1f - puff.value)
+            }.drawBehind { drawCircle(Color(0xFFFFF6E9)) })
+        }
+        val walk = walkHopPose(hop.value)
+        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp).size(70.dp, 14.dp).graphicsLayer {
+            // la sombra se encoge y se aclara en lo alto del salto (walkShadow)
+            val lift = (-walk.ty / 34f).coerceIn(0f, 1f)
+            scaleX = 1f - .4f * lift; alpha = 1f - .5f * lift
+        }.drawBehind {
             drawOval(Color(0x334A3428), Offset.Zero, size)
         })
         Box(
             Modifier.graphicsLayer {
                 transformOrigin = TransformOrigin(.5f, 1f)
-                val hopY = -sin(hop.value * Math.PI).toFloat() * 26f * density
-                translationY = hopY
-                scaleX = 1f + idle * .04f
-                scaleY = 1f - idle * .05f
+                translationY = walk.ty * density
+                scaleX = walk.sx * (1f + idle * .04f)
+                scaleY = walk.sy * (1f - idle * .05f)
+                rotationZ = walk.rot
             }
         ) { FruitSprite(charId, 86.dp) }
     }
+}
+
+/** Un cuadro del salto de la ficha (los @keyframes walkHop de css/style.css). */
+class WalkPose(val ty: Float, val sx: Float, val sy: Float, val rot: Float)
+
+private val WALK_KEYS = listOf(
+    floatArrayOf(0f, 0f, 1f, 1f, 0f), floatArrayOf(.12f, 0f, 1.1f, .88f, 0f), floatArrayOf(.45f, -34f, .94f, 1.08f, -6f),
+    floatArrayOf(.8f, 0f, 1.08f, .92f, 0f), floatArrayOf(1f, 0f, 1f, 1f, 0f)
+)
+
+/** Pose del salto al avanzar [t] (0..1): se agacha, salta con el cuerpo estirado, cae aplastándose y se endereza. */
+fun walkHopPose(t: Float): WalkPose {
+    val x = t.coerceIn(0f, 1f)
+    for (i in 1 until WALK_KEYS.size) {
+        val b = WALK_KEYS[i]
+        if (x <= b[0]) {
+            val a = WALK_KEYS[i - 1]
+            val k = androidx.compose.animation.core.EaseInOut.transform((x - a[0]) / (b[0] - a[0]))
+            fun l(j: Int) = a[j] + (b[j] - a[j]) * k
+            return WalkPose(l(1), l(2), l(3), l(4))
+        }
+    }
+    return WalkPose(0f, 1f, 1f, 0f)
 }
 
 /**
@@ -590,6 +637,29 @@ fun MapScreen(
         }
     }
 
+    // tutorial: dónde caen en la pantalla la ficha, los muros, las casillas alcanzables, las élites y la guarida
+    // (el tablero se desplaza y se acerca, así que se calcula con el mismo desplazamiento y zoom con que se dibuja)
+    val tutAnchors = LocalTutorialAnchors.current
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    if (tutAnchors != null) {
+        val owner = remember { Any() }
+        val shown = pan.anim.value
+        val k = zoom * base.density
+        fun box(x: Float, y: Float, w: Float, h: Float) = Rect(origin.x + shown.x + x * k, origin.y + shown.y + y * k, origin.x + shown.x + (x + w) * k, origin.y + shown.y + (y + h) * k)
+        fun cell(cx: Int, cy: Int) = box(cellPos(cx), cellPos(cy), MAP_CELL, MAP_CELL)
+        val groups = HashMap<String, List<Rect>>()
+        groups["token"] = listOf(cell(view.posX, view.posY))
+        groups["reachable"] = view.reachable.map { cell(it % 1000, it / 1000) }
+        groups["elites"] = view.grid.flatMapIndexed { y, row -> row.mapIndexedNotNull { x, t -> if (t == NodeType.ELITE) cell(x, y) else null } }
+        groups["lair"] = listOf(box(cellPos(view.cols - 1), cellPos(0), MAP_CELL + MAP_LAIR_EXTRA, view.rows * MAP_CELL + (view.rows - 1) * MAP_GAP))
+        val walls = ArrayList<Rect>()
+        for (y in 0 until view.rows) for (x in 0 until view.cols - 2) if (view.wallsV[y][x]) walls.add(box(cellPos(x) + MAP_CELL - 6f, cellPos(y), MAP_GAP + 12f, MAP_CELL))
+        for (y in 0 until view.rows - 1) for (x in 0 until view.cols - 1) if (view.wallsH[y][x]) walls.add(box(cellPos(x), cellPos(y) + MAP_CELL - 6f, MAP_CELL, MAP_GAP + 12f))
+        // los que están junto a la ficha primero (las cintas del tutorial son muchas)
+        groups["walls"] = walls.sortedBy { kotlin.math.abs(it.center.x - groups.getValue("token")[0].center.x) }.take(6)
+        TutAnchorGroup(owner, groups)
+    }
+
     val currentView by rememberUpdatedState(view)
     val currentMoving by rememberUpdatedState(moving)
     fun cellAt(p: Offset): Pair<Int, Int>? {
@@ -603,6 +673,8 @@ fun MapScreen(
 
     Box(
         modifier.fillMaxSize().background(pal.viewport).clipToBounds().onSizeChanged { vp = it }
+            .onGloballyPositioned { origin = it.positionInRoot() }
+            .onGloballyPositioned { origin = it.positionInRoot() }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { p ->

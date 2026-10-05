@@ -79,20 +79,11 @@ private val DRAW_FG = Color(0xFF7A5A12)
 
 /** El tapete: madera con filo dorado, fieltro con un brillo al centro. */
 private fun Modifier.feltTable(): Modifier = drawBehind {
-    val r = 40.dp.toPx()
-    drawRoundRect(Color(0x4D4A3428), Offset(0f, 8.dp.toPx()), size, CornerRadius(r))
-    drawRoundRect(Ink.ink, Offset.Zero, size, CornerRadius(r))
-    val e = 3.dp.toPx()
-    drawRoundRect(WOOD, Offset(e, e), Size(size.width - e * 2, size.height - e * 2), CornerRadius(r - e))
-    val w = 13.dp.toPx()
-    drawRoundRect(GOLD, Offset(w, w), Size(size.width - w * 2, size.height - w * 2), CornerRadius(r - w), style = Stroke(3.dp.toPx()))
-    val f = w + 3.dp.toPx()
-    val inner = Size(size.width - f * 2, size.height - f * 2)
-    drawRoundRect(FELT, Offset(f, f), inner, CornerRadius(r - f))
-    drawRoundRect(
-        Brush.radialGradient(listOf(Color(0x24FFFFFF), Color.Transparent), Offset(size.width / 2, size.height * .38f), size.width * .45f),
-        Offset(f, f), inner, CornerRadius(r - f)
-    )
+    // el tapete llena toda la pantalla; solo queda un filete dorado hacia adentro
+    drawRect(FELT)
+    drawRect(Brush.radialGradient(listOf(Color(0x24FFFFFF), Color.Transparent), Offset(size.width / 2, size.height * .45f), size.width * .5f))
+    val g = 12.dp.toPx()
+    drawRoundRect(GOLD, Offset(g, g), Size(size.width - g * 2, size.height - g * 2), CornerRadius(26.dp.toPx()), style = Stroke(3.dp.toPx()))
 }
 
 private fun resultColors(outcome: String): Pair<Color, Color> = when (outcome) {
@@ -164,7 +155,7 @@ private fun TableIntro(run: Run, table: Table, onStart: (Int) -> Unit, onLeave: 
             }
             BasicText("Gratis: si ganas, la casa te da 8 de oro; si pierdes, no pierdes nada.", style = Fonts.body(14f, color = Ink.inkSoft))
         }
-        StickerButton("Irme sin jugar", onLeave, secondary = true, fontSize = 18f)
+        StickerButton("Irme sin jugar", onLeave, secondary = true, fontSize = 24f)
     }
 }
 
@@ -175,14 +166,17 @@ private fun TableIntro(run: Run, table: Table, onStart: (Int) -> Unit, onLeave: 
 private fun TableFrame(table: Table, ctl: TableController, content: @Composable () -> Unit) {
     val info = Casino.KINDS.getValue(table.kind)
     val result = table.phase == "result"
-    Box(Modifier.fillMaxSize().padding(top = (HUD_H + 4).dp, start = 12.dp, end = 12.dp, bottom = 8.dp).feltTable()) {
+    val safe = LocalSafeInsets.current
+    val left = 30f + safe.left
+    val right = 30f + safe.right
+    Box(Modifier.fillMaxSize().feltTable()) {
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 30.dp, vertical = 20.dp),
+            Modifier.fillMaxSize().padding(start = left.dp, end = right.dp, top = (HUD_H + 8).dp, bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
         ) { content() }
-        Dealer(table, info.dealer, Modifier.align(Alignment.TopStart).padding(start = 30.dp, top = 22.dp), happy = !(result && table.outcome == "win"))
-        if (table.kind != "chess") Pot(table, Modifier.align(Alignment.TopEnd).padding(end = 38.dp, top = 28.dp))
-        if (result && table.kind != "chess") Stamp(table.outcome, Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 74.dp))
+        Dealer(table, info.dealer, Modifier.align(Alignment.TopStart).padding(start = left.dp, top = (HUD_H + 8).dp), happy = !(result && table.outcome == "win"))
+        if (table.kind != "chess") Pot(table, Modifier.align(Alignment.TopEnd).padding(end = (right + 8f).dp, top = (HUD_H + 14).dp))
+        if (result && table.kind != "chess") Stamp(table.outcome, Modifier.align(Alignment.BottomEnd).padding(end = (right + 34f).dp, bottom = 74.dp))
         CoinRain(ctl.coinRain)
     }
 }
@@ -288,7 +282,7 @@ private fun ResultBlock(run: Run, table: Table, onCollect: (Int) -> Unit, onDrop
                 }
             }
         }
-        StickerButton("Continuar", onLeave, color = Ink.mint, enabled = !run.lootPending(), fontSize = 20f)
+        ContinueButton(onLeave, enabled = !run.lootPending())
     }
 }
 
@@ -635,7 +629,7 @@ private fun ChessBody(ctl: TableController, run: Run, onCollect: (Int) -> Unit, 
                         run.loot.forEachIndexed { i, it -> if (!it.dropped) Scaled(.6f, 128f, 182f) { LootItemView(it, i, full, { onCollect(i) }, { onDrop(i) }) } }
                     }
                 }
-                StickerButton("Continuar", onLeave, color = Ink.mint, enabled = !run.lootPending(), fontSize = 20f)
+                ContinueButton(onLeave, enabled = !run.lootPending())
             } else {
                 BasicText(t.note, style = Fonts.hand(21f, CREAM).copy(textAlign = TextAlign.Center), modifier = Modifier.height(86.dp))
                 StickerButton(

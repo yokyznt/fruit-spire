@@ -3,8 +3,10 @@ package com.yokyznt.fruitspire.nativo
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yokyznt.fruitspire.core.BuyResult
@@ -19,20 +21,31 @@ import com.yokyznt.fruitspire.core.Rng
 import com.yokyznt.fruitspire.core.Run
 import com.yokyznt.fruitspire.core.RunScreen
 import com.yokyznt.fruitspire.core.Save
+import com.yokyznt.fruitspire.core.TutAction
+import com.yokyznt.fruitspire.core.TutorialCtx
+import com.yokyznt.fruitspire.core.TutorialDirector
 import com.yokyznt.fruitspire.core.data.Cards
 import com.yokyznt.fruitspire.core.data.Enemies
 import com.yokyznt.fruitspire.core.data.World
 import com.yokyznt.fruitspire.core.data.gen.Sfx
 import com.yokyznt.fruitspire.nativo.ui.CollectionState
 import com.yokyznt.fruitspire.nativo.ui.CombatController
+import com.yokyznt.fruitspire.nativo.ui.Flight
 import com.yokyznt.fruitspire.nativo.ui.GameAudio
+import com.yokyznt.fruitspire.nativo.ui.HudAnchors
 import com.yokyznt.fruitspire.nativo.ui.MapPan
 import com.yokyznt.fruitspire.nativo.ui.NoAudio
 import com.yokyznt.fruitspire.nativo.ui.PickFlash
 import com.yokyznt.fruitspire.nativo.ui.TableController
+import com.yokyznt.fruitspire.nativo.ui.TutorialAnchors
+import com.yokyznt.fruitspire.nativo.ui.TutorialGate
 import com.yokyznt.fruitspire.nativo.ui.intro
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/** Cuánto espera una pantalla de premios, tras recoger el último, para seguir sola (lo que tarda en llegar a la barra). */
+const val SOON_MS = 1200L
 
 /** Pantalla de más arriba de la app: menú, elegir fruta o una partida en curso. */
 enum class AppScreen { MENU, CHARACTER_SELECT, RUN, PASS, WARDROBE, COLLECTION, NOTES, STORY, ENDING }
@@ -109,13 +122,92 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         return if (screen == AppScreen.RUN && r != null) MusicContext.forRun(r.screen, r.combatKind, r.player.act) else MusicContext.MENU
     }
 
-    private fun bump() { tick++ }
+    private fun bump() { tick++; tutCheck() }
+
+    // ---------- tutorial «Cómo jugar» ----------
+    /** El tutorial en curso (null = una partida de verdad). */
+    val tutorial: TutorialDirector? get() = run?.tutorial
+    /** Dónde está lo iluminable de cada pantalla (cada una anota los suyos). */
+    val tutorialAnchors = TutorialAnchors()
+    /** Sube cuando se cumple un paso (Profe Limón felicita) y cuando se intenta algo que no toca (el globo se sacude). */
+    var tutPraise by mutableIntStateOf(0)
+        private set
+    var tutShake by mutableIntStateOf(0)
+        private set
+
+    private fun tutCtx(r: Run, d: TutorialDirector) = TutorialCtx(
+        r, d.flags, bagOpen = bagOpen, seedAiming = (combat?.seedAiming ?: -1) >= 0, animating = intro != null || moving != null
+    )
+
+    /** Revisa si ya se cumplió el paso (o si hay que saltar a la pantalla en que estás) cada vez que algo cambia. */
+    private fun tutCheck() {
+        val r = run ?: return
+        val d = r.tutorial ?: return
+        if (d.check(tutCtx(r, d)) && d.praise) { tutPraise++; audio.play(Sfx.BUFF) }
+        d.praise = false
+    }
+
+    private fun tutDenied() { audio.play(Sfx.DENIED); tutShake++ }
+
+    /** ¿Deja el tutorial hacer esto ahora? Si no, suena el «no» y el globo se sacude. Fuera del tutorial siempre sí. */
+    private fun tutGate(action: String): Boolean {
+        val d = tutorial ?: return true
+        if (d.allows(action)) return true
+        tutDenied()
+        return false
+    }
+
+    /** El que ve el controlador del combate. */
+    private val combatGate = object : TutorialGate {
+        override fun allows(action: String) = tutorial?.allows(action) ?: true
+        override fun allowsCard(type: String?) = tutorial?.allowsCard(type) ?: true
+        override fun denied() = tutDenied()
+        override fun notify(evt: String) = tutNotify(evt)
+    }
+
+    /** Un toque en algo que el tutorial no deja usar (por ejemplo los ajustes): suena el «no» y el globo se sacude. */
+    fun tutDeniedTap() = tutDenied()
+
+    fun tutNotify(evt: String) {
+        val r = run ?: return
+        val d = r.tutorial ?: return
+        d.notify(evt, tutCtx(r, d))
+        if (d.praise) { tutPraise++; audio.play(Sfx.BUFF); d.praise = false }
+        tick++
+    }
+
+    fun tutAdvance() {
+        val r = run ?: return
+        val d = r.tutorial ?: return
+        d.advance(tutCtx(r, d))
+        audio.play(Sfx.TAP)
+        tick++
+    }
+
+    /** ✕ o el botón de atrás: pregunta «¿Salir?» (null); con true se sale al menú y con false se sigue. */
+    fun tutQuit(answer: Boolean?) {
+        val d = tutorial ?: return
+        when (answer) {
+            true -> toMenu()
+            false -> { d.quitAsk = false; tick++ }
+            null -> { d.quitAsk = !d.quitAsk; tick++ }
+        }
+    }
+
+    /** «Cómo jugar» del menú (y «Repetir tutorial»): una partida aparte que no se guarda ni toca tu progreso. */
+    fun startTutorial() {
+        Rng.unseed()
+        enter(Run.startTutorial())
+    }
 
     /** La portada de un piso nuevo (el primero, o el que sigue al subir) suena con su fanfarria. */
     private fun fanfareIfNewFloor(r: Run) { if (r.screen == RunScreen.ACT_INTRO) audio.play(Sfx.ACT_FANFARE) }
 
     // ---------- menú ----------
     fun toMenu() {
+        if (run?.tutorial != null) run = null // salir del tutorial lo descarta
+        soonJob?.cancel(); soonJob = null
+        flights.clear()
         combat = null
         intro = null
         moving = null
@@ -198,6 +290,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- guardado ----------
     private fun persist() {
         val r = run ?: return
+        if (r.tutorial != null) return // el tutorial no se guarda ni toca lo real
         r.syncFound() // lo que llevas cuenta como encontrado para la Colección
         if (r.isOver) { store.clearRun(); canContinue = false; persistProgress(); return }
         if (Save.shouldSave(r)) { store.writeRun(Save.encode(r)); canContinue = true }
@@ -287,6 +380,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun moveTo(x: Int, y: Int) {
         val r = run ?: return
         if (moving != null || intro != null || combat != null || !r.isReachable(x, y)) return
+        if (!tutGate(TutAction.MOVE)) return
         moving = Pos(x, y)
         audio.play(Sfx.MAP_MOVE)
         val type = r.map.grid[y][x] // al llegar la casilla se consume: se lee antes
@@ -351,6 +445,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         var earlyResult: String? = null
         val c = r.startCombat(pc, onEnd = { res -> val k = ctl; if (k != null) k.onEnd(res) else earlyResult = res })
         val made = CombatController(r, c, uiScope ?: viewModelScope, { toast(it) }, { result -> finishCombat(result) }, sound)
+        if (r.tutorial != null) made.gate = combatGate
         ctl = made
         earlyResult?.let { made.onEnd(it) }
         combat = made
@@ -362,6 +457,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         combat = null
         val dungeonFight = r.combatKind == "dungeon"
         r.finishCombat(result)
+        // tutorial: si pierdes se restaura la vida y se repite el mismo combate
+        r.tutorialRetry?.let { retry ->
+            r.tutorialRetry = null
+            toast("¡No te rindas! Vamos otra vez.")
+            bump()
+            beginCombat(retry)
+            return
+        }
         // casilla de calabozo vencida: aviso del oro que dio
         if (r.screen == RunScreen.DUNGEON && r.dungeonGold > 0) toast("+${r.dungeonGold} de oro")
         if (dungeonFight && r.screen == RunScreen.TREASURE) audio.play(Sfx.CHEST_OPEN) // la escalera de salida da un cofre
@@ -370,38 +473,83 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (r.screen == RunScreen.VICTORY) startEnding(replay = false) // vencer al jefe final: el final animado y luego la victoria
     }
 
+    // ---------- premios que vuelan a la barra ----------
+    /** Dónde está cada casilla de la barra de arriba (la barra las anota). */
+    val hudAnchors = HudAnchors()
+    /** Premios en el aire: la barra muestra lo real menos lo que aún vuela, y sube al llegar. */
+    val flights = mutableStateListOf<Flight>()
+    /** Dónde está cada premio por recoger en la pantalla ("loot:N", "card:ID"); lo anotan las pantallas de premios. */
+    val lootRects = HashMap<String, Rect>()
+    private var flightSeq = 0
+    private var soonJob: Job? = null
+    /** Cuánto espera [continueSoon] (las pruebas lo cambian). */
+    var soonMs: Long = SOON_MS
+
+    /** Lo que tenía la partida antes de recoger un premio: la diferencia es lo que vuela. */
+    private class Snap(r: Run) { val gold = r.player.gold; val hp = r.player.hp; val maxHp = r.player.maxHp; val deck = r.player.deck.size }
+
+    private fun launchFlight(r: Run, kind: String, itemId: String?, key: String, before: Snap) {
+        val from = lootRects[key] ?: return
+        val p = r.player
+        flights.add(Flight(++flightSeq, kind, itemId, from, p.gold - before.gold, p.hp - before.hp, p.maxHp - before.maxHp, p.deck.size - before.deck))
+    }
+
+    fun landFlight(id: Int) { flights.removeAll { it.id == id } }
+
     // ---------- recompensas ----------
     fun collectLoot(i: Int) {
         val r = run ?: return
+        if (!tutGate(TutAction.LOOT)) return
         val item = r.loot.getOrNull(i)
         val open = item?.isOpen == true
+        val before = Snap(r)
         if (!r.collectLoot(i)) {
             if (item?.k == "seed") { if (open) audio.play(Sfx.DENIED); toast("Tu bolsa de semillas está llena: tira una o deja esta") }
             return
         }
         audio.play(when (item?.k) { "gold" -> Sfx.COIN; "relic" -> Sfx.RELIC_GET; else -> Sfx.POP })
-        persist(); bump(); finishRewardSoon()
+        if (item != null) launchFlight(r, item.k, item.id, "loot:$i", before)
+        persist(); bump(); continueSoon()
     }
 
-    fun dropLoot(i: Int) { run?.dropLoot(i); persist(); bump(); finishRewardSoon() }
+    fun dropLoot(i: Int) { run?.dropLoot(i); persist(); bump(); continueSoon() }
 
     fun pickRewardCard(id: String) {
         val r = run ?: return
+        if (!tutGate(TutAction.PICK_CARD)) return
+        val before = Snap(r)
         r.pickRewardCard(id)
-        persist(); bump(); finishRewardSoon()
+        launchFlight(r, "card", id, "card:$id", before)
+        persist(); bump(); continueSoon()
     }
 
-    /** Cuando ya se recogió todo (y se eligió carta), se sigue solo, como en la versión web. */
-    private fun finishRewardSoon() {
+    /**
+     * Cuando ya se recogió todo el premio, la pantalla sigue sola ~1,2 s después (lo que tarda el último en llegar a la barra),
+     * salvo que antes toques «Continuar». Solo en recompensas, tesoro, cofre y evento con premios; nunca en pozo, tienda,
+     * campamento, objeto de jefe, evento con opciones, dado, calabozo ni mesas.
+     */
+    private fun continueSoon() {
         val r = run ?: return
-        if (r.screen != RunScreen.REWARD || r.rewardCards.isEmpty() || !r.canFinishReward()) return
-        viewModelScope.launch {
-            delay(450)
-            if (run === r && r.screen == RunScreen.REWARD && r.canFinishReward()) continueReward()
+        val screen = r.screen
+        val ready = when (screen) {
+            RunScreen.REWARD -> r.rewardCards.isNotEmpty() && r.canFinishReward()
+            RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT -> r.loot.isNotEmpty() && !r.lootPending()
+            RunScreen.EVENT_RESULT -> r.loot.isNotEmpty() && !r.lootPending() && r.deckChanges.isEmpty()
+            else -> false
+        }
+        if (!ready) return
+        soonJob?.cancel()
+        soonJob = viewModelScope.launch {
+            delay(soonMs)
+            if (run !== r || r.screen != screen) return@launch
+            soonJob = null
+            if (screen == RunScreen.REWARD) { if (r.canFinishReward()) continueReward() } else if (!r.lootPending()) leaveNode()
         }
     }
 
     fun continueReward() {
+        if (!tutGate(TutAction.CONTINUE)) return
+        soonJob?.cancel(); soonJob = null
         val r = run ?: return
         if (!r.canFinishReward()) { audio.play(Sfx.DENIED); toast("¡Primero recoge tus premios!"); return }
         r.finishReward()
@@ -433,6 +581,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun restHeal() {
         val r = run ?: return
         if (flash != null) return
+        if (!tutGate(TutAction.REST)) return
         if (!r.restHeal()) { toast("No puedes descansar"); return }
         audio.play(Sfx.REST_HEAL)
         persist(); bump()
@@ -440,6 +589,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setPicker(mode: String?) {
         if (flash != null) return
+        if (!tutGate(if (run?.screen == RunScreen.SHOP) TutAction.SHOP else TutAction.REST)) return
         run?.setPicker(mode)
         bump()
     }
@@ -449,6 +599,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return
         val mode = r.pickerMode ?: return
         if (flash != null) return
+        if (!tutGate(if (r.screen == RunScreen.SHOP) TutAction.SHOP else TutAction.REST)) return
         // suena al elegir la carta, no al terminar el dibujo (como la web); una carta que no madura no suena
         if (mode != "upgrade") audio.play(Sfx.REMOVE_CARD)
         else if (Cards.get(r.player.deck.getOrNull(index) ?: "")?.canUpgrade == true) audio.play(Sfx.UPGRADE)
@@ -463,6 +614,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             }
             flash = null
             if (ok && r.screen == RunScreen.REST) r.leaveNode()
+            if (ok && r.screen == RunScreen.SHOP) tutNotify("shop-buy") // quitar una carta también cuenta como comprar
             persist(); bump()
         }
     }
@@ -471,6 +623,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun leaveNode() {
         val r = run ?: return
         if (flash != null) return
+        if (!tutGate(TutAction.LEAVE)) return
+        soonJob?.cancel(); soonJob = null
         if (!r.leaveNode()) { toast("¡Primero recoge tus premios!"); return }
         persist(); bump()
     }
@@ -480,19 +634,20 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         when (res) {
             BuyResult.NO_GOLD -> { audio.play(Sfx.DENIED); toast("¡No te alcanza el oro!") }
             BuyResult.BAG_FULL -> toast("Tu bolsa de semillas está llena")
-            BuyResult.OK -> { audio.play(Sfx.COIN); if (relic) audio.play(Sfx.RELIC_GET); persist() }
+            BuyResult.OK -> { audio.play(Sfx.COIN); if (relic) audio.play(Sfx.RELIC_GET); persist(); tutNotify("shop-buy") }
             BuyResult.INVALID -> {}
         }
         bump()
     }
 
-    fun buyShopCard(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopCard(i)) }
-    fun buyShopRelic(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopRelic(i), relic = true) }
-    fun buyShopSeed(i: Int) { val r = run ?: return; if (flash == null) bought(r.buyShopSeed(i)) }
+    fun buyShopCard(i: Int) { val r = run ?: return; if (flash == null && tutGate(TutAction.SHOP)) bought(r.buyShopCard(i)) }
+    fun buyShopRelic(i: Int) { val r = run ?: return; if (flash == null && tutGate(TutAction.SHOP)) bought(r.buyShopRelic(i), relic = true) }
+    fun buyShopSeed(i: Int) { val r = run ?: return; if (flash == null && tutGate(TutAction.SHOP)) bought(r.buyShopSeed(i)) }
 
     fun startShopRemoval() {
         val r = run ?: return
         if (flash != null) return
+        if (!tutGate(TutAction.SHOP)) return
         if (!r.startShopRemoval()) {
             val used = r.shopStock?.removeUsed == true
             if (!used) audio.play(Sfx.DENIED)
@@ -505,6 +660,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- eventos de misterio ----------
     fun chooseEventOption(i: Int) {
         val r = run ?: return
+        if (!tutGate(TutAction.EVENT)) return
         val pc = r.resolveEventOption(i)
         r.trapMessage?.let { toast(it); r.trapMessage = null }
         if (r.screen == RunScreen.MINIGAME || r.screen == RunScreen.DUNGEON) audio.play(Sfx.EVENT_OPEN) // la mesa o la trampilla que abre la opción
@@ -568,11 +724,12 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     var bagOpen by mutableStateOf(false)
         private set
 
-    fun openBag() { if (run != null) { bagOpen = true; audio.play(Sfx.POP) } }
-    fun closeBag() { bagOpen = false }
+    fun openBag() { if (run != null && tutGate(TutAction.BAG)) { bagOpen = true; audio.play(Sfx.POP); bump() } }
+    fun closeBag() { bagOpen = false; bump() }
 
     /** «Usar» en una semilla de la mochila: en combate y en tu turno; con varios enemigos hay que tocar uno. */
     fun useSeedFromBag(slot: Int) {
+        if (!tutGate(TutAction.SEED)) return
         bagOpen = false
         val ctl = combat
         val msg = if (ctl == null) "Las semillas se usan en combate, en tu turno" else ctl.useSeedFromBag(slot)
@@ -581,12 +738,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun dropSeed(slot: Int) {
         val r = run ?: return
+        if (r.tutorial != null) { tutDenied(); return }
         if (r.discardSeed(slot)) { persist(); bump() }
     }
 
     // ---------- visor de cartas ----------
     fun showDeck() {
         val r = run ?: return
+        if (r.tutorial != null) { tutDenied(); return }
         deckView = Triple("Tu mazo", "${r.player.deck.size} cartas en total.", r.player.deck.toList())
     }
 
