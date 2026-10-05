@@ -1,9 +1,20 @@
 package com.yokyznt.fruitspire.nativo.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -48,16 +59,46 @@ import com.yokyznt.fruitspire.core.data.World
 
 /** Pantalla "de papel": ocupa todo el teléfono, con un título a mano y su contenido centrado. */
 @Composable
-fun PaperScreen(title: String, modifier: Modifier = Modifier, art: (@Composable () -> Unit)? = null, content: @Composable () -> Unit) {
+fun PaperScreen(
+    title: String, modifier: Modifier = Modifier, art: (@Composable () -> Unit)? = null, celebrate: Boolean = false,
+    content: @Composable () -> Unit
+) {
     val safe = LocalSafeInsets.current
-    Column(
-        modifier.fillMaxSize().background(Ink.paper2).padding(top = HUD_H.dp, start = (24f + safe.left).dp, end = (24f + safe.right).dp, bottom = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
-    ) {
-        art?.invoke()
-        BasicText(title, style = Fonts.hand(50f))
-        content()
+    // entrada (panelIn de css/style.css): sube 36 px girada y se endereza en 0,55 s
+    val enter = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { enter.animateTo(1f, tween(550, easing = CubicBezierEasing(.22f, 1f, .36f, 1f))) }
+    Box(modifier.fillMaxSize().background(Ink.paper2)) {
+        Column(
+            Modifier.fillMaxSize()
+                .padding(top = HUD_H.dp, start = (24f + safe.left).dp, end = (24f + safe.right).dp, bottom = 10.dp)
+                .graphicsLayer {
+                    val k = 1f - enter.value
+                    translationY = 36f * k * density
+                    rotationZ = -2.5f * k
+                    alpha = enter.value.coerceIn(0f, 1f)
+                },
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
+        ) {
+            if (art != null) { if (celebrate) HopBox { art() } else art() }
+            BasicText(title, style = Fonts.hand(50f))
+            content()
+        }
     }
+}
+
+/** El salto de celebración (`hop` 1 s sin parar de css/style.css): sube con un giro y cae aplastándose. */
+@Composable
+fun HopBox(content: @Composable () -> Unit) {
+    val t by rememberInfiniteTransition(label = "salto").animateFloat(0f, 1f, infiniteRepeatable(tween(1000, easing = LinearEasing)), label = "t")
+    Box(Modifier.graphicsLayer {
+        transformOrigin = TransformOrigin(.5f, 1f)
+        // 0 % en el suelo · 40 % arriba (−16 px, −5°) · 70 % otra vez en el suelo, aplastada (1,05 × 0,95) · 100 % normal
+        val up = if (t < .4f) EaseInOut.transform(t / .4f) else if (t < .7f) 1f - EaseInOut.transform((t - .4f) / .3f) else 0f
+        translationY = -16f * up * density
+        rotationZ = -5f * up
+        val squash = if (t < .4f) 0f else if (t < .7f) .05f * EaseInOut.transform((t - .4f) / .3f) else .05f * (1f - EaseInOut.transform((t - .7f) / .3f))
+        scaleX = 1f + squash; scaleY = 1f - squash
+    }) { content() }
 }
 
 /** Un premio por recoger (js/loot.js): tocarlo lo suma. */
@@ -65,6 +106,13 @@ fun PaperScreen(title: String, modifier: Modifier = Modifier, art: (@Composable 
 fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -> Unit, onDrop: () -> Unit) {
     val appear = remember { Animatable(0f) }
     LaunchedEffect(Unit) { kotlinx.coroutines.delay(index * 90L); appear.animateTo(1f, spring(dampingRatio = .5f, stiffness = Spring.StiffnessMediumLow)) }
+    // «Continuar» con premios sin recoger: se menean (lootNudge, 0,45 s)
+    val nudge = LocalLootNudge.current
+    val shake = remember { Animatable(1f) }
+    LaunchedEffect(nudge.tick) { if (nudge.tick > 0 && item.isOpen) { shake.snapTo(0f); shake.animateTo(1f, tween(450, easing = androidx.compose.animation.core.EaseInOut)) } }
+    // la palomita del premio recogido aparece con `pop` (0,35 s)
+    val pop = remember { Animatable(1f) }
+    LaunchedEffect(item.taken) { if (item.taken) { pop.snapTo(0f); pop.animateTo(1f, tween(350, easing = CubicBezierEasing(.34f, 1.36f, .64f, 1f))) } }
     val (c1, c2) = when (item.k) {
         "heal", "maxhp" -> Color(0xFFFFE6EA) to Color(0xFFFFC7D0)
         "relic" -> Color(0xFFF3EDFF) to Color(0xFFDCCBFF)
@@ -72,7 +120,15 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
         "card" -> Color(0xFFEAF4FF) to Color(0xFFCBE2F7)
         else -> Color(0xFFFFF6D2) to Color(0xFFFFE9A8)
     }
-    Column(Modifier.graphicsLayer { scaleX = .7f + .3f * appear.value; scaleY = scaleX; alpha = appear.value.coerceIn(0f, 1f); translationY = (1f - appear.value) * 18f * density }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.graphicsLayer {
+        scaleX = .7f + .3f * appear.value; scaleY = scaleX; alpha = appear.value.coerceIn(0f, 1f); translationY = (1f - appear.value) * 18f * density
+        if (shake.value < 1f) {
+            // 25 % sube 10 px y se inclina −4° · 60 % cae y se inclina 3° · 100 % quieta
+            val s = shake.value
+            val (up, rot) = if (s < .25f) (s / .25f).let { -10f * it to -4f * it } else if (s < .6f) (s - .25f).div(.35f).let { -10f * (1f - it) to (-4f + 7f * it) } else (s - .6f).div(.4f).let { 0f to 3f * (1f - it) }
+            translationY += up * density; rotationZ = rot
+        }
+    }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
             Modifier.width(if (item.k == "card") 118.dp else 128.dp).height(132.dp)
                 .drawBehind {
@@ -86,6 +142,7 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
                 .clickable(remember { MutableInteractionSource() }, null, enabled = item.isOpen) { onCollect() },
             contentAlignment = Alignment.Center
         ) {
+            if (item.isOpen) LootGlow()
             // solo el contenido se atenúa: el alfa de una capa en la caja recortaba su contorno y la palomita
             Column(Modifier.alpha(if (item.taken) .45f else 1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 when (item.k) {
@@ -108,7 +165,10 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
                 GameText(label, Fonts.display(17f).copy(textAlign = TextAlign.Center, lineHeight = 18.sp))
             }
             if (item.taken) {
-                Box(Modifier.align(Alignment.TopEnd).offset(10.dp, (-10).dp).size(36.dp).drawBehind {
+                Box(Modifier.align(Alignment.TopEnd).offset(10.dp, (-10).dp).size(36.dp).graphicsLayer {
+                    val p = pop.value
+                    scaleX = .3f + .7f * p; scaleY = scaleX; rotationZ = -20f * (1f - p)
+                }.drawBehind {
                     drawCircle(Ink.ink, size.minDimension / 2f + 3.dp.toPx()); drawCircle(Ink.mint, size.minDimension / 2f)
                     drawLine(Color.White, Offset(size.width * .24f, size.height * .5f), Offset(size.width * .42f, size.height * .68f), 3.5.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
                     drawLine(Color.White, Offset(size.width * .42f, size.height * .68f), Offset(size.width * .8f, size.height * .3f), 3.5.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
@@ -117,6 +177,18 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
         }
         if (item.k == "seed" && item.isOpen && seedsFull) StickerButton("Dejarla", onDrop, secondary = true, fontSize = 15f, padding = PaddingValues(horizontal = 14.dp, vertical = 3.dp))
     }
+}
+
+/** El brillo dorado que respira alrededor de un premio por recoger (softGlow 1,6 s): solo cambia lo que se dibuja, nada se vuelve a medir. */
+@Composable
+private fun BoxScope.LootGlow() {
+    val glow by rememberInfiniteTransition(label = "brillo").animateFloat(0f, 1f, infiniteRepeatable(tween(800, easing = androidx.compose.animation.core.EaseInOut), RepeatMode.Reverse), label = "g")
+    Box(Modifier.matchParentSize().drawBehind {
+        val k = density
+        val a = glow
+        drawRoundRect(Color(0xFFFFCF4D).copy(alpha = .28f * a), Offset(-9f * k, -9f * k), Size(size.width + 18f * k, size.height + 18f * k), CornerRadius(30f * k))
+        drawRoundRect(Color(0xFFFFCF4D).copy(alpha = .75f * a), Offset(-5f * k, -5f * k), Size(size.width + 10f * k, size.height + 10f * k), CornerRadius(25f * k), style = androidx.compose.ui.graphics.drawscope.Stroke(5f * k))
+    })
 }
 
 /** Aviso de la experiencia que dio el último combate al Pase de Batalla (`passGainBox` del juego web). */
@@ -221,7 +293,7 @@ fun VictoryScreen(run: Run, onMenu: () -> Unit, onWearPet: (String) -> Unit = {}
             Sprite("rey_fruta", 100.dp)
             World.characters.drop(2).forEach { Sprite(it.id, 64.dp) }
         }
-    }) {
+    }, celebrate = true) {
         BasicText(buildAnnotatedString { append("¡Liberaste al "); withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("Rey Fruta") }; append(" y a todas las frutas!") }, style = Fonts.body(20f, color = Ink.inkSoft))
         if (run.unlockMsg.isNotEmpty()) BasicText("🔓 ${run.unlockMsg}", style = Fonts.hand(24f))
         PetUnlockBox(run, onWearPet)

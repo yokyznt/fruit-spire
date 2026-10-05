@@ -45,6 +45,14 @@ val LocalHudAnchors = compositionLocalOf { HudAnchors() }
 /** Dónde está cada premio por recoger ("loot:N", "card:ID"), para saber desde dónde sale su vuelo. */
 val LocalLootRects = compositionLocalOf { HashMap<String, Rect>() }
 
+/** «Continuar» tocado con premios sin recoger: sube [tick] y los premios se menean (lootNudge). */
+class LootNudge {
+    var tick by mutableIntStateOf(0)
+    fun hit() { tick++ }
+}
+
+val LocalLootNudge = compositionLocalOf { LootNudge() }
+
 /** Anota la posición en pantalla de un premio bajo [key]. */
 fun Modifier.noteLootRect(rects: HashMap<String, Rect>, key: String): Modifier = onGloballyPositioned { rects[key] = it.boundsInRoot() }
 

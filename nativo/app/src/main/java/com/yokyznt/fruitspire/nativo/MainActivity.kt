@@ -56,7 +56,9 @@ import com.yokyznt.fruitspire.nativo.ui.GameOverScreen
 import com.yokyznt.fruitspire.nativo.ui.FlyLayer
 import com.yokyznt.fruitspire.nativo.ui.HudBar
 import com.yokyznt.fruitspire.nativo.ui.LocalHudAnchors
+import com.yokyznt.fruitspire.nativo.ui.LocalLootNudge
 import com.yokyznt.fruitspire.nativo.ui.LocalLootRects
+import com.yokyznt.fruitspire.nativo.ui.LootNudge
 import com.yokyznt.fruitspire.nativo.ui.Ink
 import com.yokyznt.fruitspire.nativo.ui.InventoryModal
 import com.yokyznt.fruitspire.nativo.ui.LocalAudio
@@ -190,7 +192,7 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
     vm.uiScope = androidx.compose.runtime.rememberCoroutineScope()
     val run = vm.run ?: return
     val ctl = vm.combat
-    CompositionLocalProvider(LocalHudAnchors provides vm.hudAnchors, LocalLootRects provides vm.lootRects) {
+    CompositionLocalProvider(LocalHudAnchors provides vm.hudAnchors, LocalLootRects provides vm.lootRects, LocalLootNudge provides remember { LootNudge() }) {
     Box(Modifier.fillMaxSize()) {
         when (run.screen) {
             RunScreen.ACT_INTRO -> ActIntroScreen(run, vm::beginFloor)
