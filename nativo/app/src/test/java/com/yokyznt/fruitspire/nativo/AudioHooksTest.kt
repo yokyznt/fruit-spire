@@ -221,7 +221,7 @@ class AudioHooksTest {
         compose.mainClock.autoAdvance = false
         compose.setContent { DesignCanvas { GameRoot(vm, Settings(app)) } }
         vm.newGame(); advance(100)
-        vm.play(); advance(100)
+        vm.play(); vm.finishStory(); advance(100) // la partida nueva empieza con la historia
         return vm
     }
 

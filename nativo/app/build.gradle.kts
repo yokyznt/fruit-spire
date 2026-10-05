@@ -33,7 +33,7 @@ android {
     // las capturas de pantalla se hacen en la PC con Robolectric (ver ScreenshotTest)
     testOptions { unitTests { isIncludeAndroidResources = true } }
     // los dibujos y el sonido ya vienen comprimidos (webp/ogg): no se vuelven a comprimir
-    androidResources { noCompress += listOf("webp", "ogg") }
+    androidResources { noCompress += listOf("webp", "ogg", "mp4") }
 }
 kotlin {
     compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }

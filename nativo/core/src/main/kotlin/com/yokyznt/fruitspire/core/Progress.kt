@@ -101,6 +101,10 @@ class Progress {
     val bestiary = LinkedHashMap<String, Int>()
     /** Versión de las notas que ya abriste (para avisar de las nuevas). */
     var notesSeen = ""
+    /** Ya viste el final (desbloquea «Ver el final otra vez» en las Notas). */
+    var endingSeen = false
+
+    fun markEndingSeen() { if (!endingSeen) { endingSeen = true; dirty = true } }
 
     fun markFoundRelic(id: String?) { if (id != null && foundRelics.add(id)) dirty = true }
     fun markFoundSeed(id: String?) { if (id != null && foundSeeds.add(id)) dirty = true }

@@ -48,7 +48,7 @@ class FlowSmokeTest {
         compose.mainClock.autoAdvance = false
         compose.setContent { DesignCanvas { GameRoot(vm, Settings(app)) } }
         vm.newGame(); advance(100)
-        vm.play(); advance(100)
+        vm.play(); vm.finishStory(); advance(100)
         val run = vm.run!!
         vm.beginFloor(); advance(100)
         run.player.relics.add("aura_ajo")
@@ -115,7 +115,7 @@ class FlowSmokeTest {
         compose.setContent { DesignCanvas { GameRoot(vm, Settings(app)) } }
         vm.newGame(); advance(100)
         vm.selectChar("manzana")
-        vm.play(); advance(100)
+        vm.play(); vm.finishStory(); advance(100)
         val run = vm.run!!
         assertEquals(RunScreen.ACT_INTRO, run.screen)
         // para no morir en la prueba: mucha vida y fuerza

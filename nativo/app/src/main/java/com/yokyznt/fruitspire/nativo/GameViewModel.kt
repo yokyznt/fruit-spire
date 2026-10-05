@@ -35,7 +35,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Pantalla de más arriba de la app: menú, elegir fruta o una partida en curso. */
-enum class AppScreen { MENU, CHARACTER_SELECT, RUN, PASS, WARDROBE, COLLECTION, NOTES }
+enum class AppScreen { MENU, CHARACTER_SELECT, RUN, PASS, WARDROBE, COLLECTION, NOTES, STORY, ENDING }
 
 /** La transición «¡A pelear!» antes de cada combate. */
 class IntroUi(val title: String, val names: String, val sprites: List<String>, val kind: String, val act: Int)
@@ -143,8 +143,39 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = Run.start(selectedChar, selectedDiff, progress)
         enter(r)
         persistProgress()
-        fanfareIfNewFloor(r)
+        startStory(replay = false) // primero la historia; la portada del piso (con su fanfarria) viene al terminarla
     }
+
+    // ---------- historia y final ----------
+    /** La historia o el final que se está viendo se repite desde las Notas (al terminar vuelve al menú). */
+    var cineReplay by mutableStateOf(false)
+        private set
+
+    fun startStory(replay: Boolean) { cineReplay = replay; screen = AppScreen.STORY }
+
+    fun finishStory() {
+        if (cineReplay) { toMenu(); return }
+        screen = AppScreen.RUN
+        run?.let { fanfareIfNewFloor(it) }
+        bump()
+    }
+
+    fun startEnding(replay: Boolean) {
+        if (!replay) { progress.markEndingSeen(); persistProgress() }
+        cineReplay = replay
+        screen = AppScreen.ENDING
+    }
+
+    fun finishEnding() {
+        if (cineReplay) { toMenu(); return }
+        screen = AppScreen.RUN // la pantalla de victoria
+        bump()
+    }
+
+    /** La fruta de la historia (la de tu partida, o la elegida si la repites desde las Notas), su nombre y el último jefe. */
+    fun cineHeroId(): String = run?.player?.characterId ?: selectedChar
+    fun cineHeroName(): String = World.character(cineHeroId())?.name ?: "Manzana"
+    fun cineBossId(): String? = run?.lastBossId
 
     fun continueGame() {
         val text = store.readRun()
@@ -336,6 +367,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (dungeonFight && r.screen == RunScreen.TREASURE) audio.play(Sfx.CHEST_OPEN) // la escalera de salida da un cofre
         persist()
         bump()
+        if (r.screen == RunScreen.VICTORY) startEnding(replay = false) // vencer al jefe final: el final animado y luego la victoria
     }
 
     // ---------- recompensas ----------
