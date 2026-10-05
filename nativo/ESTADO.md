@@ -6,6 +6,7 @@ reemplaza a la app web empaquetada (`android/`).
 
 Compilar y probar: `JAVA_HOME=~/.jdks/jdk-21.0.12.1+1 ./gradlew.bat :core:test :app:assembleDebug`
 Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regenera `app/src/main/assets/sprites`.
+Sonido: `node tools/export-audio.js` regenera `app/src/main/assets/audio` y `GenAudio.kt`.
 
 ## Cómo está armado
 - `core/`: reglas del juego en Kotlin puro (port de `js/engine`, `js/data` y el flujo de `js/game.js`). Sin Android.
@@ -51,6 +52,13 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
   `ui/NotesScreen.kt` (notas a la derecha, a la izquierda la tarjeta del creador que abre `CREATOR_URL` con `LocalUriHandler`), puntito rojo de notas nuevas en `MenuScreen` (`notesBadge`) y `AppScreen.COLLECTION/NOTES` en el `GameViewModel`
   (`openCollection` anota lo que llevas y abre el bestiario en el castillo de tu partida la primera vez; `openNotes` las marca leídas y guarda). `Sprite(silhouette = true)` y `SeedArt(silhouette = true)` dibujan la mancha oscura de lo no descubierto.
   Los botones «Ver la historia/el final otra vez» de las notas llegan en la etapa 5. `CollectionScreenTest` (19 pruebas: capturas de cada pestaña, toques y el recorrido menú → Colección/Notas con el `GameViewModel` real).
+- Sonido (etapa 5A): `tools/export-audio.js` (Node 22 + Chrome + ffmpeg con libvorbis; `node tools/export-audio.js [sfx|music]`) reevalúa una copia parcheada de `js/audio.js` con un `OfflineAudioContext`
+  (azar con semilla fija, buses al máximo) y escribe `app/src/main/assets/audio/{sfx,music}/*.ogg` (34 efectos con 63 variantes, 21 canciones, ~9 MB) y `core/.../data/gen/GenAudio.kt` (enum `Sfx`, `GEN_SONGS`,
+  `GEN_PLAYLISTS`, `GEN_BUZZ`). `core/Audio.kt`: `MusicContext.forRun` (= `musicContextFor` de render.js), `MusicPlan` (lista por lugar: empieza al azar y sigue en orden), `Volume.curve` (`(v/100)^1.7`).
+  App: `Audio.kt` (`AndroidAudio`: SoundPool de 8 voces, MediaPlayer con fundido, vibración con la tabla BUZZ, pausa/reanudación con el ciclo de vida), `ui/GameAudio.kt` (interfaz `GameAudio`, `NoAudio` por defecto en pruebas,
+  `LocalAudio`, `Modifier.tapButton`). Enlaces: `CombatController(audio)`, `TableController(audio)`, `GameViewModel.audio`/`musicPlace()` (la raíz cambia de canción con `LaunchedEffect`), `Settings.onChanged`, `StickerButton` y los
+  botones de barra, selección de fruta y ajustes hacen «tap» como todo `<button>` de la web. Los controladores reciben un reenviador del ViewModel, así que sobreviven a que la actividad se recree.
+  Pruebas: `AudioTest` (core, 8), `AndroidAudioTest` (4), `AudioHooksTest` (24, con un `RecordingAudio`), `TableAudioTest` (11), `ButtonTapTest` (3). Sin probar a oído en el teléfono.
 - Gotcha de los dibujos: volver a correr `node tools/export-sprites.js` regraba ~12 `.webp` viejos con bytes distintos (carta_marcada, flor_imperial, guardia_hielo…); si no vienen al caso, restaurarlos con `git checkout` y dejar solo los nuevos y `sprites.json`.
 - Para cuidar que las reglas sean idénticas: comparación cruzada con semilla (`node tools/crosscheck-combat.js 3000 1000` genera las trazas de JS en `core/build/`, y `gradlew :core:test` exige que Kotlin salga idéntico).
 
@@ -60,15 +68,15 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
   `Hud.kt`, `CharacterSelect.kt`, `ActIntro.kt`, `MapScreen.kt`, `CombatController.kt` (modelos inmutables, poses de ataque = keyframes del CSS, tiempos de `js/fx.js`),
   `CombatScreen.kt`, `RewardScreens.kt`, `DeckModal.kt`.
 - Las animaciones del combate necesitan el reloj de cuadros de Compose: el controlador usa el scope de la composición (`vm.uiScope`), NO `viewModelScope`.
-- Pruebas: `gradlew :core:test` (103 pruebas, con el motor idéntico a JS) y `gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`
-  (67 pruebas; capturas en `app/build/capturas/`; `FlowSmokeTest` monta `GameRoot` y juega con las pantallas reales; `TableScreenshotTest` captura cada mesa y prueba
+- Pruebas: `gradlew :core:test` (111 pruebas, con el motor idéntico a JS) y `gradlew :app:testDebugUnitTest -Proborazzi.test.record=true`
+  (109 pruebas; capturas en `app/build/capturas/`; `FlowSmokeTest` monta `GameRoot` y juega con las pantallas reales; `TableScreenshotTest` captura cada mesa y prueba
   toques y arrastres reales en el tablero).
 - Mesas de juego en pantalla: `ui/TableController.kt` (tiempos de las animaciones y toques; `busy` ignora toques) y `ui/TableScreens.kt` (tapete, crupier con globo, fichas,
   dados y cartas dibujados con Canvas, rodillos, ruleta, tablero de ajedrez que se toca o se arrastra). Las piezas de ajedrez son dibujos exportados `mgp_<pieza><equipo>`
   (con carita) y `mgp_<pieza><equipo>_s` (sin ella, para las bandejas); salen de `MG.fruitPiece` de js/minigames.js (se expuso solo para el exportador).
 - Cuidado: un `return@key` dentro del lambda de `key(...)` de Compose generó una clase inválida (`Illegal method name "<anonymous>"`) que compila pero revienta al cargarse;
   `TableScreen` lo evita separando en otra función. Si una prueba de pantalla dice `ClassFormatError`, buscar un retorno anticipado dentro de un lambda inline composable.
-- Sin hacer todavía: audio y vibración (etapa 1 pendiente), tooltips de objetos, explicaciones de intención y estados salen al tocar.
+- Sin hacer todavía: tooltips de objetos, explicaciones de intención y estados salen al tocar.
 - Emulador: el controlador AEHD no estaba cargado el 2026-10-04 (`emulator -accel-check` decía que no está instalado); el teléfono tiene bloqueo seguro, así que
   las pruebas de pantalla se hicieron con Robolectric. APK: `./gradlew.bat :app:assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk` (ya instalado en el teléfono).
 
@@ -76,7 +84,7 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
 - [x] 0. Tutorial arreglado en la app web (v2.9).
 - [ ] 1. Cimientos: proyecto, dibujos y letras exportados, base visual, menú y ajustes **(hecho)**;
       port del motor de combate y de todos los datos **(hecho, 3000 combates idénticos a JS)**;
-      sonido exportado **(pendiente)**.
+      sonido y vibración **(hechos en la 5A)**.
 - [x] 2. Partida base **(hecha, falta probarla con dedo en el teléfono)**. Motor, mapas, flujo de partida, guardado y todas las pantallas:
       elegir fruta y grado, portada de piso, barra de arriba, mapa (arrastre, zoom de Ajustes, muros de cinta, ríos con puente, guarida, ficha que camina),
       «¡A pelear!», combate (mano en abanico: tocar selecciona, arrastrar juega; intenciones, estados, cáscara, efectos, turno enemigo, viñedo de la Uva,
@@ -94,5 +102,5 @@ Dibujos: `node tools/export-sprites.js` (desde la raíz del repositorio) regener
       **Hecho (4A):** las cinco mesas de juego (dados, póker, ajedrez, tragamonedas, ruleta), desde las casillas del mapa y desde los eventos de misterio.
       **Hecho (4B):** pase de batalla, vestidor (con la fruta vestida en el mapa, el combate, la barra de arriba y la selección) y mascotitas con sus retos y efectos.
       **Hecho (4C):** colección (cartas, objetos, semillas), bestiario y notas, con sus pantallas conectadas al menú. **Con esto la etapa 4 queda completa.**
-- [ ] 5. Tutorial, historia y final.
+- [ ] 5. Sonido, historia y final, tutorial. **Hecho (5A):** sonido (efectos, música por pantalla, vibración, volumen de Ajustes). Faltan 5B (historia y final) y 5C (tutorial).
 - [ ] 6. Pulido, compilación de lanzamiento y relevo de la app web.

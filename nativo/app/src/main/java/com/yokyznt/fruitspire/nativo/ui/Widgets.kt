@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.yokyznt.fruitspire.core.data.gen.Sfx
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -71,6 +72,7 @@ fun StickerButton(
 ) {
     val press = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    val audio = LocalAudio.current
     val lift = if (secondary) 2.dp else 5.dp
     Box(
         modifier
@@ -93,7 +95,7 @@ fun StickerButton(
                         scope.launch { press.animateTo(1f, tween(70)) }
                         val released = tryAwaitRelease()
                         scope.launch { press.animateTo(0f, spring(dampingRatio = .45f, stiffness = 500f)) }
-                        if (released) onClick()
+                        if (released) { audio.play(Sfx.TAP); onClick() }
                     }
                 )
             }

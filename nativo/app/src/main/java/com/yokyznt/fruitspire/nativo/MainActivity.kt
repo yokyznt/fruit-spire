@@ -49,12 +49,15 @@ import com.yokyznt.fruitspire.nativo.ui.EventResultScreen
 import com.yokyznt.fruitspire.nativo.ui.EventScreen
 import com.yokyznt.fruitspire.nativo.ui.FateScreen
 import com.yokyznt.fruitspire.nativo.ui.Fonts
+import com.yokyznt.fruitspire.nativo.ui.GameAudio
 import com.yokyznt.fruitspire.nativo.ui.GameOverScreen
 import com.yokyznt.fruitspire.nativo.ui.HudBar
 import com.yokyznt.fruitspire.nativo.ui.Ink
 import com.yokyznt.fruitspire.nativo.ui.InventoryModal
+import com.yokyznt.fruitspire.nativo.ui.LocalAudio
 import com.yokyznt.fruitspire.nativo.ui.MapScreen
 import com.yokyznt.fruitspire.nativo.ui.MenuScreen
+import com.yokyznt.fruitspire.nativo.ui.NoAudio
 import com.yokyznt.fruitspire.nativo.ui.NodeResultScreen
 import com.yokyznt.fruitspire.nativo.ui.NotesScreen
 import com.yokyznt.fruitspire.nativo.ui.TableScreen
@@ -79,12 +82,18 @@ import com.yokyznt.fruitspire.nativo.ui.notebookPaper
 
 class MainActivity : ComponentActivity() {
     private val vm: GameViewModel by viewModels()
+    private var audio: GameAudio = NoAudio
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         SpriteStore.init(this)
         val settings = Settings(this)
+        // el sonido: los ajustes de volumen y vibración le llegan al momento
+        val sound = AndroidAudio(this, settings)
+        settings.onChanged = sound::settingChanged
+        audio = sound
+        vm.audio = sound
         setContent {
             // Ajustes → Pantalla encendida
             LaunchedEffect(settings.awake) {
@@ -93,6 +102,16 @@ class MainActivity : ComponentActivity() {
             }
             DesignCanvas { GameRoot(vm, settings) }
         }
+    }
+
+    // En segundo plano todo se calla (música y vibración) y al volver se retoma
+    override fun onPause() { audio.pause(); super.onPause() }
+    override fun onResume() { super.onResume(); audio.resume() }
+
+    override fun onDestroy() {
+        audio.release()
+        if (vm.audio === audio) vm.audio = NoAudio
+        super.onDestroy()
     }
 
     // Pantalla completa: sin barra de estado ni botones de Android (vuelven al deslizar desde el borde)
@@ -115,7 +134,10 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
     val toast = remember { ToastState() }
     vm.toast = { toast.show(it) }
     val soon = { toast.show("Llega en una etapa siguiente") }
-    CompositionLocalProvider(LocalProgress provides vm.progress) {
+    // la música sigue a la pantalla: al cambiar de lugar cambia de lista (musicContextFor de la web)
+    val place = vm.musicPlace()
+    LaunchedEffect(place) { vm.audio.music(place) }
+    CompositionLocalProvider(LocalProgress provides vm.progress, LocalAudio provides vm.audio) {
     Box(Modifier.fillMaxSize().notebookPaper()) {
         when (vm.screen) {
             AppScreen.MENU -> MenuScreen(

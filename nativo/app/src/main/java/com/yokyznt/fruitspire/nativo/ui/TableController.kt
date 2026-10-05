@@ -10,6 +10,7 @@ import com.yokyznt.fruitspire.core.RoulettePick
 import com.yokyznt.fruitspire.core.Run
 import com.yokyznt.fruitspire.core.RunScreen
 import com.yokyznt.fruitspire.core.Table
+import com.yokyznt.fruitspire.core.data.gen.Sfx
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -29,7 +30,8 @@ class TableController(
     private val scope: CoroutineScope,
     private val persist: () -> Unit,
     private val bump: () -> Unit,
-    private val toast: (String) -> Unit
+    private val toast: (String) -> Unit,
+    private val audio: GameAudio = NoAudio
 ) {
     var busy by mutableStateOf(false)
         private set
@@ -49,10 +51,15 @@ class TableController(
     var coinRain by mutableIntStateOf(0)
         private set
     private var rained = false
+    private var settled = false
 
     private val alive: Boolean get() = run.table === table && run.screen == RunScreen.MINIGAME
 
     private fun after() {
+        if (table.phase == "result" && !settled) { // el resultado suena una sola vez: gana, pierde o empata (`finish` de js/minigames.js)
+            settled = true
+            audio.play(when (table.outcome) { "win" -> Sfx.WIN; "lose" -> Sfx.DENIED; else -> Sfx.POP })
+        }
         if (table.phase == "result" && table.outcome == "win" && !rained) { rained = true; coinRain++ }
         persist()
         bump()
@@ -61,6 +68,7 @@ class TableController(
     fun start(bet: Int) {
         if (busy) return
         if (!table.start(bet)) { toast("No te alcanza el oro"); return }
+        audio.play(Sfx.COIN)
         after()
     }
 
@@ -68,6 +76,7 @@ class TableController(
     private suspend fun rollAnimation(who: String): Boolean {
         for (i in 0 until 7) {
             rolling = Rolling(who, 1 + Random.nextInt(6))
+            audio.play(Sfx.TAP)
             delay(70L + i * 12)
             if (!alive) { rolling = null; busy = false; return false }
         }
@@ -81,6 +90,7 @@ class TableController(
         scope.launch {
             if (!rollAnimation("player")) return@launch
             table.diceRoll()
+            audio.play(Sfx.HIT)
             busy = false
             if (table.phase == "house") runHouse() else after()
         }
@@ -100,6 +110,7 @@ class TableController(
             while (alive && table.houseNeedsRoll()) {
                 if (!rollAnimation("house")) return@launch
                 table.houseRoll()
+                audio.play(Sfx.HIT)
                 bump()
                 delay(350)
             }
@@ -111,7 +122,12 @@ class TableController(
     }
 
     // ---------------------------------------------------------------- póker
-    fun pokerToggle(i: Int) { if (!busy) { table.pokerToggle(i); bump() } }
+    fun pokerToggle(i: Int) {
+        if (busy) return
+        if (table.kind == "poker" && table.phase == "play") audio.play(Sfx.SELECT)
+        table.pokerToggle(i)
+        bump()
+    }
 
     fun pokerShow() { if (!busy) { table.pokerShow(); after() } }
 
@@ -130,6 +146,7 @@ class TableController(
                 for (k in 0 until 3) if (spin[k]) faces[k] = Casino.SLOT_SYMBOLS.random()
                 val stop = when (t) { 9 -> 0; 16 -> 1; 23 -> 2; else -> -1 }
                 if (stop >= 0) { spin[stop] = false; faces[stop] = final[stop] }
+                audio.play(if (stop >= 0) Sfx.HIT else Sfx.TAP) // cada rodillo que para suena a golpe
                 reelFaces = faces
                 reelSpin = spin
                 delay(80)
@@ -142,7 +159,12 @@ class TableController(
     }
 
     // ---------------------------------------------------------------- ruleta
-    fun roulettePick(p: RoulettePick) { if (!busy) { table.roulettePick(p); bump() } }
+    fun roulettePick(p: RoulettePick) {
+        if (busy) return
+        if (table.kind == "roulette" && table.phase == "play") audio.play(Sfx.SELECT)
+        table.roulettePick(p)
+        bump()
+    }
 
     fun rouletteSpin() {
         if (busy || table.kind != "roulette" || table.phase != "play") return
@@ -154,8 +176,11 @@ class TableController(
         wheelSpin++
         bump()
         scope.launch {
-            delay(2700)
-            if (!alive) { busy = false; return@launch }
+            for (i in 0 until 9) { // la bolita da 9 toquecitos mientras la rueda gira (2.7 s)
+                audio.play(Sfx.TAP)
+                delay(300)
+                if (!alive) { busy = false; return@launch }
+            }
             table.rouletteSettle()
             busy = false
             after()
@@ -166,7 +191,12 @@ class TableController(
     /** Toque en una casilla (o pieza soltada en ella): elige, mueve o quita la elección. */
     fun chessClick(r: Int, c: Int) {
         if (busy) return
+        val piece = table.board.getOrNull(r)?.getOrNull(c)
+        val mine = piece != null && piece.c == 0 && table.kind == "chess" && table.phase == "play" && table.turn == "player"
+        val won = table.won.size
         val moved = table.chessClick(r, c)
+        if (moved) audio.play(if (table.won.size > won) Sfx.HIT else Sfx.MAP_MOVE) // comer suena a golpe; mover, a paso
+        else if (mine) audio.play(if (table.sel != null) Sfx.SELECT else Sfx.DENIED) // una pieza sin jugadas se niega
         bump()
         if (moved) afterChessMove()
     }
@@ -181,7 +211,8 @@ class TableController(
         scope.launch {
             delay(650)
             if (!alive || table.phase != "play") { busy = false; return@launch }
-            table.chessEnemyMove()
+            val lost = table.lost.size
+            if (table.chessEnemyMove()) audio.play(if (table.lost.size > lost) Sfx.HIT else Sfx.MAP_MOVE)
             busy = false
             afterChessMove()
         }

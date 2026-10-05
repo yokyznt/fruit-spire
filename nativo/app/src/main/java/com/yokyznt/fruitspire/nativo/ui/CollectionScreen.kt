@@ -63,6 +63,7 @@ import com.yokyznt.fruitspire.core.data.SeedDef
 import com.yokyznt.fruitspire.core.data.Seeds
 import com.yokyznt.fruitspire.core.data.Statuses
 import com.yokyznt.fruitspire.core.data.gen.GEN_GAME_COLORS
+import com.yokyznt.fruitspire.core.data.gen.Sfx
 
 // ---------------------------------------------------------------------------------------------------------------
 // La Colección (js/collection.js + js/bestiary.js): cartas, objetos, semillas y bestiario en pestañas. Lo que aún no
@@ -168,8 +169,9 @@ private fun TabIcon(id: String) {
 /** Pestaña en forma de píldora: la elegida va amarilla. */
 @Composable
 private fun Pill(label: String, on: Boolean, onClick: () -> Unit, icon: @Composable () -> Unit) {
+    val audio = LocalAudio.current
     Row(
-        Modifier.chip(99.dp, if (on) Ink.banana else Ink.edge).tap(onClick).padding(start = 6.dp, end = 18.dp, top = 3.dp, bottom = 3.dp),
+        Modifier.chip(99.dp, if (on) Ink.banana else Ink.edge).tap { audio.play(Sfx.SELECT); onClick() }.padding(start = 6.dp, end = 18.dp, top = 3.dp, bottom = 3.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         icon()
@@ -564,8 +566,9 @@ private fun Tile(
     has: Boolean, selected: Boolean, name: String, fill: Color, badge: String?, look: TierLook?, kills: Int,
     onClick: () -> Unit, art: @Composable (silhouette: Boolean) -> Unit
 ) {
+    val audio = LocalAudio.current
     Box(
-        Modifier.fillMaxWidth().height(128.dp).stickerCard(16.dp, fill = if (has) fill else UNSEEN_FILL, glow = if (selected) Ink.mint else null).tap(onClick)
+        Modifier.fillMaxWidth().height(128.dp).stickerCard(16.dp, fill = if (has) fill else UNSEEN_FILL, glow = if (selected) Ink.mint else null).tap { audio.play(Sfx.TAP); onClick() }
     ) {
         Column(
             Modifier.fillMaxSize().padding(horizontal = 5.dp, vertical = 7.dp),

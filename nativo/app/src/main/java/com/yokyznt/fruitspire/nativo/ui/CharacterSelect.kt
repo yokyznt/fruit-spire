@@ -89,7 +89,7 @@ private fun Polaroid(c: CharacterDef, index: Int, selected: Boolean, progress: P
             drawRoundRect(Color(0x294A3428), Offset(6.dp.toPx(), 12.dp.toPx()), size, CornerRadius(4.dp.toPx()))
             drawRoundRect(Color(0xFFE6D6BC), Offset(-1.dp.toPx(), -1.dp.toPx()), Size(size.width + 2.dp.toPx(), size.height + 2.dp.toPx()), CornerRadius(4.dp.toPx()))
             drawRoundRect(Ink.edge, Offset.Zero, size, CornerRadius(4.dp.toPx()))
-        }.clickable(remember { MutableInteractionSource() }, null) { onClick() }.padding(10.dp)
+        }.tapButton { onClick() }.padding(10.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
@@ -124,7 +124,7 @@ private fun GradeChip(d: Difficulty, selected: Boolean, locked: Boolean, onClick
     Box(
         Modifier.graphicsLayer { if (selected) { rotationZ = -2f; scaleX = 1.06f; scaleY = 1.06f; translationY = -5f * density }; alpha = if (locked) .55f else 1f }
             .chip(99.dp, if (selected) Ink.banana else Ink.paper2)
-            .clickable(remember { MutableInteractionSource() }, null) { onClick() }
+            .tapButton { onClick() }
             .padding(start = 6.dp, end = 16.dp, top = 4.dp, bottom = 4.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {

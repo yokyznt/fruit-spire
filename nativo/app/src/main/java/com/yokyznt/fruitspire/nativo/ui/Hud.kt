@@ -113,7 +113,7 @@ fun HudBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy((12 * scale).dp)
     ) {
-        Box(Modifier.clickable(remember { MutableInteractionSource() }, null) { onMenu() }) { FruitSprite(state.charId, (40 * scale).dp) }
+        Box(Modifier.tapButton { onMenu() }) { FruitSprite(state.charId, (40 * scale).dp) }
         Spacer(Modifier.weight(1f))
         // castillo y piso
         Row(
@@ -143,7 +143,7 @@ fun HudBar(
         }
         // mochila: cuántos objetos, los dos últimos y las semillas
         Row(
-            Modifier.chip(14.dp, if (state.seedReady) Ink.mintSoft else Ink.edge).clickable(remember { MutableInteractionSource() }, null) { onBag() }
+            Modifier.chip(14.dp, if (state.seedReady) Ink.mintSoft else Ink.edge).tapButton { onBag() }
                 .padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
@@ -161,7 +161,7 @@ fun HudBar(
         }
         // mazo
         Row(
-            Modifier.rotate(-1f).chip(14.dp).clickable(remember { MutableInteractionSource() }, null) { onDeck() }
+            Modifier.rotate(-1f).chip(14.dp).tapButton { onDeck() }
                 .padding(start = 10.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {

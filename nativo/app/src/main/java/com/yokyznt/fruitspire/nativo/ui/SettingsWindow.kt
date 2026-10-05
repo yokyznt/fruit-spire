@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yokyznt.fruitspire.core.GameInfo
+import com.yokyznt.fruitspire.core.data.gen.Sfx
 import com.yokyznt.fruitspire.nativo.Settings
 
 /** Ventana de ajustes (renderSettings de js/settings.js). */
@@ -92,6 +93,7 @@ private fun SettingRow(label: String, control: @Composable () -> Unit) {
 /** Opciones en fila, una sola encendida. */
 @Composable
 private fun <T> Segments(options: List<Pair<T, String>>, selected: T, onPick: (T) -> Unit) {
+    val audio = LocalAudio.current
     Row(
         Modifier
             .drawBehind { drawRoundRect(Ink.ink, Offset(-2.dp.toPx(), -2.dp.toPx()), Size(size.width + 4.dp.toPx(), size.height + 4.dp.toPx()), CornerRadius(size.height)) }
@@ -101,7 +103,7 @@ private fun <T> Segments(options: List<Pair<T, String>>, selected: T, onPick: (T
     ) {
         for ((value, label) in options) {
             Box(
-                Modifier.background(if (value == selected) Ink.mint else Ink.paper2).clickable { onPick(value) }.padding(horizontal = 18.dp).height(46.dp),
+                Modifier.background(if (value == selected) Ink.mint else Ink.paper2).clickable { audio.play(Sfx.TAP); onPick(value) }.padding(horizontal = 18.dp).height(46.dp),
                 contentAlignment = Alignment.Center
             ) { BasicText(label, style = Fonts.body(18f, FontWeight.SemiBold)) }
         }
@@ -111,6 +113,7 @@ private fun <T> Segments(options: List<Pair<T, String>>, selected: T, onPick: (T
 /** Volumen: − ▮▮▮▮▮▯▯▯▯▯ + */
 @Composable
 private fun Volume(value: Int, onChange: (Int) -> Unit) {
+    val audio = LocalAudio.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         RoundButton("−") { onChange(value - 10) }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -122,7 +125,7 @@ private fun Volume(value: Int, onChange: (Int) -> Unit) {
                             drawRoundRect(if (on) Ink.ink else Color(0xFFCDBFA5), size = size, cornerRadius = CornerRadius(6.dp.toPx()))
                             drawRoundRect(if (on) Ink.orange else Color(0xFFE9DFCC), Offset(2.dp.toPx(), 2.dp.toPx()), Size(size.width - 4.dp.toPx(), size.height - 4.dp.toPx()), CornerRadius(4.dp.toPx()))
                         }
-                        .clickable { onChange(i * 10) }
+                        .clickable { audio.play(Sfx.TAP); onChange(i * 10) }
                 )
             }
         }
@@ -133,6 +136,7 @@ private fun Volume(value: Int, onChange: (Int) -> Unit) {
 
 @Composable
 private fun RoundButton(label: String, onClick: () -> Unit) {
+    val audio = LocalAudio.current
     Box(
         Modifier.size(44.dp)
             .drawBehind {
@@ -141,7 +145,7 @@ private fun RoundButton(label: String, onClick: () -> Unit) {
                 drawCircle(Ink.paper2)
             }
             .clip(RoundedCornerShape(50))
-            .clickable(onClick = onClick),
+            .clickable { audio.play(Sfx.TAP); onClick() },
         contentAlignment = Alignment.Center
     ) { BasicText(label, style = Fonts.body(27f, FontWeight.SemiBold)) }
 }
