@@ -167,7 +167,7 @@ private fun idlePose(kind: String, timeSec: Float, offsetSec: Float): Pose {
 // Globo de intención, estados y placa de nombre
 // ---------------------------------------------------------------------------------------------------------------
 @Composable
-private fun IntentBubble(intent: IntentUi, acting: Boolean, onInfo: () -> Unit, modifier: Modifier = Modifier) {
+private fun IntentBubble(intent: IntentUi, acting: Boolean, onInfo: () -> Unit, modifier: Modifier = Modifier, compact: Boolean = false) {
     val bob by rememberInfiniteTransition(label = "globo").animateFloat(0f, 1f, infiniteRepeatable(tween(1800, easing = EaseInOut), RepeatMode.Reverse), label = "bob")
     val pulse by rememberInfiniteTransition(label = "pulso").animateFloat(1f, 1.12f, infiniteRepeatable(tween(500, easing = EaseInOut), RepeatMode.Reverse), label = "pulse")
     val fill = when (intent.cls) {
@@ -188,21 +188,22 @@ private fun IntentBubble(intent: IntentUi, acting: Boolean, onInfo: () -> Unit, 
                 drawRoundRect(Ink.ink, Offset(-3f * k, -3f * k), Size(size.width + 6f * k, size.height + 6f * k), CornerRadius(r + 3f * k))
                 drawRoundRect(fill, Offset.Zero, size, CornerRadius(r))
                 // la colita del globo
-                val tail = Path().apply { moveTo(size.width - 40f * k, size.height - 1f); lineTo(size.width - 16f * k, size.height - 1f); lineTo(size.width - 28f * k, size.height + 14f * k); close() }
+                val mid = size.width / 2f
+                val tail = Path().apply { moveTo(mid - 12f * k, size.height - 1f); lineTo(mid + 12f * k, size.height - 1f); lineTo(mid, size.height + 14f * k); close() }
                 drawPath(tail, Ink.ink, style = Stroke(6f * k))
                 drawPath(tail, fill)
             }.padding(start = 14.dp, end = 8.dp, top = 5.dp, bottom = 5.dp)
                 .pointerInput(Unit) { detectTapGestures(onLongPress = { onInfo() }, onTap = { onInfo() }) },
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            if (intent.unknown) BasicText("?", style = Fonts.display(30f))
+            if (intent.unknown) BasicText("?", style = Fonts.display(if (compact) 26f else 30f))
             else {
-                Sprite(intent.sprite, 36.dp)
-                if (intent.label.isNotEmpty()) BasicText(intent.label, style = Fonts.display(30f))
+                Sprite(intent.sprite, if (compact) 30.dp else 36.dp)
+                if (intent.label.isNotEmpty()) BasicText(intent.label, style = Fonts.display(if (compact) 25f else 30f))
                 intent.extras.forEach { (sp, v) ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Sprite(sp, 34.dp)
-                        if (v.isNotEmpty()) BasicText(v, style = Fonts.display(26f))
+                        Sprite(sp, if (compact) 28.dp else 34.dp)
+                        if (v.isNotEmpty()) BasicText(v, style = Fonts.display(if (compact) 21f else 26f))
                     }
                 }
             }
@@ -211,15 +212,15 @@ private fun IntentBubble(intent: IntentUi, acting: Boolean, onInfo: () -> Unit, 
 }
 
 @Composable
-private fun StatusChip(s: StatusUi, onInfo: () -> Unit) {
+private fun StatusChip(s: StatusUi, compact: Boolean = false, onInfo: () -> Unit) {
     val fill = when (s.id) { "poison" -> Ink.grapeSoft; "strength" -> Ink.peachSoft; "vulnerable" -> Ink.strawberrySoft; "weak" -> Color(0xFFF1EFD0); else -> Ink.edge }
     Row(
         Modifier.chip(99.dp, fill).pointerInput(Unit) { detectTapGestures(onLongPress = { onInfo() }, onTap = { onInfo() }) }
-            .padding(start = 3.dp, end = if (s.noCount) 6.dp else 12.dp, top = 1.dp, bottom = 1.dp),
+            .padding(start = 3.dp, end = if (s.noCount) 6.dp else if (compact) 9.dp else 12.dp, top = 1.dp, bottom = 1.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)
     ) {
-        Sprite(s.sprite, 34.dp)
-        if (!s.noCount) BasicText("${s.n}", style = Fonts.display(21f))
+        Sprite(s.sprite, if (compact) 28.dp else 34.dp)
+        if (!s.noCount) BasicText("${s.n}", style = Fonts.display(if (compact) 18f else 21f))
     }
 }
 
@@ -235,29 +236,42 @@ private fun BlockBadge(n: Int, modifier: Modifier = Modifier) {
 }
 
 /** La placa de abajo: nombre, barra de vida con cáscara y estados. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun Plate(c: CombatantUi, ctl: CombatController, multi: Boolean, modifier: Modifier = Modifier) {
+private fun Plate(c: CombatantUi, ctl: CombatController, multi: Boolean, width: Float, modifier: Modifier = Modifier) {
     val boss = c.tier == "boss"
     val tilt = if (c.key == "player") -1f else 1f
-    Box(modifier.graphicsLayer { rotationZ = tilt }, contentAlignment = Alignment.TopCenter) {
+    val title = c.name + if (boss) " ♛" else if (c.tier == "elite") " ✦" else ""
+    // el nombre va en una sola línea, arriba de la barra, y se achica solo si no cabe en la placa: nunca tapa la vida
+    val nameSize = min(if (multi) 21f else 25f, (width - 30f) / (title.length * .54f)).coerceAtLeast(13f)
+    Column(modifier.graphicsLayer { rotationZ = tilt }, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.graphicsLayer { rotationZ = -2f * tilt }.chip(8.dp).padding(horizontal = 10.dp)) {
+            BasicText(title, style = Fonts.display(nameSize), maxLines = 1, softWrap = false)
+        }
+        // la placa crema mide solo lo que lleva dentro (la barra y, si hay, los estados)
         Column(
-            Modifier.fillMaxWidth().padding(top = 14.dp)
-                .drawBehind { drawRoundRect(if (boss) Color(0xD9FFD6DC) else Color(0xD1FFFBF2), cornerRadius = CornerRadius(20f * density)) }
-                .padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 8.dp),
+            Modifier.padding(top = 5.dp).fillMaxWidth()
+                .drawBehind { drawRoundRect(if (boss) Color(0xD9FFD6DC) else Color(0xD1FFFBF2), cornerRadius = CornerRadius(18f * density)) }
+                .padding(start = 14.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // la cáscara va pegada a la barra solo si la placa es ancha; si no, tapa las cifras de la vida y pasa a la fila de estados
+            val blockOnBar = c.block > 0 && width >= 240f
+            val blockInRow = c.block > 0 && !blockOnBar
+            val blockAnchor = if (c.key == "player") Modifier.tutAnchor("block") else Modifier
             Box(Modifier.fillMaxWidth()) {
-                HpBar(c.hp, c.maxHp, Modifier.fillMaxWidth(), height = 28.dp)
-                if (c.block > 0) BlockBadge(c.block, Modifier.align(Alignment.CenterStart).offset((-22).dp, 0.dp).then(if (c.key == "player") Modifier.tutAnchor("block") else Modifier))
+                HpBar(c.hp, c.maxHp, Modifier.fillMaxWidth(), height = 34.dp, textScale = .62f)
+                if (blockOnBar) BlockBadge(c.block, Modifier.align(Alignment.CenterStart).offset((-20).dp, 0.dp).then(blockAnchor))
             }
-            Row(Modifier.padding(top = 7.dp).height(36.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                c.statuses.forEach { s -> StatusChip(s) { ctl.showSections(statusSectionsFull(listOf(s.id to s.n))) } }
+            if (c.statuses.isNotEmpty() || blockInRow) {
+                androidx.compose.foundation.layout.FlowRow(
+                    Modifier.padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (blockInRow) BlockBadge(c.block, blockAnchor)
+                    c.statuses.forEach { s -> StatusChip(s, compact = multi) { ctl.showSections(statusSectionsFull(listOf(s.id to s.n))) } }
+                }
             }
-        }
-        Box(
-            Modifier.graphicsLayer { rotationZ = -2f * tilt }.chip(8.dp).padding(horizontal = 16.dp, vertical = 1.dp)
-        ) {
-            BasicText(c.name + if (c.tier == "boss") " ♛" else if (c.tier == "elite") " ✦" else "", style = Fonts.display(if (multi) 26f else 32f))
         }
     }
 }
@@ -296,8 +310,8 @@ private fun CombatantView(
             })
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // viñedo de la Uva
-            Box(Modifier.fillMaxWidth().height(if (player) 50.dp else 0.dp))
+            // viñedo de la Uva (la fruta) y, en los enemigos, el hueco donde flota su globo de intención
+            Box(Modifier.fillMaxWidth().height(if (player) 50.dp else if (multi) 40.dp else 46.dp))
             Box(
                 Modifier.size(spriteSize.dp).onGloballyPositioned { ctl.anchors[c.key] = it.boundsInRoot() }
                     .graphicsLayer {
@@ -343,7 +357,7 @@ private fun CombatantView(
                 if (c.charId != null) FruitSprite(c.charId, spriteSize.dp, mood = mood, hurt = c.hurt) // tu fruta, vestida
                 else Sprite(c.sprite, spriteSize.dp, mood = mood, hurt = c.hurt)
             }
-            Plate(c, ctl, multi, Modifier.fillMaxWidth().padding(top = 0.dp).then(if (player) Modifier.tutAnchor("plate") else Modifier))
+            Plate(c, ctl, multi, width, Modifier.fillMaxWidth().then(if (player) Modifier.tutAnchor("plate") else Modifier))
         }
         // anillo de cáscara / curación / poder
         Box(Modifier.matchParentSize().graphicsLayer { alpha = if (actor.ring.value < 1f) 1f - actor.ring.value else 0f; val s = .6f + .7f * actor.ring.value; scaleX = s; scaleY = s }.drawBehind {
@@ -351,10 +365,13 @@ private fun CombatantView(
         })
         // globo de intención
         c.intent?.let { intent ->
-            IntentBubble(
-                intent, ctl.acting == index - 1 && !player, { ctl.showSections(intent.sections.ifEmpty { listOf(InfoSection(intent.title.ifEmpty { "Intención" }, intent.tip)) }, tip = "intent") },
-                Modifier.align(Alignment.TopStart).offset(10.dp, 0.dp).tutAnchor("intent")
-            )
+            // centrado sobre la cabeza (puede ser más ancho que la placa sin recortarse)
+            Box(Modifier.align(Alignment.TopCenter).wrapContentSize(Alignment.TopCenter, unbounded = true).tutAnchor("intent")) {
+                IntentBubble(
+                    intent, ctl.acting == index - 1 && !player, { ctl.showSections(intent.sections.ifEmpty { listOf(InfoSection(intent.title.ifEmpty { "Intención" }, intent.tip)) }, tip = "intent") },
+                    compact = multi
+                )
+            }
         }
     }
 }
@@ -460,19 +477,31 @@ private fun Pile(label: String, count: Int, which: String, ctl: CombatController
 // ---------------------------------------------------------------------------------------------------------------
 class CardPose(val cx: Float, val cy: Float, val rot: Float, val scale: Float)
 
-const val HAND_TOP = 454f // arriba de las cartas sin abanico (la mano asoma desde el borde de abajo)
-const val PLAY_LINE = 452f
+const val HAND_TOP = 410f // arriba de las cartas sin abanico (la mano asoma desde el borde de abajo y deja ver lo que hace cada carta)
+const val PLAY_LINE = 408f
+
+/** Lo que ocupan a cada lado la naranja de energía y el botón de turno: la mano no pasa de ahí. */
+const val HAND_SIDE = 236f
+
+/** Las cartas se achican cuando la pantalla es poco ancha, para no tapar la naranja, las pilas ni el botón de turno. */
+fun handScale(w: Float): Float = ((w - 2f * HAND_SIDE - HAND_FAN) / 760f).coerceIn(.74f, 1f)
+
+/** Lo que se abre el abanico de cada lado por lo que giran las cartas de las puntas. */
+private const val HAND_FAN = 60f
 
 fun fanPose(i: Int, n: Int, w: Float, selected: Boolean): CardPose {
-    val overlap = if (n > 1) min(-10f, (900f - n * CARD_W) / (n - 1)) else 0f
+    val s = handScale(w)
+    val cw = CARD_W * s
+    val avail = min(900f, w - 2f * HAND_SIDE - HAND_FAN)
+    val overlap = if (n > 1) min(-10f * s, (avail - n * cw) / (n - 1)) else 0f
     val off = i - (n - 1) / 2f
-    val bx = w / 2f + off * (CARD_W + overlap)
-    val by = HAND_TOP + CARD_H / 2f
-    if (selected) return CardPose(bx, by - 110f, 0f, 1.08f)
+    val bx = w / 2f + off * (cw + overlap)
+    if (selected) return CardPose(bx, HAND_TOP + CARD_H / 2f - 80f, 0f, 1.08f)
+    val by = HAND_TOP + CARD_H * s / 2f
     val r = off * 3.5f
     val y = off * off * 3.5f
     val rad = r * PI.toFloat() / 180f
-    return CardPose(bx + 200f * sin(rad) - y * sin(rad), by + 200f * (1 - cos(rad)) + y * cos(rad), r, 1f)
+    return CardPose(bx + 200f * sin(rad) - y * sin(rad), by + 200f * (1 - cos(rad)) + y * cos(rad), r, s)
 }
 
 private fun hitCard(p: Offset, pose: CardPose): Boolean {
@@ -807,27 +836,30 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
         // escenario: la fruta a la izquierda y los enemigos a la derecha
         // la cámara del teléfono tapa el borde: todo el escenario empieza después del recorte (y un poco más a la derecha)
         val safe = LocalSafeInsets.current
+        // las placas se reparten el ancho que queda (cada enemigo de más las achica) y los dibujos se ajustan a su placa
+        val padStart = (if (multi) 16f else 56f) + safe.left + 44f
+        val padEnd = (if (multi) 16f else 56f) + safe.right
+        val meW = if (multi) 230f else 270f
+        val enemyGap = 12f
+        val enemyW = if (!multi) 270f
+        else ((designW - padStart - padEnd - meW - 36f - enemyGap * (ui.enemies.size - 1)) / ui.enemies.size).coerceIn(150f, 260f)
         Row(
-            Modifier.fillMaxSize().padding(
-                start = (if (multi) 16f else 60f).dp + (safe.left + 44f).dp, end = (if (multi) 16f else 60f).dp + safe.right.dp,
-                top = 56.dp, bottom = 248.dp
-            ),
+            Modifier.fillMaxSize().padding(start = padStart.dp, end = padEnd.dp, top = 56.dp, bottom = 272.dp),
             verticalAlignment = Alignment.Bottom
         ) {
             val me = ui.player
-            val meW = if (multi) 330f else 400f
             Box {
-                CombatantView(me, ctl.actors[0], ctl, clock, meW, if (multi) 128f else 164f, multi, 0)
+                CombatantView(me, ctl.actors[0], ctl, clock, meW, if (multi) 108f else 140f, multi, 0)
                 if (ui.showGarden) Garden(ui.garden, Modifier.align(Alignment.TopCenter))
             }
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                 BasicText("vs", style = Fonts.hand(40f, Color(0xFFA57A4E)), modifier = Modifier.graphicsLayer { rotationZ = -8f })
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Bottom) {
+            Row(horizontalArrangement = Arrangement.spacedBy(enemyGap.dp), verticalAlignment = Alignment.Bottom) {
                 ui.enemies.forEachIndexed { i, e ->
                     key(i) {
-                        val size = if (multi) 140f else if (e.tier == "boss") 214f else 184f
-                        CombatantView(e, ctl.actors[1 + i], ctl, clock, if (multi) 262f else 400f, size, multi, i + 1)
+                        val size = if (multi) min(116f, enemyW - 36f).coerceAtLeast(88f) else if (e.tier == "boss") 152f else 150f
+                        CombatantView(e, ctl.actors[1 + i], ctl, clock, enemyW, size, multi, i + 1)
                     }
                 }
             }
@@ -838,17 +870,17 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
             Box(Modifier.tutAnchor("energy")) { EnergyOrange(ui.energy, ui.maxEnergy, ctl.orangeNope, ctl) }
             Pile("robo", ui.drawCount, "draw", ctl)
         }
-        Column(Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 12.dp).width(200.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 12.dp).width(HAND_SIDE.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy((-14).dp)) {
                 Pile("compost", ui.exhaustCount, "exhaust", ctl)
                 Pile("descarte", ui.discardCount, "discard", ctl)
             }
-            StickerButton("Terminar turno", { ctl.endTurn() }, Modifier.tutAnchor("end-turn"), enabled = ui.playerTurn, fontSize = 19f, padding = PaddingValues(horizontal = 18.dp, vertical = 9.dp))
-            BasicText("turno ${ui.turnNumber}", style = Fonts.hand(20f, Color(0xFF7A5634)))
+            StickerButton("Terminar turno", { ctl.endTurn() }, Modifier.tutAnchor("end-turn"), enabled = ui.playerTurn, fontSize = 24f, padding = PaddingValues(horizontal = 20.dp, vertical = 13.dp))
+            BasicText("turno ${ui.turnNumber}", style = Fonts.hand(22f, Color(0xFF7A5634)))
         }
 
         // la mano (el recuadro de abajo es lo que ilumina el tutorial: las cartas giran en abanico y no se pueden medir sueltas)
-        Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = 230.dp).fillMaxWidth().height(236.dp).tutAnchor("hand"))
+        Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = HAND_SIDE.dp).fillMaxWidth().height((DESIGN_H - HAND_TOP + 8f).dp).tutAnchor("hand"))
         Box(Modifier.fillMaxSize()) {
             ui.hand.forEachIndexed { i, h -> key(h.key) { HandCardView(h, i, ui.hand.size, ctl, designW, drag, discarding) } }
             val sel = ctl.selected

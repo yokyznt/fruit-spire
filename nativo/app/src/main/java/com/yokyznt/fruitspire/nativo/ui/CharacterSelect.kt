@@ -66,7 +66,7 @@ fun Tape(kind: Int, modifier: Modifier = Modifier, rotation: Float = -3f) {
 
 /** Foto instantánea de una fruta (`.polaroid`): se levanta y salta cuando está elegida. */
 @Composable
-private fun Polaroid(c: CharacterDef, index: Int, selected: Boolean, progress: Progress, onClick: () -> Unit) {
+private fun Polaroid(c: CharacterDef, index: Int, selected: Boolean, progress: Progress, width: Float, onClick: () -> Unit) {
     val tilt = floatArrayOf(-4f, 2f, -1.5f, 3f)[index % 4]
     val drop = floatArrayOf(0f, 12f, 0f, 6f)[index % 4]
     val photoColors = listOf(Ink.bananaSoft to Ink.peachSoft, Ink.mintSoft to Color(0xFFFFF6D6), Color(0xFFE9F6D6) to Ink.grapeSoft, Ink.grapeSoft to Color(0xFFFFE6F0))[index % 4]
@@ -75,7 +75,7 @@ private fun Polaroid(c: CharacterDef, index: Int, selected: Boolean, progress: P
     )
     val level = progress.level(c.id)
     Box(
-        Modifier.width(240.dp).graphicsLayer {
+        Modifier.width(width.dp).graphicsLayer {
             rotationZ = if (selected) 0f else tilt
             translationY = (if (selected) -14f else drop) * density
             scaleX = if (selected) 1.05f else 1f
@@ -154,11 +154,15 @@ fun CharacterSelectScreen(
     val starter = remember(sel.id) { World.starterDeck(sel.id).distinct().mapNotNull { Cards.get(it) }.filter { it.character != null } }
     Column(Modifier.fillMaxSize().padding(top = 6.dp, bottom = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         BasicText("Elige tu fruta", style = Fonts.hand(40f))
-        Row(Modifier.padding(top = 28.dp, bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(26.dp)) {
-            chars.forEachIndexed { i, c -> Polaroid(c, i, c.id == sel.id, progress) { onSelectChar(c.id) } }
+        // las fotos se achican para que las cuatro quepan en pantallas poco anchas, y dejan aire abajo (las "caídas" y la sombra no tocan el panel)
+        val screenW = LocalDesignWidth.current
+        val gap = 26f
+        val cardW = ((screenW - 48f - gap * (chars.size - 1)) / chars.size).coerceAtMost(240f)
+        Row(Modifier.padding(top = 22.dp, bottom = 30.dp), horizontalArrangement = Arrangement.spacedBy(gap.dp)) {
+            chars.forEachIndexed { i, c -> Polaroid(c, i, c.id == sel.id, progress, cardW) { onSelectChar(c.id) } }
         }
         Column(
-            Modifier.width(1000.dp).paperPanel(radius = 6.dp).padding(horizontal = 24.dp, vertical = 12.dp),
+            Modifier.width(kotlin.math.min(1000f, screenW - 40f).dp).paperPanel(radius = 6.dp).padding(horizontal = 24.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             BasicText(sel.name, style = Fonts.hand(31f))

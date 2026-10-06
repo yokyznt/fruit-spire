@@ -116,6 +116,8 @@ fun HudBar(
 ) {
     val scale = if (compact) 1f else 1.17f
     val safe = LocalSafeInsets.current
+    // en pantallas poco anchas (4:3, tabletas) se quita lo repetido o secundario para que nada se salga por la derecha
+    val narrow = LocalDesignWidth.current < 1000f
     Row(
         modifier.fillMaxWidth().height((58 * scale).dp).padding(start = (22f + safe.left).dp, end = (22f + safe.right).dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -130,7 +132,7 @@ fun HudBar(
         ) {
             Sprite(state.diffSprite, 24.dp)
             BasicText("Castillo ${state.castle}", style = Fonts.display(19f * scale))
-            BasicText("Piso ${state.floor} · ${state.floorName}", style = Fonts.hand(19f * scale, Ink.inkSoft))
+            BasicText(if (narrow) "Piso ${state.floor}" else "Piso ${state.floor} · ${state.floorName}", style = Fonts.hand(19f * scale, Ink.inkSoft))
         }
         // vida
         HudGain(state.hp, Color(0xFFC8374F), "hp") {
@@ -140,7 +142,7 @@ fun HudBar(
             ) {
                 Sprite("ui_heart", 24.dp)
                 BasicText("${state.hp}/${state.maxHp}", style = Fonts.body(18f * scale, FontWeight.Bold))
-                HpBar(state.hp, state.maxHp, Modifier.width(80.dp), height = 14.dp, showText = false)
+                if (!narrow) HpBar(state.hp, state.maxHp, Modifier.width(80.dp), height = 14.dp, showText = false)
             }
         }
         // oro
@@ -162,7 +164,7 @@ fun HudBar(
             ) {
                 Sprite("ui_bag", 28.dp)
                 BasicText("${state.relics.size}", style = Fonts.display(20f * scale))
-                state.relics.takeLast(2).reversed().forEach { rid ->
+                state.relics.takeLast(if (narrow) 1 else 2).reversed().forEach { rid ->
                     if (Relics.get(rid) != null) Sprite(rid, 24.dp)
                 }
                 state.seeds.forEach { id ->

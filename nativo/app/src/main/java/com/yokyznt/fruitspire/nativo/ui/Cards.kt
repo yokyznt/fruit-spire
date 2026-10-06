@@ -325,7 +325,7 @@ fun SeedArt(seed: SeedDef, size: Dp, modifier: Modifier = Modifier, silhouette: 
 // Barra de vida de "jugo": relleno rayado, estela clara que baja después y cifras encima
 // ---------------------------------------------------------------------------------------------------------------
 @Composable
-fun HpBar(hp: Int, maxHp: Int, modifier: Modifier = Modifier, height: Dp = 28.dp, showText: Boolean = true, delayMs: Int = 0) {
+fun HpBar(hp: Int, maxHp: Int, modifier: Modifier = Modifier, height: Dp = 28.dp, showText: Boolean = true, delayMs: Int = 0, textScale: Float = .52f) {
     val target = if (maxHp <= 0) 0f else (hp.toFloat() / maxHp).coerceIn(0f, 1f)
     val fill = remember { Animatable(target) }
     val ghost = remember { Animatable(target) }
@@ -336,7 +336,7 @@ fun HpBar(hp: Int, maxHp: Int, modifier: Modifier = Modifier, height: Dp = 28.dp
     Box(modifier.height(height)) {
         Canvas(Modifier.fillMaxSize()) {
             val r = size.height / 2f
-            val stroke = 2.5.dp.toPx()
+            val stroke = (if (height >= 30.dp) 3.5.dp else 2.5.dp).toPx()
             val clip = Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))) }
             clipPath(clip) {
                 drawRect(Ink.strawberrySoft)
@@ -359,7 +359,7 @@ fun HpBar(hp: Int, maxHp: Int, modifier: Modifier = Modifier, height: Dp = 28.dp
         }
         if (showText) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                OutlinedText("$hp/$maxHp", Fonts.body(height.value * .52f, FontWeight.Bold), inkWidth = 0.dp, edgeWidth = 1.5.dp)
+                OutlinedText("$hp/$maxHp", Fonts.body(height.value * textScale, FontWeight.Bold), inkWidth = 0.dp, edgeWidth = if (textScale > .55f) 2.5.dp else 1.5.dp)
             }
         }
     }
