@@ -16,7 +16,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -61,6 +64,7 @@ import com.yokyznt.fruitspire.core.Run
 import com.yokyznt.fruitspire.core.Table
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -134,71 +138,120 @@ private fun PlayingTable(run: Run, ctl: TableController, onCollect: (Int) -> Uni
 @Composable
 private fun TableIntro(run: Run, table: Table, onStart: (Int) -> Unit, onLeave: () -> Unit) {
     val info = Casino.KINDS.getValue(table.kind)
-    PaperScreen(info.name, art = { Sprite(info.sprite, 110.dp) }) {
-        BasicText(info.rules, style = Fonts.body(18f, color = Ink.inkSoft).copy(textAlign = TextAlign.Center), modifier = Modifier.width(640.dp))
+    PaperScreen(info.name, art = {
+        // el crupier de la mesa, grande, saludando con su globo
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(150.dp), contentAlignment = Alignment.BottomCenter) { Sprite(info.dealer, 150.dp) }
+            SpeechBubble("¿Te atreves?", Modifier.padding(bottom = 70.dp), fontSize = 26f, tailLeft = true)
+        }
+    }) {
+        BasicText(info.rules, style = Fonts.body(22f, color = Ink.inkSoft).copy(textAlign = TextAlign.Center), modifier = Modifier.width(820.dp))
         if (table.kind == "chess") {
-            StickerButton("¡Jugar!", { onStart(0) }, color = Ink.mint, fontSize = 22f, modifier = Modifier.padding(top = 6.dp))
+            StickerButton("¡Jugar!", { onStart(0) }, color = Ink.mint, fontSize = 30f, padding = PaddingValues(horizontal = 56.dp, vertical = 16.dp), modifier = Modifier.padding(top = 6.dp))
         } else {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
-                BasicText("¿Cuánto apuestas? Tienes", style = Fonts.hand(25f))
-                Sprite("ui_coin", 26.dp)
-                BasicText("${run.player.gold}", style = Fonts.hand(25f).copy(fontWeight = FontWeight.Bold))
+                BasicText("¿Cuánto apuestas? Tienes", style = Fonts.hand(29f))
+                Sprite("ui_coin", 32.dp)
+                BasicText("${run.player.gold}", style = Fonts.hand(29f).copy(fontWeight = FontWeight.Bold))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 listOf(10, 25, 50).forEach { b ->
                     StickerButton(
                         "$b", { onStart(b) }, color = if (b == 25) Ink.banana else Ink.peach, enabled = run.player.gold >= b,
-                        fontSize = 21f, leading = { Sprite("ui_coin", 26.dp) }
+                        fontSize = 28f, padding = PaddingValues(horizontal = 34.dp, vertical = 14.dp), leading = { Sprite("ui_coin", 32.dp) }
                     )
                 }
-                StickerButton("Gratis", { onStart(0) }, secondary = true, fontSize = 18f)
+                StickerButton("Gratis", { onStart(0) }, secondary = true, fontSize = 26f, padding = PaddingValues(horizontal = 32.dp, vertical = 14.dp))
             }
-            BasicText("Gratis: si ganas, la casa te da 8 de oro; si pierdes, no pierdes nada.", style = Fonts.body(14f, color = Ink.inkSoft))
+            BasicText("Gratis: si ganas, la casa te da 8 de oro; si pierdes, no pierdes nada.", style = Fonts.body(17f, color = Ink.inkSoft))
         }
-        StickerButton("Irme sin jugar", onLeave, secondary = true, fontSize = 24f)
+        StickerButton("Irme sin jugar", onLeave, secondary = true, fontSize = 26f, padding = PaddingValues(horizontal = 36.dp, vertical = 14.dp))
     }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // Marco: crupier, fichas y sello
 // ---------------------------------------------------------------------------------------------------------------
+/** Agranda lo que lleva dentro hasta llenar el espacio que hay (sin pasar de [maxScale]); los toques siguen funcionando sobre lo agrandado. */
+@Composable
+private fun AutoFit(maxScale: Float, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    androidx.compose.ui.layout.Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val p = measurables.first().measure(androidx.compose.ui.unit.Constraints(maxWidth = constraints.maxWidth, maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
+        val s = min(maxScale, min(constraints.maxWidth.toFloat() / p.width.coerceAtLeast(1), constraints.maxHeight.toFloat() / p.height.coerceAtLeast(1))).coerceAtLeast(.5f)
+        layout((p.width * s).roundToInt(), (p.height * s).roundToInt()) {
+            p.placeRelativeWithLayer(0, 0) { scaleX = s; scaleY = s; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f) }
+        }
+    }
+}
+
+/** Lo que cabe a la izquierda de la mesa: el crupier con su globo (grande, para que se vea y se lea sin esfuerzo). */
+private const val DEALER_W = 330f
+
+/** El globo de diálogo del crupier: salta al cambiar el texto. [tailLeft] pone la colita a la izquierda (el crupier está a su lado); si no, abajo (está debajo). */
+@Composable
+private fun SpeechBubble(text: String, modifier: Modifier = Modifier, fontSize: Float = 28f, tailLeft: Boolean = false) {
+    val pop = remember(text) { Animatable(.8f) }
+    LaunchedEffect(text) { pop.animateTo(1f, spring(dampingRatio = .45f, stiffness = Spring.StiffnessMedium)) }
+    Box(
+        modifier.widthIn(max = 320.dp)
+            .graphicsLayer { scaleX = pop.value; scaleY = pop.value; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(if (tailLeft) 0f else .5f, 1f) }
+            .drawBehind {
+                val k = density
+                val r = 20f * k
+                drawRoundRect(Color(0x40000000), Offset(0f, 4f * k), size, CornerRadius(r))
+                drawRoundRect(Ink.ink, Offset(-3f * k, -3f * k), Size(size.width + 6f * k, size.height + 6f * k), CornerRadius(r + 3f * k))
+                drawRoundRect(Color(0xFFFFFDF7), Offset.Zero, size, CornerRadius(r))
+                val tri = Path().apply {
+                    if (tailLeft) { moveTo(1f, size.height * .3f); lineTo(-16f * k, size.height * .5f); lineTo(1f, size.height * .7f) }
+                    else { val m = size.width / 2f; moveTo(m - 14f * k, size.height - 1f); lineTo(m, size.height + 18f * k); lineTo(m + 14f * k, size.height - 1f) }
+                    close()
+                }
+                drawPath(tri, Ink.ink, style = Stroke(6f * k))
+                drawPath(tri, Color(0xFFFFFDF7))
+            }
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+    ) { BasicText(text, style = Fonts.hand(fontSize).copy(textAlign = TextAlign.Center), maxLines = 3) }
+}
+
+/**
+ * El crupier, grande, y lo que dice: sus frases cambian con lo que haces y con cómo vas (preocupado si ganas, burlón si pierdes).
+ */
+@Composable
+private fun Dealer(table: Table, dealer: String, modifier: Modifier = Modifier) {
+    val wobble = rememberInfiniteTransition(label = "crupier")
+    val tilt by wobble.animateFloat(-3f, 3f, infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Reverse), label = "tilt")
+    val mood = when { table.ahead > 0 -> "hurt"; table.ahead < 0 -> "wink"; else -> null }
+    Column(modifier.width(DEALER_W.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        SpeechBubble(table.dealerLine, Modifier.padding(bottom = 24.dp))
+        Box(Modifier.graphicsLayer { rotationZ = tilt; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 1f) }) { Sprite(dealer, 230.dp, mood = mood) }
+    }
+}
+
 @Composable
 private fun TableFrame(table: Table, ctl: TableController, content: @Composable () -> Unit) {
     val info = Casino.KINDS.getValue(table.kind)
     val result = table.phase == "result"
     val safe = LocalSafeInsets.current
-    val left = 30f + safe.left
-    val right = 30f + safe.right
+    // la cámara solo tapa un lado, pero la mesa se centra: el margen es igual a los dos lados
+    val side = 30f + max(safe.left, safe.right)
     Box(Modifier.fillMaxSize().feltTable()) {
-        Column(
-            Modifier.fillMaxSize().padding(start = left.dp, end = right.dp, top = (HUD_H + 8).dp, bottom = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
-        ) { content() }
-        Dealer(table, info.dealer, Modifier.align(Alignment.TopStart).padding(start = left.dp, top = (HUD_H + 8).dp), happy = !(result && table.outcome == "win"))
-        if (table.kind != "chess") Pot(table, Modifier.align(Alignment.TopEnd).padding(end = (right + 8f).dp, top = (HUD_H + 14).dp))
-        if (result && table.kind != "chess") Stamp(table.outcome, Modifier.align(Alignment.BottomEnd).padding(end = (right + 34f).dp, bottom = 74.dp))
-        CoinRain(ctl.coinRain)
-    }
-}
-
-@Composable
-private fun Dealer(table: Table, dealer: String, modifier: Modifier, happy: Boolean) {
-    val wobble = rememberInfiniteTransition(label = "crupier")
-    val tilt by wobble.animateFloat(-3f, 3f, infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Reverse), label = "tilt")
-    Row(modifier, verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.graphicsLayer { rotationZ = tilt }) { Sprite(dealer, 78.dp, mood = if (happy) null else "hurt") }
-        Box(
-            Modifier.padding(top = 10.dp).widthIn(max = 190.dp)
-                .drawBehind {
-                    val r = 16.dp.toPx()
-                    drawRoundRect(Color(0x40000000), Offset(0f, 3.dp.toPx()), size, CornerRadius(r))
-                    drawRoundRect(Ink.ink, Offset(-2.dp.toPx(), -2.dp.toPx()), Size(size.width + 4.dp.toPx(), size.height + 4.dp.toPx()), CornerRadius(r + 2.dp.toPx()))
-                    drawRoundRect(Color(0xFFFFFDF7), Offset.Zero, size, CornerRadius(r))
-                    val tri = Path().apply { moveTo(0f, 12.dp.toPx()); lineTo(-9.dp.toPx(), 20.dp.toPx()); lineTo(0f, 28.dp.toPx()); close() }
-                    drawPath(tri, Ink.ink)
+        // el crupier y la mesa van juntos: la mesa se agranda hasta llenar el resto de la pantalla
+        Row(
+            Modifier.fillMaxSize().padding(start = side.dp, end = side.dp, top = (HUD_H + 4).dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Dealer(table, info.dealer)
+            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
+                AutoFit(maxScale = 1.6f) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { content() }
                 }
-                .padding(horizontal = 12.dp, vertical = 5.dp)
-        ) { BasicText(table.dealerLine, style = Fonts.hand(19f)) }
+            }
+            // el lugar de las fichas apostadas
+            if (table.kind != "chess") Spacer(Modifier.width(96.dp))
+        }
+        if (table.kind != "chess") Pot(table, Modifier.align(Alignment.TopEnd).padding(end = (side + 8f).dp, top = (HUD_H + 14).dp))
+        if (result && table.kind != "chess") Stamp(table.outcome, Modifier.align(Alignment.BottomEnd).padding(end = (side + 34f).dp, bottom = 74.dp))
+        CoinRain(ctl.coinRain)
     }
 }
 

@@ -62,7 +62,7 @@ fun NotesScreen(onBack: () -> Unit, endingSeen: Boolean = false, onReplayStory: 
             // repetir la historia y, si ya la viste, el final (js/notes.js)
             StickerButton("Ver la historia otra vez", onReplayStory, color = Ink.banana, fontSize = 18f, padding = PaddingValues(horizontal = 22.dp, vertical = 8.dp))
             if (endingSeen) StickerButton("Ver el final otra vez", onReplayEnding, color = Ink.mint, fontSize = 18f, padding = PaddingValues(horizontal = 22.dp, vertical = 8.dp))
-            StickerButton("Volver", onBack, secondary = true, fontSize = 18f, padding = PaddingValues(horizontal = 26.dp, vertical = 6.dp))
+            StickerButton("Volver", onBack, secondary = true, fontSize = 24f, padding = PaddingValues(horizontal = 34.dp, vertical = 10.dp))
         }
         LazyColumn(
             Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(top = 6.dp, bottom = 12.dp, end = 4.dp),

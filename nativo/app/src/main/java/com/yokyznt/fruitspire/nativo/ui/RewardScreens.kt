@@ -63,14 +63,15 @@ fun PaperScreen(
     title: String, modifier: Modifier = Modifier, art: (@Composable () -> Unit)? = null, celebrate: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val safe = LocalSafeInsets.current
+    // la cámara solo tapa un lado, pero el contenido se centra: el margen es el mismo a los dos lados (el mayor)
+    val side = LocalSafeInsets.current.let { kotlin.math.max(it.left, it.right) }
     // entrada (panelIn de css/style.css): sube 36 px girada y se endereza en 0,55 s
     val enter = remember { Animatable(0f) }
     LaunchedEffect(Unit) { enter.animateTo(1f, tween(550, easing = CubicBezierEasing(.22f, 1f, .36f, 1f))) }
     Box(modifier.fillMaxSize().background(Ink.paper2)) {
         Column(
             Modifier.fillMaxSize()
-                .padding(top = HUD_H.dp, start = (24f + safe.left).dp, end = (24f + safe.right).dp, bottom = 10.dp)
+                .padding(top = HUD_H.dp, start = (24f + side).dp, end = (24f + side).dp, bottom = 10.dp)
                 .graphicsLayer {
                     val k = 1f - enter.value
                     translationY = 36f * k * density

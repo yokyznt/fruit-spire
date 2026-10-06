@@ -91,7 +91,7 @@ fun InventoryModal(run: Run, usable: Boolean, onUseSeed: (Int) -> Unit, onDropSe
             Sprite("ui_bag", 42.dp)
             BasicText("Mochila", style = Fonts.hand(38f))
             Box(Modifier.weight(1f))
-            StickerButton("Cerrar", onClose, secondary = true, fontSize = 17f, padding = PaddingValues(horizontal = 18.dp, vertical = 4.dp))
+            StickerButton("Cerrar", onClose, secondary = true, fontSize = 22f, padding = PaddingValues(horizontal = 28.dp, vertical = 8.dp))
         }
 
         // ---------- semillas ----------

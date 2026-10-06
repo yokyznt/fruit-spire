@@ -140,7 +140,7 @@ fun CollectionScreen(progress: Progress, state: CollectionState, onInfo: (String
             BasicText("Colección", style = Fonts.hand(40f))
             Spacer(Modifier.weight(1f))
             BasicText(Album.countText(state.tab, progress), style = Fonts.hand(25f, Ink.inkSoft))
-            StickerButton("Volver", onBack, secondary = true, fontSize = 17f, padding = PaddingValues(horizontal = 18.dp, vertical = 4.dp))
+            StickerButton("Volver", onBack, secondary = true, fontSize = 22f, padding = PaddingValues(horizontal = 28.dp, vertical = 8.dp))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
             Album.TABS.forEach { (id, label) -> Pill(label, state.tab == id, { state.pickTab(id) }) { TabIcon(id) } }

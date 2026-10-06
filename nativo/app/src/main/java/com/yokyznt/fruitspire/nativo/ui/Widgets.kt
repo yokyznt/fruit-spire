@@ -41,6 +41,9 @@ import com.yokyznt.fruitspire.core.data.gen.Sfx
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** El relleno de los botones secundarios («Volver», «Irme», «Salir»…): arena, más oscura que el papel para que se note. */
+private val SecondaryFill = Color(0xFFF0DFBF)
+
 /** Rectángulo redondeado con el contorno de tinta y el filo blanco de los stickers. */
 fun DrawScope.stickerShape(fill: Color, radius: Float, inkWidth: Float, edgeWidth: Float, dashed: Boolean = false, topLeft: Offset = Offset.Zero, size: Size = this.size) {
     val r = CornerRadius(radius.coerceAtMost(size.minDimension / 2f))
@@ -85,7 +88,7 @@ fun StickerButton(
     val press = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val audio = LocalAudio.current
-    val lift = if (secondary) 2.dp else 5.dp
+    val lift = 5.dp
     Box(
         modifier
             // el alfa NO va aquí: una capa con alfa se recorta a los límites del botón y cortaba el contorno y la sombra de arriba y abajo
@@ -98,14 +101,11 @@ fun StickerButton(
                     androidx.compose.ui.geometry.Rect(-pad, -pad, size.width + pad, size.height + pad),
                     androidx.compose.ui.graphics.Paint().apply { alpha = .45f }
                 )
-                if (secondary) {
-                    stickerShape(Ink.paper2, size.height / 2f, 0f, 2.dp.toPx(), dashed = true)
-                } else {
-                    // sombra de tinta debajo: el botón "flota" sobre ella
-                    val drop = lift.toPx() * (1f - press.value)
-                    drawRoundRect(Ink.ink, Offset(-ink, -ink + drop), Size(size.width + ink * 2, size.height + ink * 2), CornerRadius(size.height / 2f + ink))
-                    stickerShape(color, size.height / 2f, ink, 3.dp.toPx())
-                }
+                // sombra de tinta debajo: el botón "flota" sobre ella. Los secundarios («Volver», «Irme»…) también son sólidos
+                // (arena con contorno de tinta), para que se vean y se puedan presionar igual que los demás
+                val drop = lift.toPx() * (1f - press.value)
+                drawRoundRect(Ink.ink, Offset(-ink, -ink + drop), Size(size.width + ink * 2, size.height + ink * 2), CornerRadius(size.height / 2f + ink))
+                stickerShape(if (secondary) SecondaryFill else color, size.height / 2f, ink, 3.dp.toPx())
                 if (dim) drawContext.canvas.restore()
             }
             .pointerInput(enabled) {
@@ -122,13 +122,13 @@ fun StickerButton(
                     }
                 )
             }
-            .defaultMinSize(minHeight = 44.dp)
+            .defaultMinSize(minHeight = if (secondary) 52.dp else 44.dp, minWidth = if (secondary) 120.dp else 0.dp)
             .padding(padding),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             if (leading != null) { leading(); Spacer(Modifier.width(8.dp)) }
-            val textStyle = if (secondary) Fonts.hand(fontSize * 1.2f) else Fonts.body(fontSize, FontWeight.SemiBold)
+            val textStyle = Fonts.body(fontSize, FontWeight.SemiBold)
             BasicText(text, style = if (enabled) textStyle else textStyle.copy(color = textStyle.color.copy(alpha = .45f)), maxLines = 1)
         }
     }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -79,19 +80,19 @@ private fun EventArt(ev: EventDef, size: Dp = 140.dp) = ArtOrEmoji(ev.sprite ?: 
 fun EventScreen(run: Run, onOption: (Int) -> Unit) {
     val ev = run.currentEvent ?: return
     PaperScreen(ev.title, art = { EventArt(ev) }) {
-        BasicText(ev.desc, style = Fonts.body(23f, color = Ink.inkSoft).copy(textAlign = TextAlign.Center), modifier = Modifier.width(980.dp))
-        Column(Modifier.width(820.dp).padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        BasicText(ev.desc, style = Fonts.body(25f, color = Ink.inkSoft).copy(textAlign = TextAlign.Center), modifier = Modifier.width(980.dp))
+        Column(Modifier.width(940.dp).padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ev.options.forEachIndexed { i, o ->
                 val locked = o.locked?.invoke(run.player).orEmpty()
                 Box(
                     Modifier.fillMaxWidth().tutAnchor("event-options").graphicsLayer { alpha = if (locked.isEmpty()) 1f else .5f }
                         .stickerCard(16.dp, fill = toneColor(optionTone(o)))
                         .let { m -> if (locked.isEmpty()) m.tap { onOption(i) } else m }
-                        .padding(horizontal = 22.dp, vertical = 14.dp)
+                        .padding(horizontal = 26.dp, vertical = 20.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GameText(o.text, Fonts.body(23f, FontWeight.Medium))
-                        if (locked.isNotEmpty()) BasicText("($locked)", style = Fonts.body(17f, color = Ink.inkSoft))
+                        GameText(o.text, Fonts.body(28f, FontWeight.Medium))
+                        if (locked.isNotEmpty()) BasicText("($locked)", style = Fonts.body(20f, color = Ink.inkSoft))
                     }
                 }
             }
@@ -157,10 +158,10 @@ fun WellScreen(run: Run, onToss: () -> Unit, onCollect: (Int) -> Unit, onDrop: (
         }
         Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
             StickerButton(
-                "Tirar moneda ($cost)", onToss, color = Ink.mint, enabled = run.player.gold >= cost && !pending, fontSize = 20f,
-                leading = { Sprite("ui_coin", 26.dp) }
+                "Tirar moneda ($cost)", onToss, color = Ink.mint, enabled = run.player.gold >= cost && !pending, fontSize = 26f,
+                padding = PaddingValues(horizontal = 34.dp, vertical = 14.dp), leading = { Sprite("ui_coin", 32.dp) }
             )
-            StickerButton("Irme", onLeave, secondary = true, enabled = !pending, fontSize = 24f)
+            StickerButton("Irme", onLeave, secondary = true, enabled = !pending, fontSize = 26f, padding = PaddingValues(horizontal = 34.dp, vertical = 14.dp))
         }
     }
 }
@@ -249,10 +250,10 @@ fun FateScreen(run: Run, shown: Int?, rolling: Boolean, onRoll: () -> Unit, onFi
                 BasicText(tier.name, style = Fonts.display(30f, col))
                 BasicText("· ${tier.text}", style = Fonts.hand(24f))
             }
-            StickerButton("¡A pelear!", onFight, color = Ink.mint, fontSize = 22f)
+            StickerButton("¡A pelear!", onFight, color = Ink.mint, fontSize = 28f, padding = PaddingValues(horizontal = 44.dp, vertical = 16.dp))
         } else {
-            BasicText("Tira antes de pelear.", style = Fonts.body(19f, color = Ink.inkSoft))
-            StickerButton("Tirar", onRoll, color = Ink.banana, enabled = !rolling, fontSize = 22f)
+            BasicText("Tira antes de pelear.", style = Fonts.body(21f, color = Ink.inkSoft))
+            StickerButton("Tirar", onRoll, color = Ink.banana, enabled = !rolling, fontSize = 28f, padding = PaddingValues(horizontal = 44.dp, vertical = 16.dp))
         }
     }
 }

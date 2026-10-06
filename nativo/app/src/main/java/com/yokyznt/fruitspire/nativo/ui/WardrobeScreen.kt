@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -75,7 +76,7 @@ fun WardrobeScreen(
                     "Mascotitas: se ganan con retos. Colores y accesorios: en el Pase de Batalla.",
                     style = Fonts.body(13.5f, color = Ink.inkSoft).copy(textAlign = TextAlign.Center, lineHeight = 17.sp), modifier = Modifier.padding(horizontal = 8.dp)
                 )
-                StickerButton("Volver", onBack, secondary = true, fontSize = 18f, modifier = Modifier.padding(top = 4.dp))
+                StickerButton("Volver", onBack, secondary = true, fontSize = 24f, padding = PaddingValues(horizontal = 34.dp, vertical = 12.dp), modifier = Modifier.padding(top = 4.dp))
             }
             // derecha: lo que se puede poner
             Column(

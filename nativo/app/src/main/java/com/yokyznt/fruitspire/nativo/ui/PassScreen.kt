@@ -79,7 +79,7 @@ fun PassScreen(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 StickerButton("Ir al Vestidor", onWardrobe, color = Ink.grapeBtn, fontSize = 20f)
-                StickerButton("Volver", onBack, secondary = true, fontSize = 18f)
+                StickerButton("Volver", onBack, secondary = true, fontSize = 24f, padding = PaddingValues(horizontal = 34.dp, vertical = 12.dp))
             }
         }
     }

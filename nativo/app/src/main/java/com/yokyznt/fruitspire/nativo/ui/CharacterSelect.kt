@@ -180,7 +180,7 @@ fun CharacterSelectScreen(
             BasicText(diff.desc, style = Fonts.hand(21f, Ink.inkSoft).copy(textAlign = TextAlign.Center), modifier = Modifier.padding(top = 6.dp))
         }
         Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-            StickerButton("Volver", onBack, secondary = true, fontSize = 18f)
+            StickerButton("Volver", onBack, secondary = true, fontSize = 24f, padding = androidx.compose.foundation.layout.PaddingValues(horizontal = 34.dp, vertical = 12.dp))
             StickerButton("¡A jugar con ${sel.name}!", onPlay, color = Ink.mint, fontSize = 22f, padding = androidx.compose.foundation.layout.PaddingValues(horizontal = 34.dp, vertical = 12.dp))
         }
     }

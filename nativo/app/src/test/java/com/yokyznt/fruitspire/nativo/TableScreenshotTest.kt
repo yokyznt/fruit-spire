@@ -148,7 +148,8 @@ class TableScreenshotTest {
     fun ajedrezTocarYMover() {
         val (_, table) = chessSetup()
         val board = compose.onNodeWithTag("tablero")
-        val cs = board.fetchSemanticsNode().size.width / 5f
+        // la mesa se agranda para llenar la pantalla: los toques de la prueba se miden en píxeles de pantalla, ya con esa escala
+        val cs = board.fetchSemanticsNode().let { it.boundsInRoot.width } / 5f
         board.performTouchInput { click(Offset(cs * 2.5f, cs * 4.5f)) }   // el peón del centro
         compose.waitForIdle()
         assertEquals(4 to 2, table.sel!!.let { it.r to it.c })
@@ -168,7 +169,7 @@ class TableScreenshotTest {
     fun ajedrezArrastrar() {
         val (_, table) = chessSetup()
         val board = compose.onNodeWithTag("tablero")
-        val cs = board.fetchSemanticsNode().size.width / 5f
+        val cs = board.fetchSemanticsNode().let { it.boundsInRoot.width } / 5f
         board.performTouchInput { swipe(Offset(cs * 0.5f, cs * 4.5f), Offset(cs * 0.5f, cs * 3.5f), durationMillis = 300) }
         compose.waitForIdle()
         assertEquals('P', table.board[3][0]!!.t)

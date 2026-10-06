@@ -78,50 +78,41 @@ fun ActIntroScreen(run: Run, onGo: () -> Unit) {
         Modifier.fillMaxSize().padding(top = HUD_H.dp, bottom = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically)
     ) {
-        BasicText("${castle.name} · Piso ${p.floor} de ${World.FLOORS_PER_CASTLE}", style = Fonts.hand(31f, Ink.inkSoft))
+        // poco texto: el castillo se ve en los dibujos, así que solo dice el piso; la regla va con su nombre (se explica en el combate)
+        BasicText("Piso ${p.floor} de ${World.FLOORS_PER_CASTLE}", style = Fonts.hand(30f, Ink.inkSoft))
         CastleRow(p.act)
-        Box(Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value }) { Sprite("act_${theme.id}", 120.dp) }
+        Box(Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value }) { Sprite("act_${theme.id}", 130.dp) }
         Logo(theme.name, 70f)
-        if (rule != null) {
-            Row(
-                Modifier.padding(top = 4.dp).chip(18.dp, Ink.paper2).padding(horizontal = 14.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Sprite(theme.rule!!.info.sprite, 50.dp)
-                Column {
-                    BasicText(rule.name, style = Fonts.hand(23f))
-                    GameText(rule.desc, Fonts.body(15f, color = Ink.inkSoft), maxLines = 2)
+        // una sola fila de fichas pequeñas: regla del piso, lo recuperado y la maldición que entró
+        Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (rule != null) {
+                Row(Modifier.chip(99.dp, Ink.paper2).padding(start = 8.dp, end = 18.dp, top = 3.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Sprite(theme.rule!!.info.sprite, 40.dp)
+                    BasicText(rule.name, style = Fonts.hand(25f))
                 }
             }
-        }
-        if (run.actHealed > 0 && (p.act > 1 || p.floor > 1)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Sprite("ui_heal", 24.dp)
-                GameText("Recuperaste ${run.actHealed} ❤️ en el camino.", Fonts.body(18f, FontWeight.SemiBold, androidx.compose.ui.graphics.Color(0xFF4E9A35)))
+            if (run.actHealed > 0 && (p.act > 1 || p.floor > 1)) {
+                Row(Modifier.chip(99.dp, Ink.leafSoft).padding(start = 8.dp, end = 16.dp, top = 3.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Sprite("ui_heal", 34.dp)
+                    BasicText("+${run.actHealed}", style = Fonts.display(25f, androidx.compose.ui.graphics.Color(0xFF3F8A2A)))
+                }
             }
-        }
-        run.actCurse?.let { id ->
-            Cards.get(id)?.let { c ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Sprite(c.sprite, 26.dp)
-                    BasicText("Se coló una maldición: ${c.name}.", style = Fonts.body(18f, FontWeight.SemiBold, androidx.compose.ui.graphics.Color(0xFF7A5BC4)))
+            run.actCurse?.let { id ->
+                Cards.get(id)?.let { c ->
+                    Row(Modifier.chip(99.dp, Ink.grapeSoft).padding(start = 8.dp, end = 16.dp, top = 3.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Sprite(c.sprite, 34.dp)
+                        BasicText(c.name, style = Fonts.hand(24f, androidx.compose.ui.graphics.Color(0xFF6A4BB4)))
+                    }
                 }
             }
         }
         Row(
-            Modifier.padding(top = 6.dp, bottom = 6.dp).rotate(-1f).chip(99.dp, Ink.strawberrySoft).padding(start = 10.dp, end = 20.dp, top = 4.dp, bottom = 4.dp),
+            Modifier.padding(top = 4.dp, bottom = 6.dp).rotate(-1f).chip(99.dp, Ink.strawberrySoft).padding(start = 10.dp, end = 22.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Sprite(boss.sprite ?: boss.id, 52.dp)
-            BasicText(
-                buildAnnotatedString {
-                    append("Al final te espera: ")
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(boss.name) }
-                    append(if (last) " (¡el último jefe!)" else if (guardian) " (guardián)" else " (jefe del castillo)")
-                },
-                style = Fonts.hand(23f)
-            )
+            Sprite(boss.sprite ?: boss.id, 56.dp)
+            BasicText(boss.name, style = Fonts.hand(27f))
         }
-        StickerButton("¡Adelante!", onGo, color = Ink.mint, fontSize = 23f, padding = PaddingValues(horizontal = 44.dp, vertical = 12.dp))
+        StickerButton("¡Adelante!", onGo, color = Ink.mint, fontSize = 28f, padding = PaddingValues(horizontal = 56.dp, vertical = 14.dp))
     }
 }
