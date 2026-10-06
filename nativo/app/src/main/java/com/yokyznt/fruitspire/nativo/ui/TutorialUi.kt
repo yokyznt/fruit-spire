@@ -110,18 +110,18 @@ fun tutorialText(text: String, bold: SpanStyle = SpanStyle(color = Color(0xFFC9A
 
 private val RingGold = Color(0xFFFFCF4D)
 
-/** Los marcos dorados que respiran sobre [rects]; con [solo] (un solo elemento en un paso de acción) el resto se oscurece. */
+/** Los marcos dorados que respiran sobre [rects]; todo lo demás se oscurece ([dim] = qué tanto, de 0 a 1) para no perder de vista lo que Profe Limón enseña. */
 @Composable
-private fun SpotRings(rects: List<Rect>, solo: Boolean) {
+private fun SpotRings(rects: List<Rect>, dim: Float) {
     if (rects.isEmpty()) return
     val pulse by rememberInfiniteTransition(label = "marco").animateFloat(0f, 1f, infiniteRepeatable(tween(1200, easing = EaseInOut), RepeatMode.Reverse), label = "p")
     Canvas(Modifier.fillMaxSize()) {
         val k = density
         val pad = 6f * k
         val boxes = rects.take(12).map { Rect(it.left - pad, it.top - pad, it.right + pad, it.bottom + pad) }
-        if (solo) {
+        if (dim > 0f) {
             val hole = Path().apply { boxes.forEach { addRoundRect(androidx.compose.ui.geometry.RoundRect(it, CornerRadius(14f * k))) } }
-            clipPath(hole, ClipOp.Difference) { drawRect(Color(0x80140E0A)) }
+            clipPath(hole, ClipOp.Difference) { drawRect(Color(0xFF140E0A).copy(alpha = dim)) }
         }
         boxes.forEach { r ->
             val radius = CornerRadius(14f * k + pad)
@@ -131,45 +131,70 @@ private fun SpotRings(rects: List<Rect>, solo: Boolean) {
     }
 }
 
-/** El globo: a un lado de lo iluminado, probando la posición que pide el paso y luego las demás hasta tapar lo menos posible. */
+/**
+ * El globo con Profe Limón: **pegado al lado de lo que enseña** (a su derecha o izquierda; si no cabe, arriba o abajo) para no
+ * perder al jugador. Entre las posiciones posibles elige la que no tape lo iluminado ([rects]) ni lo que el paso pide no
+ * tapar ([avoid]) y quede más cerca. Sin nada iluminado (el saludo) sale donde pide [pos].
+ */
 @Composable
-private fun PlacedBubble(pos: String, avoid: List<Rect>, content: @Composable () -> Unit) {
+private fun PlacedBubble(pos: String, rects: List<Rect>, avoid: List<Rect>, content: @Composable () -> Unit) {
     val density = LocalDensity.current.density
     val safe = LocalSafeInsets.current
     Layout(content = content, modifier = Modifier.fillMaxSize()) { measurables, constraints ->
         val w = constraints.maxWidth
         val h = constraints.maxHeight
         val p = measurables[0].measure(Constraints(maxWidth = (560f * density).toInt().coerceAtMost(w), maxHeight = h))
+        val bw = p.width.toFloat()
+        val bh = p.height.toFloat()
         val m = 24f * density
         val top = 74f * density
         val left = m + safe.left * density
-        val right = w - m - safe.right * density - p.width
-        fun at(name: String): Pair<Int, Int> = when (name) {
-            "bl" -> left.toInt() to (h - m - p.height).toInt()
-            "br" -> right.toInt() to (h - m - p.height).toInt()
-            "tl" -> left.toInt() to top.toInt()
-            "tr" -> right.toInt() to top.toInt()
-            "bottom" -> ((w - p.width) / 2) to (h - 20f * density - p.height).toInt()
-            "top" -> ((w - p.width) / 2) to top.toInt()
-            "ml" -> left.toInt() to (h - p.height) / 2
-            "mr" -> right.toInt() to (h - p.height) / 2
-            else -> ((w - p.width) / 2) to ((h - p.height) / 2)
+        val right = w - m - safe.right * density - bw
+        val bottom = h - m - bh
+        fun at(name: String): Pair<Float, Float> = when (name) {
+            "bl" -> left to bottom
+            "br" -> right to bottom
+            "tl" -> left to top
+            "tr" -> right to top
+            "bottom" -> (w - bw) / 2 to h - 20f * density - bh
+            "top" -> (w - bw) / 2 to top
+            "ml" -> left to (h - bh) / 2
+            "mr" -> right to (h - bh) / 2
+            else -> (w - bw) / 2 to (h - bh) / 2
         }
-        val order = listOf(pos) + listOf("bl", "br", "tl", "tr", "bottom", "top", "ml", "mr").filter { it != pos }
-        val hud = Rect(0f, 0f, w.toFloat(), top)
-        var best = pos
-        if (pos != "center" && avoid.isNotEmpty()) {
-            var bestArea = Float.MAX_VALUE
-            for (name in order) {
-                val (x, y) = at(name)
-                val box = Rect(x.toFloat(), y.toFloat(), (x + p.width).toFloat(), (y + p.height).toFloat())
-                val area = (avoid + hud).sumOf { r -> box.intersect(r).let { i -> if (i.width > 0 && i.height > 0) (i.width * i.height).toDouble() else 0.0 } }.toFloat()
-                if (area < bestArea) { bestArea = area; best = name }
-                if (area == 0f) break
+        var best: Pair<Float, Float> = at(pos)
+        if (rects.isNotEmpty() && pos != "center") {
+            val t = Rect(rects.minOf { it.left }, rects.minOf { it.top }, rects.maxOf { it.right }, rects.maxOf { it.bottom })
+            val gap = 18f * density
+            val hud = Rect(0f, 0f, w.toFloat(), top)
+            val keepClear = rects.map { it.inflate(8f * density) }
+            fun overlap(a: Rect, b: Rect): Float = a.intersect(b).let { i -> if (i.width > 0f && i.height > 0f) i.width * i.height else 0f }
+            fun dist(a: Rect, b: Rect): Float {
+                val dx = maxOf(0f, maxOf(a.left - b.right, b.left - a.right))
+                val dy = maxOf(0f, maxOf(a.top - b.bottom, b.top - a.bottom))
+                return kotlin.math.hypot(dx, dy)
             }
+            // posiciones a probar, de la más natural a la menos: al lado (derecha, izquierda) y luego arriba y abajo; cada una centrada o pegada a un borde
+            val cx = t.center.x - bw / 2
+            val cy = t.center.y - bh / 2
+            val candidates = ArrayList<Pair<Float, Float>>()
+            for (y in listOf(cy, t.top, t.bottom - bh)) candidates += (t.right + gap) to y
+            for (y in listOf(cy, t.top, t.bottom - bh)) candidates += (t.left - gap - bw) to y
+            for (x in listOf(cx, t.left, t.right - bw)) candidates += x to (t.top - gap - bh)
+            for (x in listOf(cx, t.left, t.right - bw)) candidates += x to (t.bottom + gap)
+            var bestScore = Double.MAX_VALUE
+            var bestCovered = Double.MAX_VALUE
+            fun consider(x: Float, y: Float, order: Float) {
+                val box = Rect(x, y, x + bw, y + bh)
+                val covered = keepClear.sumOf { overlap(box, it).toDouble() } * 2.0 + avoid.sumOf { overlap(box, it).toDouble() } + overlap(box, hud)
+                val score = covered * 10.0 + dist(box, t) + order
+                if (score < bestScore) { bestScore = score; bestCovered = covered; best = x to y }
+            }
+            candidates.forEachIndexed { i, (x0, y0) -> consider(x0.coerceIn(left, maxOf(left, right)), y0.coerceIn(top, maxOf(top, bottom)), i * 3f) }
+            // si nada de lo anterior deja libre lo iluminado, se prueban también las esquinas de siempre
+            if (bestCovered > 0.0) for (name in listOf("bl", "br", "tl", "tr", "bottom", "top")) at(name).let { (x, y) -> consider(x, y, 40f) }
         }
-        val (x, y) = at(best)
-        layout(w, h) { p.place(x, y) }
+        layout(w, h) { p.place(best.first.toInt(), best.second.toInt()) }
     }
 }
 
@@ -245,13 +270,15 @@ fun TutorialOverlay(
     val step = d.step ?: return
     Box(modifier.fillMaxSize()) {
         if (d.quitAsk) { QuitAsk(onQuit); return@Box }
-        // en los pasos de lectura nada se toca hasta «Siguiente» (el velo es casi transparente: se sigue viendo todo)
-        if (step.next) Box(Modifier.fillMaxSize().background(Color(0x1F4A3428)).pointerInput(Unit) { detectTapGestures { } })
-        SpotRings(rects, solo = rects.size == 1 && !step.next)
+        // en los pasos de lectura nada se toca hasta «Siguiente». Todo se oscurece menos lo que Profe Limón enseña (y él mismo):
+        // más fuerte al leer, menos al actuar (para seguir viendo la carta que se arrastra); sin nada iluminado (el saludo), se oscura todo el fondo
+        val shown = rects.isNotEmpty()
+        if (step.next) Box(Modifier.fillMaxSize().then(if (shown) Modifier else Modifier.background(Color(0xA6140E0A))).pointerInput(Unit) { detectTapGestures { } })
+        SpotRings(rects, dim = if (step.next) .65f else .5f)
         var praise by remember { androidx.compose.runtime.mutableStateOf(false) }
         LaunchedEffect(praiseKey) { if (praiseKey > 0) { praise = true; kotlinx.coroutines.delay(1800); praise = false } }
         val text = remember(step) { tutorialText(step.text) }
-        PlacedBubble(step.pos, rects + avoid) { BubbleBody(d, text, praise, shakeKey, onNext, onQuitAsk) }
+        PlacedBubble(step.pos, rects, avoid) { BubbleBody(d, text, praise, shakeKey, onNext, onQuitAsk) }
     }
 }
 

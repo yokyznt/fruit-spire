@@ -73,6 +73,22 @@ class TutorialScreenTest {
         Rng.unseed()
     }
 
+    /** Cada paso del primer combate: Profe Limón queda al lado de lo que enseña y todo lo demás se oscurece (capturas tutorial_c<paso>.png). */
+    @Test
+    fun enCadaPasoDelCombateProfeLimonQuedaAlLadoDeLoQueEnsena() {
+        val vm = start()
+        repeat(3) { vm.tutAdvance(); settle() }
+        vm.moveTo(1, 1); advance(3500); settle()
+        assertEquals(RunScreen.COMBAT, vm.run!!.screen)
+        repeat(8) {
+            val i = vm.tutorial!!.i
+            compose.onRoot().captureRoboImage("build/capturas/tutorial_c$i.png")
+            if (vm.tutorial!!.step?.next != true) return@repeat
+            vm.tutAdvance(); settle()
+        }
+        Rng.unseed()
+    }
+
     @Test
     fun salirPreguntaYElTutorialSeDescarta() {
         val vm = start()
