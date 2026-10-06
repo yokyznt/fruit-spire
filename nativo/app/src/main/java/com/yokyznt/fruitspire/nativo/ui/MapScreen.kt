@@ -17,6 +17,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -83,12 +84,26 @@ import kotlin.math.sin
 
 const val MAP_CELL = 124f
 const val MAP_GAP = 24f
-const val MAP_LAIR_EXTRA = 90f
+/** Alto de la guarida del jefe, la franja de arriba. */
+const val MAP_LAIR_H = 236f
 
-/** Esquina izquierda/superior de la casilla i del tablero (en px de diseño sin zoom). */
-fun cellPos(i: Int): Float = MAP_GAP + i * (MAP_CELL + MAP_GAP)
-fun boardWidth(cols: Int): Float = cols * MAP_CELL + (cols + 1) * MAP_GAP + MAP_LAIR_EXTRA
-fun boardHeight(rows: Int): Float = rows * MAP_CELL + (rows + 1) * MAP_GAP
+// Es una torre: el mapa se sube. El núcleo sigue contando "columnas" de izquierda a derecha (x = 0 es la salida, la última es la guarida) y
+// "filas" de arriba abajo; aquí el avance x se dibuja de ABAJO hacia ARRIBA y la fila y de izquierda a derecha, y la guarida va arriba del todo.
+
+/** Esquina izquierda de la casilla de la fila [y] (en px de diseño sin zoom). */
+fun cellPos(y: Int): Float = MAP_GAP + y * (MAP_CELL + MAP_GAP)
+
+/** Esquina de arriba de la casilla de avance [x]: la salida (x = 0) queda abajo del todo y cada paso sube una casilla. */
+fun cellY(cols: Int, x: Int): Float = mapTop() + ((cols - 2) - x) * (MAP_CELL + MAP_GAP)
+
+/** Dónde empiezan las casillas (debajo de la guarida). */
+private fun mapTop(): Float = MAP_GAP + MAP_LAIR_H + MAP_GAP
+
+fun boardWidth(rows: Int): Float = rows * MAP_CELL + (rows + 1) * MAP_GAP
+fun boardHeight(cols: Int): Float = mapTop() + (cols - 1) * (MAP_CELL + MAP_GAP)
+
+/** El ancho de la guarida: todo el ancho del tablero menos los márgenes. */
+private fun lairWidth(rows: Int): Float = rows * MAP_CELL + (rows - 1) * MAP_GAP
 
 /** Texto de cada tipo de casilla (NODE_INFO de js/game.js). */
 class NodeText(val sprite: String, val label: String, val desc: String)
@@ -302,8 +317,9 @@ private fun DrawScope.drawBoard(v: MapView, pal: MapPalette) {
     // adornos del tema: siempre los mismos para un mismo piso (salen de su semilla)
     var s = (if (v.seed == 0) 1234567L else v.seed.toLong()) and 0xFFFFFFFFL
     fun rnd(): Float { s = (s * 1664525L + 1013904223L) and 0xFFFFFFFFL; return s / 4294967296f }
-    val bw = boardWidth(v.cols)
-    val bh = boardHeight(v.rows)
+    val bw = boardWidth(v.rows)
+    val bh = boardHeight(v.cols)
+    val cols = v.cols
     val decoCount = Math.round(v.cols * v.rows * 0.45f)
     for (i in 0 until decoCount) {
         // el tamaño se redondea a decenas: así hay pocos dibujos distintos que preparar
@@ -321,13 +337,15 @@ private fun DrawScope.drawBoard(v: MapView, pal: MapPalette) {
     for (y in 0 until v.rows) {
         for (x in 0 until v.cols - 1) {
             if (!walkable(x, y)) continue
+            // hacia adelante (x + 1): sube una casilla
             if (x < v.cols - 2 && !v.wallsV[y][x] && walkable(x + 1, y)) {
-                val cy = u(cellPos(y) + MAP_CELL / 2)
-                drawLine(pal.link.copy(alpha = pal.link.alpha * .9f), Offset(u(cellPos(x) + MAP_CELL), cy), Offset(u(cellPos(x) + MAP_CELL + MAP_GAP), cy), u(6f), pathEffect = dash)
+                val cx = u(cellPos(y) + MAP_CELL / 2)
+                drawLine(pal.link.copy(alpha = pal.link.alpha * .9f), Offset(cx, u(cellY(cols, x) - MAP_GAP)), Offset(cx, u(cellY(cols, x))), u(6f), pathEffect = dash)
             }
+            // a la derecha (y + 1)
             if (y < v.rows - 1 && !v.wallsH[y][x] && walkable(x, y + 1)) {
-                val cx = u(cellPos(x) + MAP_CELL / 2)
-                drawLine(pal.link.copy(alpha = pal.link.alpha * .9f), Offset(cx, u(cellPos(y) + MAP_CELL)), Offset(cx, u(cellPos(y) + MAP_CELL + MAP_GAP)), u(6f), pathEffect = dash)
+                val cy = u(cellY(cols, x) + MAP_CELL / 2)
+                drawLine(pal.link.copy(alpha = pal.link.alpha * .9f), Offset(u(cellPos(y) + MAP_CELL), cy), Offset(u(cellPos(y) + MAP_CELL + MAP_GAP), cy), u(6f), pathEffect = dash)
             }
         }
     }
@@ -351,7 +369,7 @@ private fun DrawScope.drawBoard(v: MapView, pal: MapPalette) {
             if (visited) fill = Color.White.copy(alpha = .5f)
             if (type == NodeType.ELITE) { fill = Color(0xFFFFE8DC); ring = Ink.orange; ringW = 3f; lift = true }
             if (type == NodeType.BLOCKED) { fill = Color(0xFFE8DCC4); ring = Color(0xFFC9B896); ringW = 2f; lift = false }
-            val left = u(cellPos(x)); val top = u(cellPos(y)); val cs = u(MAP_CELL)
+            val left = u(cellPos(y)); val top = u(cellY(cols, x)); val cs = u(MAP_CELL)
             val tilt = if (isCurrent) 0f else TILTS[(x * 7 + y * 3) % 4]
             rotate(tilt, Offset(left + cs / 2, top + cs / 2)) {
                 if (lift) drawRoundRect(Color(0x2E4A3428), Offset(left + u(2f), top + u(4f)), Size(cs, cs), CornerRadius(u(radius)))
@@ -377,28 +395,28 @@ private fun DrawScope.drawBoard(v: MapView, pal: MapPalette) {
         }
     }
 
-    // muros verticales (entre (x,y) y (x+1,y)); los del río se ven distinto y el cruce lleva un puente
+    // muros entre (x,y) y (x+1,y): como se avanza hacia arriba, son cintas acostadas entre dos pisos; los del río se ven distinto y el cruce lleva un puente
     for (y in 0 until v.rows) {
         for (x in 0 until v.cols - 1) {
             val isRiver = v.rivers.any { it.first == x }
             if (isRiver && !v.wallsV[y][x]) {
-                val bx = u(cellPos(x + 1) - MAP_GAP); val by = u(cellPos(y) - MAP_GAP / 2)
-                val bw2 = u(MAP_GAP); val bh2 = u(MAP_CELL + MAP_GAP)
+                val bx = u(cellPos(y) - MAP_GAP / 2); val by = u(cellY(cols, x) - MAP_GAP)
+                val bw2 = u(MAP_CELL + MAP_GAP); val bh2 = u(MAP_GAP)
                 drawRect(Ink.ink, Offset(bx - u(2f), by - u(2f)), Size(bw2 + u(4f), bh2 + u(4f)))
                 drawRect(Color(0xFF8C6A3F), Offset(bx, by), Size(bw2, bh2))
-                var py = 0f
-                while (py < bh2) { drawRect(Color(0xFFB0703F), Offset(bx, by + py), Size(bw2, u(6f).coerceAtMost(bh2 - py))); py += u(8f) }
+                var px = 0f
+                while (px < bw2) { drawRect(Color(0xFFB0703F), Offset(bx + px, by), Size(u(6f).coerceAtMost(bw2 - px), bh2)); px += u(8f) }
                 continue
             }
             if (!v.wallsV[y][x]) continue
-            drawTape((x + y) % 3, u(cellPos(x + 1) - MAP_GAP + (MAP_GAP - 17f) / 2), u(cellPos(y) - MAP_GAP / 2), u(17f), u(MAP_CELL + MAP_GAP), true, isRiver)
+            drawTape((x + y) % 3, u(cellPos(y) - MAP_GAP / 2), u(cellY(cols, x) - MAP_GAP + (MAP_GAP - 17f) / 2), u(MAP_CELL + MAP_GAP), u(17f), false, isRiver)
         }
     }
-    // muros horizontales (entre (x,y) y (x,y+1))
+    // muros entre (x,y) y (x,y+1): cintas paradas entre dos casillas del mismo piso
     for (y in 0 until v.rows - 1) {
         for (x in 0 until v.cols - 1) {
             if (!v.wallsH[y][x]) continue
-            drawTape((x + y + 1) % 3, u(cellPos(x) - MAP_GAP / 2), u(cellPos(y + 1) - MAP_GAP + (MAP_GAP - 17f) / 2), u(MAP_CELL + MAP_GAP), u(17f), false, false)
+            drawTape((x + y + 1) % 3, u(cellPos(y + 1) - MAP_GAP + (MAP_GAP - 17f) / 2), u(cellY(cols, x) - MAP_GAP / 2), u(17f), u(MAP_CELL + MAP_GAP), true, false)
         }
     }
 }
@@ -412,7 +430,7 @@ private fun StrokeText(text: String, style: androidx.compose.ui.text.TextStyle, 
     }
 }
 
-/** La guarida del jefe: toda la última columna del mapa. */
+/** La guarida del jefe: la franja de arriba de la torre. */
 @Composable
 private fun BossLair(v: MapView, pal: MapPalette, modifier: Modifier) {
     val menace by rememberInfiniteTransition(label = "amenaza").animateFloat(
@@ -453,15 +471,18 @@ private fun BossLair(v: MapView, pal: MapPalette, modifier: Modifier) {
         },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            StrokeText("Guarida del jefe", Fonts.hand(30f).copy(textAlign = TextAlign.Center, lineHeight = 31.sp), Modifier.padding(horizontal = 8.dp))
+        // la guarida es una franja ancha: el jefe a la izquierda y, a su lado, el título, su nombre y el aviso de entrar
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             Box(Modifier.graphicsLayer { rotationZ = (menace * 4f - 2f); val s = 1f + menace * .06f; scaleX = s; scaleY = s }) { Sprite(v.bossSprite, 150.dp) }
-            Box(Modifier.graphicsLayer { rotationZ = -2f }.chip(10.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
-                BasicText(v.bossName, style = Fonts.display(24f).copy(textAlign = TextAlign.Center, lineHeight = 26.sp))
-            }
-            if (v.lairReachable) {
-                Box(Modifier.graphicsLayer { translationY = -bob * 6f * density }.chip(99.dp, Ink.mintDark).padding(horizontal = 16.dp, vertical = 2.dp)) {
-                    BasicText("¡Entrar!", style = Fonts.hand(27f, Color.White))
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StrokeText("Guarida del jefe", Fonts.hand(32f).copy(textAlign = TextAlign.Center), Modifier.padding(horizontal = 4.dp))
+                Box(Modifier.graphicsLayer { rotationZ = -2f }.chip(10.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                    BasicText(v.bossName, style = Fonts.display(25f).copy(textAlign = TextAlign.Center))
+                }
+                if (v.lairReachable) {
+                    Box(Modifier.graphicsLayer { translationY = -bob * 6f * density }.chip(99.dp, Ink.mintDark).padding(horizontal = 18.dp, vertical = 2.dp)) {
+                        BasicText("¡Entrar!", style = Fonts.hand(29f, Color.White))
+                    }
                 }
             }
         }
@@ -491,8 +512,8 @@ private fun ReachableMark(type: String, castle: Int, modifier: Modifier) {
 
 /** La fruta del jugador caminando por el mapa. */
 @Composable
-private fun PlayerToken(charId: String, target: Pair<Int, Int>, moving: Boolean) {
-    val to = Offset(cellPos(target.first), cellPos(target.second))
+private fun PlayerToken(charId: String, cols: Int, target: Pair<Int, Int>, moving: Boolean) {
+    val to = Offset(cellPos(target.second), cellY(cols, target.first))
     val at by animateOffsetAsState(to, tween(if (moving) 440 else 0, easing = HopEase), label = "ficha")
     val hop = remember { Animatable(0f) }
     // el polvo que queda en la casilla de la que sales (puff de css/style.css): sube, crece y se desvanece en 0,5 s
@@ -501,7 +522,7 @@ private fun PlayerToken(charId: String, target: Pair<Int, Int>, moving: Boolean)
     var puffFrom by remember { mutableStateOf(to) }
     LaunchedEffect(target, moving) {
         if (moving) {
-            puffFrom = Offset(cellPos(lastTarget.first), cellPos(lastTarget.second))
+            puffFrom = Offset(cellPos(lastTarget.second), cellY(cols, lastTarget.first))
             lastTarget = target
             launch { puff.snapTo(0f); puff.animateTo(1f, tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
             hop.snapTo(0f); hop.animateTo(1f, tween(440, easing = androidx.compose.animation.core.LinearEasing))
@@ -582,8 +603,8 @@ fun MapScreen(
     val base = LocalDensity.current
     val boardDensity = remember(base, zoom) { Density(base.density * zoom, base.fontScale) }
     val pal = remember(view.themeId, view.castle) { paletteFor(view.themeId, view.castle) }
-    val bw = boardWidth(view.cols)
-    val bh = boardHeight(view.rows)
+    val bw = boardWidth(view.rows)
+    val bh = boardHeight(view.cols)
     val boardPx = Size(bw * base.density * zoom, bh * base.density * zoom)
     var vp by remember { mutableStateOf(IntSize.Zero) }
     val scope = rememberCoroutineScope()
@@ -593,8 +614,8 @@ fun MapScreen(
     fun clamp(o: Offset) = Offset(clampAxis(o.x, vp.width.toFloat(), boardPx.width), clampAxis(o.y, vp.height.toFloat(), boardPx.height))
     fun centerOn(x: Int, y: Int): Offset = clamp(
         Offset(
-            vp.width / 2f - (cellPos(x) + MAP_CELL / 2) * zoom * base.density,
-            vp.height / 2f + hudMargin / 4f - (cellPos(y) + MAP_CELL / 2) * zoom * base.density
+            vp.width / 2f - (cellPos(y) + MAP_CELL / 2) * zoom * base.density,
+            vp.height / 2f + hudMargin / 4f - (cellY(view.cols, x) + MAP_CELL / 2) * zoom * base.density
         )
     )
 
@@ -613,14 +634,16 @@ fun MapScreen(
         val cell = MAP_CELL * zoom * base.density
         val gap = MAP_GAP * zoom * base.density
         val margin = 40f * base.density
-        val cx = cellPos(view.posX) * zoom * base.density + pan.anim.value.x
-        val cy = cellPos(view.posY) * zoom * base.density + pan.anim.value.y
+        val cx = cellPos(view.posY) * zoom * base.density + pan.anim.value.x
+        val cy = cellY(view.cols, view.posX) * zoom * base.density + pan.anim.value.y
         var x = pan.anim.value.x
         var y = pan.anim.value.y
-        if (cx + cell * 2 + gap > vp.width - margin) x -= cx + cell * 2 + gap - (vp.width - margin)
+        // a los lados basta con que la ficha no se salga; hacia arriba se deja ver también el piso que sigue
+        if (cx + cell > vp.width - margin) x -= cx + cell - (vp.width - margin)
         if (cx < margin) x += margin - cx
         if (cy + cell > vp.height - margin) y -= cy + cell - (vp.height - margin)
-        if (cy < margin + HUD_H * base.density) y += margin + HUD_H * base.density - cy
+        val topRoom = margin + HUD_H * base.density + cell + gap
+        if (cy < topRoom) y += topRoom - cy
         val target = clamp(Offset(x, y))
         if (target != pan.anim.value) pan.anim.animateTo(target, tween(450, easing = androidx.compose.animation.core.EaseOut))
     }
@@ -646,17 +669,19 @@ fun MapScreen(
         val shown = pan.anim.value
         val k = zoom * base.density
         fun box(x: Float, y: Float, w: Float, h: Float) = Rect(origin.x + shown.x + x * k, origin.y + shown.y + y * k, origin.x + shown.x + (x + w) * k, origin.y + shown.y + (y + h) * k)
-        fun cell(cx: Int, cy: Int) = box(cellPos(cx), cellPos(cy), MAP_CELL, MAP_CELL)
+        fun cell(cx: Int, cy: Int) = box(cellPos(cy), cellY(view.cols, cx), MAP_CELL, MAP_CELL)
         val groups = HashMap<String, List<Rect>>()
         groups["token"] = listOf(cell(view.posX, view.posY))
         groups["reachable"] = view.reachable.map { cell(it % 1000, it / 1000) }
         groups["elites"] = view.grid.flatMapIndexed { y, row -> row.mapIndexedNotNull { x, t -> if (t == NodeType.ELITE) cell(x, y) else null } }
-        groups["lair"] = listOf(box(cellPos(view.cols - 1), cellPos(0), MAP_CELL + MAP_LAIR_EXTRA, view.rows * MAP_CELL + (view.rows - 1) * MAP_GAP))
+        groups["lair"] = listOf(box(cellPos(0), MAP_GAP, lairWidth(view.rows), MAP_LAIR_H))
         val walls = ArrayList<Rect>()
-        for (y in 0 until view.rows) for (x in 0 until view.cols - 2) if (view.wallsV[y][x]) walls.add(box(cellPos(x) + MAP_CELL - 6f, cellPos(y), MAP_GAP + 12f, MAP_CELL))
-        for (y in 0 until view.rows - 1) for (x in 0 until view.cols - 1) if (view.wallsH[y][x]) walls.add(box(cellPos(x), cellPos(y) + MAP_CELL - 6f, MAP_CELL, MAP_GAP + 12f))
+        // entre dos pisos (cinta acostada) y entre dos casillas del mismo piso (cinta parada)
+        for (y in 0 until view.rows) for (x in 0 until view.cols - 2) if (view.wallsV[y][x]) walls.add(box(cellPos(y), cellY(view.cols, x) - MAP_GAP - 6f, MAP_CELL, MAP_GAP + 12f))
+        for (y in 0 until view.rows - 1) for (x in 0 until view.cols - 1) if (view.wallsH[y][x]) walls.add(box(cellPos(y) + MAP_CELL - 6f, cellY(view.cols, x), MAP_GAP + 12f, MAP_CELL))
         // los que están junto a la ficha primero (las cintas del tutorial son muchas)
-        groups["walls"] = walls.sortedBy { kotlin.math.abs(it.center.x - groups.getValue("token")[0].center.x) }.take(6)
+        val tc = groups.getValue("token")[0].center
+        groups["walls"] = walls.sortedBy { kotlin.math.hypot(it.center.x - tc.x, it.center.y - tc.y) }.take(6)
         TutAnchorGroup(owner, groups)
     }
 
@@ -665,9 +690,10 @@ fun MapScreen(
     fun cellAt(p: Offset): Pair<Int, Int>? {
         val u = (p - pan.anim.value) / (zoom * base.density)
         val v = currentView
-        if (u.x >= cellPos(v.cols - 1) - MAP_GAP / 2) return (v.cols - 1) to v.posY
-        val x = floor((u.x - MAP_GAP / 2) / (MAP_CELL + MAP_GAP)).toInt()
-        val y = floor((u.y - MAP_GAP / 2) / (MAP_CELL + MAP_GAP)).toInt()
+        val top = cellY(v.cols, v.cols - 2) // arriba de la última casilla empieza el hueco de la guarida
+        if (u.y < top - MAP_GAP / 2) return if (u.x in 0f..boardWidth(v.rows)) (v.cols - 1) to v.posY else null
+        val x = (v.cols - 2) - floor((u.y - top + MAP_GAP / 2) / (MAP_CELL + MAP_GAP)).toInt()
+        val y = floor((u.x - MAP_GAP / 2) / (MAP_CELL + MAP_GAP)).toInt()
         return if (x in 0 until v.cols - 1 && y in 0 until v.rows) x to y else null
     }
 
@@ -718,14 +744,13 @@ fun MapScreen(
                 for (key2 in view.reachable) {
                     val x = key2 % 1000
                     val y = key2 / 1000
-                    if (!moving) ReachableMark(view.grid[y][x], view.castle, Modifier.offset(cellPos(x).dp, cellPos(y).dp))
+                    if (!moving) ReachableMark(view.grid[y][x], view.castle, Modifier.offset(cellPos(y).dp, cellY(view.cols, x).dp))
                 }
                 BossLair(
                     view, pal,
-                    Modifier.offset(cellPos(view.cols - 1).dp, cellPos(0).dp)
-                        .size((MAP_CELL + MAP_LAIR_EXTRA).dp, (view.rows * MAP_CELL + (view.rows - 1) * MAP_GAP).dp)
+                    Modifier.offset(cellPos(0).dp, MAP_GAP.dp).size(lairWidth(view.rows).dp, MAP_LAIR_H.dp)
                 )
-                PlayerToken(view.charId, tokenTarget, moving)
+                PlayerToken(view.charId, view.cols, tokenTarget, moving)
             }
         }
     }

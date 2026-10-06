@@ -28,6 +28,7 @@ import com.yokyznt.fruitspire.core.data.Cards
 import com.yokyznt.fruitspire.core.data.Enemies
 import com.yokyznt.fruitspire.core.data.World
 import com.yokyznt.fruitspire.core.data.gen.Sfx
+import com.yokyznt.fruitspire.nativo.ui.AscendUi
 import com.yokyznt.fruitspire.nativo.ui.CollectionState
 import com.yokyznt.fruitspire.nativo.ui.CombatController
 import com.yokyznt.fruitspire.nativo.ui.Flight
@@ -203,6 +204,28 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     /** La portada de un piso nuevo (el primero, o el que sigue al subir) suena con su fanfarria. */
     private fun fanfareIfNewFloor(r: Run) { if (r.screen == RunScreen.ACT_INTRO) audio.play(Sfx.ACT_FANFARE) }
 
+    /** La escalera de subir de piso (null = no hay). Se ve por encima de todo mientras dura. */
+    var ascend: AscendUi? by mutableStateOf(null)
+        private set
+    private var ascendKey = 0L
+
+    /**
+     * Después de vencer a un jefe, antes de la portada del piso que sigue: la fruta sube la escalera de la torre. Si no hubo cambio
+     * de piso, o es el tutorial, no hace nada (y la fanfarria suena como siempre).
+     */
+    private fun ascendIfNewFloor(r: Run) {
+        if (r.screen != RunScreen.ACT_INTRO) return
+        if (r.tutorial != null) { fanfareIfNewFloor(r); return }
+        ascend = AscendUi(++ascendKey, r.player.characterId, r.player.floor, r.player.act, r.player.floor == 1)
+    }
+
+    /** Terminó (o se saltó) la escalera: se descubre la portada del piso nuevo con su fanfarria. */
+    fun finishAscend() {
+        if (ascend == null) return
+        ascend = null
+        run?.let { fanfareIfNewFloor(it) }
+    }
+
     // ---------- menú ----------
     fun toMenu() {
         if (run?.tutorial != null) run = null // salir del tutorial lo descarta
@@ -210,6 +233,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         flights.clear()
         combat = null
         intro = null
+        ascend = null
         moving = null
         deckView = null
         flash = null
@@ -553,7 +577,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val r = run ?: return
         if (!r.canFinishReward()) { audio.play(Sfx.DENIED); toast("¡Primero recoge tus premios!"); return }
         r.finishReward()
-        fanfareIfNewFloor(r)
+        ascendIfNewFloor(r)
         persist(); bump()
     }
 
@@ -562,14 +586,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val had = r.player.relics.size
         r.pickBossRelic(id)
         if (r.player.relics.size > had) audio.play(Sfx.RELIC_GET)
-        fanfareIfNewFloor(r)
+        ascendIfNewFloor(r)
         persist(); bump()
     }
 
     fun skipBossRelic() {
         val r = run ?: return
         r.skipBossRelic()
-        fanfareIfNewFloor(r)
+        ascendIfNewFloor(r)
         persist(); bump()
     }
 

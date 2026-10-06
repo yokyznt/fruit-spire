@@ -79,8 +79,8 @@ private val lootOr: (String) -> (TutorialCtx) -> List<String> = { other -> { c -
 val TUTORIAL_STEPS: List<TutStep> = listOf(
     // ---------- el mapa ----------
     TutStep(RunScreen.MAP, "center", "¡Hola! Soy <b>Profe Limón</b>. Te enseño a jugar en un ratito.", next = true),
-    TutStep(RunScreen.MAP, "top", "Esta es tu fruta. Cruza el mapa hasta el <b>jefe</b>, a la derecha.", next = true, spots = spot("token")),
-    TutStep(RunScreen.MAP, "top", "Puedes ir adelante, arriba o abajo. Las cintas son <b>muros</b>.", next = true, spots = spot("walls")),
+    TutStep(RunScreen.MAP, "top", "Esta es tu fruta. Sube la torre hasta el <b>jefe</b>, arriba.", next = true, spots = spot("token")),
+    TutStep(RunScreen.MAP, "top", "Puedes ir adelante o a los lados. Las cintas son <b>muros</b>.", next = true, spots = spot("walls")),
     TutStep(RunScreen.MAP, "top", "Toca la casilla del <b>enemigo</b>.", spots = spot("reachable"), allow = setOf(TutAction.MOVE), until = onScreen(RunScreen.COMBAT)),
 
     // ---------- el primer combate ----------

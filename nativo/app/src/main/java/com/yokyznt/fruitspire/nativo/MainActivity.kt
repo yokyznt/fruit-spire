@@ -248,6 +248,8 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
         }
         if (vm.bagOpen) InventoryModal(run, ctl?.canUseSeedNow() == true, vm::useSeedFromBag, vm::dropSeed, vm::closeBag)
         vm.intro?.let { CombatIntroOverlay(it) }
+        // subir de piso después de un jefe: la fruta sube la escalera de la torre
+        vm.ascend?.let { a -> androidx.compose.runtime.key(a.key) { com.yokyznt.fruitspire.nativo.ui.StairsScene(a, onDone = vm::finishAscend) } }
         vm.deckView?.let { (title, note, ids) -> DeckModal(title, note, ids) { vm.deckView = null } }
         // el tutorial: Profe Limón y lo que ilumina, por encima de todo
         if (tut != null && run.screen != RunScreen.TUTORIAL_END) {

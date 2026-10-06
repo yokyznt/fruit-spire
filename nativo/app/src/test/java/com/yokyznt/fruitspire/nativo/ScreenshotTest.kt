@@ -130,8 +130,9 @@ open class ScreenshotTest {
         val cy = key / 1000
         val h = compose.onRoot().fetchSemanticsNode().size.height
         val d = h / 660f
-        val x = pan.anim.value.x + (com.yokyznt.fruitspire.nativo.ui.cellPos(cx) + 62f) * 1.25f * d
-        val y = pan.anim.value.y + (com.yokyznt.fruitspire.nativo.ui.cellPos(cy) + 62f) * 1.25f * d
+        // el mapa se sube: la fila (cy) va de izquierda a derecha y el avance (cx) de abajo hacia arriba
+        val x = pan.anim.value.x + (com.yokyznt.fruitspire.nativo.ui.cellPos(cy) + 62f) * 1.25f * d
+        val y = pan.anim.value.y + (com.yokyznt.fruitspire.nativo.ui.cellY(view.cols, cx) + 62f) * 1.25f * d
         compose.onRoot().performTouchInput { click(androidx.compose.ui.geometry.Offset(x, y)) }
         compose.waitForIdle()
         org.junit.Assert.assertEquals("la casilla tocada ($cx,$cy) debía avisar", cx to cy, moved)
