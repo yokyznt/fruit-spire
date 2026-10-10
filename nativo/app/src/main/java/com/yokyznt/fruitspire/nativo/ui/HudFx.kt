@@ -141,6 +141,93 @@ private fun FlightView(f: Flight, anchors: HudAnchors, onLand: (Int) -> Unit) {
     }
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Tienda: el hueco que se cierra al comprar (soldOut), el temblor al no alcanzar (shakeSoft) y el gasto del oro (coinSpend)
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Un artículo recién comprado: su hueco se cierra mientras él vuela a la barra. [group] es "card", "relic" o "seed"; [index] su sitio en esa fila. */
+@Immutable
+class ShopSale(val id: Int, val group: String, val index: Int, val itemId: String, val price: Int, val sale: Boolean = false)
+
+/** Una compra negada: el artículo [key] ("card:2", "relic:0", "seed:1", "remove") tiembla; [tick] cambia con cada negativa. */
+@Immutable
+class ShopNope(val key: String, val tick: Int)
+
+/** Un sitio de una fila de la tienda: el artículo vivo número [live], o (si [live] es −1) el hueco de [ghost] que se está cerrando. */
+class ShopSlot(val live: Int, val ghost: ShopSale?)
+
+/** El orden de una fila: los [live] artículos y, en su sitio, el hueco de cada compra reciente (antes del que ocupó su lugar). */
+fun shopSlots(live: Int, ghosts: List<ShopSale>): List<ShopSlot> {
+    val sorted = ghosts.sortedWith(compareBy({ it.index }, { it.id }))
+    val out = ArrayList<ShopSlot>(live + sorted.size)
+    var g = 0
+    for (k in 0 until live) {
+        while (g < sorted.size && sorted[g].index <= k) out.add(ShopSlot(-1, sorted[g++]))
+        out.add(ShopSlot(k, null))
+    }
+    while (g < sorted.size) out.add(ShopSlot(-1, sorted[g++]))
+    return out
+}
+
+/** Cómo va el hueco de lo comprado: opacidad, tamaño y qué parte de su ancho (con la separación) sigue ocupando. */
+class SoldPose(val alpha: Float, val scale: Float, val width: Float)
+
+const val SOLD_MS = 400
+const val SHAKE_MS = 450
+
+private val EaseInOut = CubicBezierEasing(.65f, 0f, .35f, 1f)
+private val EaseOut = CubicBezierEasing(.22f, 1f, .36f, 1f)
+
+/** `soldOut`: transparente y a 0,8 a un 35 %, luego se encoge a 0,6 mientras el ancho se cierra del todo (ease-in-out por tramo). */
+fun soldPose(t: Float): SoldPose {
+    val p = t.coerceIn(0f, 1f)
+    return if (p < .35f) {
+        val e = EaseInOut.transform(p / .35f)
+        SoldPose(1f - e, 1f - .2f * e, 1f)
+    } else {
+        val e = EaseInOut.transform((p - .35f) / .65f)
+        SoldPose(0f, .8f - .2f * e, 1f - e)
+    }
+}
+
+/** Valor entre los fotogramas clave [at]/[values] en [t] (0..1), con una suavización [ease] en cada tramo. */
+internal fun keyed(t: Float, at: FloatArray, values: FloatArray, ease: CubicBezierEasing): Float {
+    val p = t.coerceIn(0f, 1f)
+    for (i in 1 until at.size) if (p <= at[i]) {
+        val k = ease.transform((p - at[i - 1]) / (at[i] - at[i - 1]))
+        return values[i - 1] + (values[i] - values[i - 1]) * k
+    }
+    return values.last()
+}
+
+private val ShakeAt = floatArrayOf(0f, .2f, .45f, .7f, 1f)
+private val ShakeVals = floatArrayOf(0f, -8f, 7f, -3f, 0f)
+
+/** `shakeSoft`: cuánto se corre hacia un lado (en dp) a los [t] (0..1) de 0,45 s. */
+fun shakeSoft(t: Float): Float = keyed(t, ShakeAt, ShakeVals, EaseOut)
+
+private val SpendAt = floatArrayOf(0f, .4f, 1f)
+private val SpendVals = floatArrayOf(0f, 1f, 0f)
+
+/** `coinSpend`: 0 en reposo y 1 a los 40 % de 0,45 s (entonces la casilla del oro va a −3°, escala 1,15 y se pinta de banana). */
+fun spendPulse(t: Float): Float = keyed(t, SpendAt, SpendVals, EaseOut)
+
+/** Cómo va el aviso: opacidad y cuánto le falta bajar (dp, negativo = más arriba de su sitio). */
+class ToastPose(val alpha: Float, val dy: Float)
+
+/** Cuánto dura el aviso en pantalla (la web lo deja 1,4 s; en el teléfono se lee con más calma). */
+const val TOAST_MS = 1800
+
+/** `toastIn`: baja 20 dp mientras aparece en el primer 15 %, se queda hasta el 80 % y se desvanece. [p] es el avance 0..1. */
+fun toastPose(p: Float): ToastPose {
+    val t = p.coerceIn(0f, 1f)
+    return when {
+        t < .15f -> ToastPose(t / .15f, -20f * (1f - t / .15f))
+        t <= .8f -> ToastPose(1f, 0f)
+        else -> ToastPose(1f - (t - .8f) / .2f, 0f)
+    }
+}
+
 /** Escala y giro del brinco `hud-gain`: 0,55 s, sube a 1,18 (y −3°) a un tercio y vuelve. [t] es el avance 0..1. */
 fun gainBump(t: Float): Pair<Float, Float> {
     val q = if (t < .35f) t / .35f else 1f - (t - .35f) / .65f

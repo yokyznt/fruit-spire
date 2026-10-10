@@ -37,6 +37,8 @@ import com.yokyznt.fruitspire.nativo.ui.HudAnchors
 import com.yokyznt.fruitspire.nativo.ui.MapPan
 import com.yokyznt.fruitspire.nativo.ui.NoAudio
 import com.yokyznt.fruitspire.nativo.ui.PickFlash
+import com.yokyznt.fruitspire.nativo.ui.ShopNope
+import com.yokyznt.fruitspire.nativo.ui.ShopSale
 import com.yokyznt.fruitspire.nativo.ui.TableController
 import com.yokyznt.fruitspire.nativo.ui.TutorialAnchors
 import com.yokyznt.fruitspire.nativo.ui.TutorialGate
@@ -231,6 +233,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (run?.tutorial != null) run = null // salir del tutorial lo descarta
         soonJob?.cancel(); soonJob = null
         flights.clear()
+        clearShopFx()
         combat = null
         intro = null
         ascend = null
@@ -512,13 +515,40 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     /** Lo que tenía la partida antes de recoger un premio: la diferencia es lo que vuela. */
     private class Snap(r: Run) { val gold = r.player.gold; val hp = r.player.hp; val maxHp = r.player.maxHp; val deck = r.player.deck.size }
 
+    /** Lanza el vuelo de un premio o compra. Solo lo que sube se retiene de la barra: gastar oro o perder vida baja de inmediato. */
     private fun launchFlight(r: Run, kind: String, itemId: String?, key: String, before: Snap) {
         val from = lootRects[key] ?: return
         val p = r.player
-        flights.add(Flight(++flightSeq, kind, itemId, from, p.gold - before.gold, p.hp - before.hp, p.maxHp - before.maxHp, p.deck.size - before.deck))
+        flights.add(
+            Flight(
+                ++flightSeq, kind, itemId, from, (p.gold - before.gold).coerceAtLeast(0), (p.hp - before.hp).coerceAtLeast(0),
+                (p.maxHp - before.maxHp).coerceAtLeast(0), (p.deck.size - before.deck).coerceAtLeast(0)
+            )
+        )
     }
 
     fun landFlight(id: Int) { flights.removeAll { it.id == id } }
+
+    // ---------- tienda: lo comprado vuela y su hueco se cierra; lo que no alcanza tiembla ----------
+    /** Compras recientes: la pantalla de la tienda dibuja el hueco cerrándose y avisa con [endSale]. */
+    val sales = mutableStateListOf<ShopSale>()
+    private var saleSeq = 0
+    fun endSale(id: Int) { sales.removeAll { it.id == id } }
+
+    /** La última compra negada: el artículo de esa llave tiembla. */
+    var nope by mutableStateOf<ShopNope?>(null)
+        private set
+    /** Sube con cada compra que no alcanza el oro: la casilla del oro de la barra tiembla. */
+    var goldNope by mutableIntStateOf(0)
+        private set
+    private var nopeSeq = 0
+
+    private fun shopNope(key: String, gold: Boolean) {
+        nope = ShopNope(key, ++nopeSeq)
+        if (gold) goldNope++
+    }
+
+    private fun clearShopFx() { sales.clear(); nope = null }
 
     // ---------- recompensas ----------
     fun collectLoot(i: Int) {
@@ -650,23 +680,57 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (!tutGate(TutAction.LEAVE)) return
         soonJob?.cancel(); soonJob = null
         if (!r.leaveNode()) { toast("¡Primero recoge tus premios!"); return }
+        clearShopFx()
         persist(); bump()
     }
 
     // ---------- tienda ----------
-    private fun bought(res: BuyResult, relic: Boolean = false) {
+    /**
+     * Lo que pasa tras intentar comprar el artículo [i] de la fila [group] ("card", "relic" o "seed"): sonido y aviso, y la
+     * animación de la web: comprado vuela a la barra mientras su hueco se cierra; si no alcanza, tiembla (js/game.js shopPurchase).
+     */
+    private fun bought(r: Run, res: BuyResult, group: String, i: Int, itemId: String?, price: Int, onSale: Boolean, before: Snap) {
+        val key = "$group:$i"
         when (res) {
-            BuyResult.NO_GOLD -> { audio.play(Sfx.DENIED); toast("¡No te alcanza el oro!") }
-            BuyResult.BAG_FULL -> toast("Tu bolsa de semillas está llena")
-            BuyResult.OK -> { audio.play(Sfx.COIN); if (relic) audio.play(Sfx.RELIC_GET); persist(); tutNotify("shop-buy") }
+            BuyResult.NO_GOLD -> { audio.play(Sfx.DENIED); toast("¡No te alcanza el oro!"); shopNope(key, gold = true) }
+            BuyResult.BAG_FULL -> { toast("Tu bolsa de semillas está llena"); shopNope(key, gold = false) }
+            BuyResult.OK -> {
+                audio.play(Sfx.COIN); if (group == "relic") audio.play(Sfx.RELIC_GET)
+                nope = null
+                if (itemId != null) {
+                    sales.add(ShopSale(++saleSeq, group, i, itemId, price, onSale))
+                    launchFlight(r, group, itemId, "shop:$key", before)
+                }
+                persist(); tutNotify("shop-buy")
+            }
             BuyResult.INVALID -> {}
         }
         bump()
     }
 
-    fun buyShopCard(i: Int) { val r = run ?: return; if (flash == null && tutGate(TutAction.SHOP)) bought(r.buyShopCard(i)) }
-    fun buyShopRelic(i: Int) { val r = run ?: return; if (flash == null && tutGate(TutAction.SHOP)) bought(r.buyShopRelic(i), relic = true) }
-    fun buyShopSeed(i: Int) { val r = run ?: return; if (flash == null && tutGate(TutAction.SHOP)) bought(r.buyShopSeed(i)) }
+    fun buyShopCard(i: Int) {
+        val r = run ?: return
+        if (flash != null || !tutGate(TutAction.SHOP)) return
+        val item = r.shopStock?.cards?.getOrNull(i)
+        val before = Snap(r)
+        bought(r, r.buyShopCard(i), "card", i, item?.cardId, item?.price ?: 0, item?.sale == true, before)
+    }
+
+    fun buyShopRelic(i: Int) {
+        val r = run ?: return
+        if (flash != null || !tutGate(TutAction.SHOP)) return
+        val item = r.shopStock?.relics?.getOrNull(i)
+        val before = Snap(r)
+        bought(r, r.buyShopRelic(i), "relic", i, item?.relicId, item?.price ?: 0, false, before)
+    }
+
+    fun buyShopSeed(i: Int) {
+        val r = run ?: return
+        if (flash != null || !tutGate(TutAction.SHOP)) return
+        val item = r.shopStock?.seeds?.getOrNull(i)
+        val before = Snap(r)
+        bought(r, r.buyShopSeed(i), "seed", i, item?.seedId, item?.price ?: 0, false, before)
+    }
 
     fun startShopRemoval() {
         val r = run ?: return
@@ -674,7 +738,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (!tutGate(TutAction.SHOP)) return
         if (!r.startShopRemoval()) {
             val used = r.shopStock?.removeUsed == true
-            if (!used) audio.play(Sfx.DENIED)
+            if (!used) { audio.play(Sfx.DENIED); shopNope("remove", gold = true) }
             toast(if (used) "Ya usaste este servicio" else "¡No te alcanza el oro!")
             return
         }
