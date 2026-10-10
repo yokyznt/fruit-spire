@@ -433,12 +433,8 @@ private fun StrokeText(text: String, style: androidx.compose.ui.text.TextStyle, 
 /** La guarida del jefe: la franja de arriba de la torre. */
 @Composable
 private fun BossLair(v: MapView, pal: MapPalette, modifier: Modifier) {
-    val menace by rememberInfiniteTransition(label = "amenaza").animateFloat(
-        0f, 1f, infiniteRepeatable(tween(2000, easing = EaseInOut), RepeatMode.Reverse), label = "menace"
-    )
-    val bob by rememberInfiniteTransition(label = "salto").animateFloat(
-        0f, 1f, infiniteRepeatable(tween(1200, easing = EaseInOut), RepeatMode.Reverse), label = "bob"
-    )
+    val menace by idleAnim(0f, 1f, infiniteRepeatable(tween(2000, easing = EaseInOut), RepeatMode.Reverse), "menace", rest = .5f)
+    val bob by idleAnim(0f, 1f, infiniteRepeatable(tween(1200, easing = EaseInOut), RepeatMode.Reverse), "bob")
     Box(
         modifier.drawBehind {
             val k = density
@@ -494,9 +490,8 @@ private val HopEase = CubicBezierEasing(.45f, 0f, .3f, 1f)
 /** Una casilla a la que puedes ir: anillo que respira y dibujo que sube y baja. */
 @Composable
 private fun ReachableMark(type: String, castle: Int, modifier: Modifier) {
-    val t = rememberInfiniteTransition(label = "alcanzable")
-    val breathe by t.animateFloat(1f, 1.045f, infiniteRepeatable(tween(1600, easing = EaseInOut), RepeatMode.Reverse), label = "aro")
-    val bob by t.animateFloat(0f, -4f, infiniteRepeatable(tween(1600, easing = EaseInOut), RepeatMode.Reverse), label = "bob")
+    val breathe by idleAnim(1f, 1.045f, infiniteRepeatable(tween(1600, easing = EaseInOut), RepeatMode.Reverse), "aro")
+    val bob by idleAnim(0f, -4f, infiniteRepeatable(tween(1600, easing = EaseInOut), RepeatMode.Reverse), "bob")
     Box(modifier.size(MAP_CELL.dp), contentAlignment = Alignment.Center) {
         Box(Modifier.size(MAP_CELL.dp).graphicsLayer { scaleX = breathe; scaleY = breathe }.drawBehind {
             val k = density
@@ -528,7 +523,7 @@ private fun PlayerToken(charId: String, cols: Int, target: Pair<Int, Int>, movin
             hop.snapTo(0f); hop.animateTo(1f, tween(440, easing = androidx.compose.animation.core.LinearEasing))
         } else lastTarget = target
     }
-    val idle by rememberInfiniteTransition(label = "respira").animateFloat(0f, 1f, infiniteRepeatable(tween(2200, easing = EaseInOut), RepeatMode.Reverse), label = "idle")
+    val idle by idleAnim(0f, 1f, infiniteRepeatable(tween(2200, easing = EaseInOut), RepeatMode.Reverse), "respira")
     Box(
         Modifier.size(MAP_CELL.dp).graphicsLayer {
             translationX = at.x * density; translationY = at.y * density

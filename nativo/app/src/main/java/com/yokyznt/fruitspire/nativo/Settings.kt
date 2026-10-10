@@ -18,6 +18,12 @@ class Settings(context: Context) {
     var mapZoom by mutableStateOf(prefs.getString("mapZoom", "normal") ?: "normal"); private set
     var motion by mutableStateOf(prefs.getString("motion", "todas") ?: "todas"); private set
     var awake by mutableStateOf(prefs.getBoolean("awake", true)); private set
+    /** "bonito" | "rapido" (sin sombras ni resplandores y con dibujos más ligeros: para teléfonos lentos). */
+    var graphics by mutableStateOf(prefs.getString("graphics", "bonito") ?: "bonito"); private set
+    /** Velocidad de las animaciones del combate: "normal" | "rapido". */
+    var pace by mutableStateOf(prefs.getString("pace", "normal") ?: "normal"); private set
+    /** Al terminar el turno con cartas que aún puedes jugar, pide tocar otra vez. */
+    var confirmEnd by mutableStateOf(prefs.getBoolean("confirmEnd", false)); private set
 
     /** Se llama con la clave del ajuste que cambió ("music", "sfx", "vibrate"…): el sonido aplica el volumen al momento. */
     var onChanged: (String) -> Unit = {}
@@ -28,4 +34,10 @@ class Settings(context: Context) {
     fun putMapZoom(v: String) { mapZoom = v; prefs.edit().putString("mapZoom", v).apply(); onChanged("mapZoom") }
     fun putMotion(v: String) { motion = v; prefs.edit().putString("motion", v).apply(); onChanged("motion") }
     fun putAwake(v: Boolean) { awake = v; prefs.edit().putBoolean("awake", v).apply(); onChanged("awake") }
+    fun putGraphics(v: String) { graphics = v; prefs.edit().putString("graphics", v).apply(); onChanged("graphics") }
+    fun putPace(v: String) { pace = v; prefs.edit().putString("pace", v).apply(); onChanged("pace") }
+    fun putConfirmEnd(v: Boolean) { confirmEnd = v; prefs.edit().putBoolean("confirmEnd", v).apply(); onChanged("confirmEnd") }
+
+    /** Cuánto dura cada animación del combate respecto a lo normal (1 = como la web; 0,6 = «Rápido»). */
+    val paceFactor: Float get() = if (pace == "rapido") .6f else 1f
 }

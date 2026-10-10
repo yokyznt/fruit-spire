@@ -80,7 +80,7 @@ fun WardrobeScreen(
                         ) { FruitSprite(c.id, 52.dp, dressed = false) }
                     }
                 }
-                val hop by rememberInfiniteTransition(label = "vestidor").animateFloat(0f, 1f, infiniteRepeatable(tween(1500, easing = EaseInOut), RepeatMode.Reverse), label = "salto")
+                val hop by idleAnim(0f, 1f, infiniteRepeatable(tween(1500, easing = EaseInOut), RepeatMode.Reverse), "salto")
                 Box(Modifier.height(190.dp), contentAlignment = Alignment.BottomCenter) {
                     Box(
                         Modifier.graphicsLayer {

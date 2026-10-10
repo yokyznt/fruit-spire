@@ -232,7 +232,10 @@ class RunTest {
                     val text = Save.encode(run)
                     val back = Save.decode(text, progress) ?: fail("no se pudo leer lo guardado (semilla $seed, paso $steps)")
                     // lo guardado en una pantalla "de paso" vuelve en el mapa; el resto, igual
-                    val keeps = run.screen in listOf(RunScreen.ACT_INTRO, RunScreen.REWARD, RunScreen.BOSS_RELIC, RunScreen.WELL, RunScreen.DUNGEON)
+                    val keeps = run.screen in listOf(
+                        RunScreen.ACT_INTRO, RunScreen.REWARD, RunScreen.BOSS_RELIC, RunScreen.WELL, RunScreen.DUNGEON,
+                        RunScreen.REST, RunScreen.SHOP, RunScreen.EVENT
+                    )
                     // una recompensa ya recogida entera se cierra sola al cargar
                     val closesOnLoad = run.screen == RunScreen.REWARD && run.canFinishReward()
                     if (!closesOnLoad) assertEquals(if (keeps) run.screen else RunScreen.MAP, back.screen, "pantalla (semilla $seed, paso $steps)")

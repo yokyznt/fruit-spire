@@ -8,6 +8,19 @@ Leer primero `nativo/ESTADO.md` (qué hay hecho y cómo compilar/probar). Este a
 - Pruebas: `node tools/crosscheck-combat.js 3000 1000` y luego `cd nativo; $env:JAVA_HOME='C:\Users\yokis\.jdks\jdk-21.0.12.1+1'; .\gradlew.bat :core:test :app:testDebugUnitTest :app:assembleDebug` (123 de núcleo y 122 de pantalla en verde al guardar este plan). Revisar los XML de `build/test-results`.
 - Teléfono (Nothing, 2392×1080, conectado por USB con depuración): `adb` en `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`; `adb install -r app\build\outputs\apk\debug\app-debug.apk`; capturas con `adb shell screencap -p /sdcard/x.png` + `adb pull`; toques con `adb shell input tap X Y` (coordenadas físicas = las de una captura mostrada a 2000 de ancho × 1.2); `uiautomator dump` para ver qué es tocable.
 
+## ACTUALIZACIÓN (2026-10-10, tarde) — auditoría de lanzamiento (rama `nativo-auditoria-release`, versión 3.1.0 / código 4)
+Arreglado:
+- **Reanudar**: campamento, tienda y misterio se guardan y vuelven (`Save.RESUMABLE`, `ResumeTest`); antes, si Android mataba la app con uno abierto, se perdía la casilla (cura, compra o evento).
+- **«Terminar turno» tocado durante una animación se perdía** (`wantsEndTurn` solo se escribía): ahora corre al terminar la animación (`runQueuedEndTurn`).
+- **«Animaciones: Menos» no hacía nada**: ahora detiene todas las animaciones de reposo (`Fx.calm`, `idleAnim`).
+- **Lienzo en ventanas verticales o estrechas** (tabletas, plegables, pantalla dividida; Android 16 ya no respeta la orientación fija): `DesignCanvas` no baja de 880 de ancho de diseño y deja papel arriba y abajo.
+- **Música**: `prepareAsync` (antes `prepare()` detenía el hilo principal en cada cambio) y foco de audio (llamadas y otras apps).
+- **Memoria**: la caché de dibujos se ajusta al teléfono (35 % de la memoria de la app, 24–96 MB; 32 MB en poca RAM) y suelta con `onTrimMemory`; la ficha que caminaba ya no «llega» a una casilla si saliste al menú.
+- **«Partida nueva» con partida guardada** pregunta antes de perderla.
+Ajustes nuevos: Gráficos (Bonitos/Rápidos: sin sombras y dibujos al 70 %), Combate › Velocidad (Normal/Rápida), Avisar fin de turno, Política de privacidad (enlace) y Borrar progreso (con confirmación).
+Revisado sin cambios: los dibujos (frutas, 117 enemigos, 68 accesorios, 12 mascotas) se ven bien; `SpriteCoverageTest` vigila que nada caiga a emoji.
+Pruebas: núcleo 152 y app 237 en verde; comparación cruzada con JS (3000 combates, 1000 mapas).
+
 ## ACTUALIZACIÓN (2026-10-10) — rama `worktree-nativo-animaciones-menores` (sobre `main` 927ec82)
 Hecho (animaciones menores de la tienda, el aviso y el mazo; tablas de la web en `css/style.css` y `css/loot.css`):
 - **Tienda** (`NodeScreens.kt`, `GameViewModel.bought`): lo comprado vuela a la barra (mazo/mochila) y su hueco se cierra (`SoldSlot`, `soldPose`, 0,4 s) mientras los demás se deslizan; si no alcanza, el artículo tiembla (`shakeSoft`, `vm.nope`) y la casilla del oro también (`vm.goldNope`); al gastar oro la casilla da el pulso `coinSpend` (`HudBar`, `spendPulse`). El oro baja de inmediato (los vuelos ya no retienen ganancias negativas).

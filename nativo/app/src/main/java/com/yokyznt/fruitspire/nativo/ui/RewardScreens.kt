@@ -90,7 +90,7 @@ fun PaperScreen(
 /** El salto de celebración (`hop` 1 s sin parar de css/style.css): sube con un giro y cae aplastándose. */
 @Composable
 fun HopBox(content: @Composable () -> Unit) {
-    val t by rememberInfiniteTransition(label = "salto").animateFloat(0f, 1f, infiniteRepeatable(tween(1000, easing = LinearEasing)), label = "t")
+    val t by idleAnim(0f, 1f, infiniteRepeatable(tween(1000, easing = LinearEasing)), "salto")
     Box(Modifier.graphicsLayer {
         transformOrigin = TransformOrigin(.5f, 1f)
         // 0 % en el suelo · 40 % arriba (−16 px, −5°) · 70 % otra vez en el suelo, aplastada (1,05 × 0,95) · 100 % normal
@@ -183,7 +183,7 @@ fun LootItemView(item: LootItem, index: Int, seedsFull: Boolean, onCollect: () -
 /** El brillo dorado que respira alrededor de un premio por recoger (softGlow 1,6 s): solo cambia lo que se dibuja, nada se vuelve a medir. */
 @Composable
 private fun BoxScope.LootGlow() {
-    val glow by rememberInfiniteTransition(label = "brillo").animateFloat(0f, 1f, infiniteRepeatable(tween(800, easing = androidx.compose.animation.core.EaseInOut), RepeatMode.Reverse), label = "g")
+    val glow by idleAnim(0f, 1f, infiniteRepeatable(tween(800, easing = androidx.compose.animation.core.EaseInOut), RepeatMode.Reverse), "brillo")
     Box(Modifier.matchParentSize().drawBehind {
         val k = density
         val a = glow

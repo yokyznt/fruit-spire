@@ -169,8 +169,8 @@ private fun idlePose(kind: String, timeSec: Float, offsetSec: Float): Pose {
 // ---------------------------------------------------------------------------------------------------------------
 @Composable
 private fun IntentBubble(intent: IntentUi, acting: Boolean, onInfo: () -> Unit, modifier: Modifier = Modifier, compact: Boolean = false) {
-    val bob by rememberInfiniteTransition(label = "globo").animateFloat(0f, 1f, infiniteRepeatable(tween(1800, easing = EaseInOut), RepeatMode.Reverse), label = "bob")
-    val pulse by rememberInfiniteTransition(label = "pulso").animateFloat(1f, 1.12f, infiniteRepeatable(tween(500, easing = EaseInOut), RepeatMode.Reverse), label = "pulse")
+    val bob by idleAnim(0f, 1f, infiniteRepeatable(tween(1800, easing = EaseInOut), RepeatMode.Reverse), "bob")
+    val pulse by idleAnim(1f, 1.12f, infiniteRepeatable(tween(500, easing = EaseInOut), RepeatMode.Reverse), "pulse")
     val fill = when (intent.cls) {
         "attack" -> Ink.strawberrySoft; "defend" -> Ink.mintSoft; "buff" -> Ink.peachSoft; "heal" -> Ink.leafSoft; else -> Ink.edge
     }
@@ -803,7 +803,8 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
     val designW = LocalDesignWidth.current
     ctl.pxPerUnit = density
     // reloj en segundos para las animaciones de reposo (se lee solo al dibujar: no recompone nada)
-    val clock = rememberInfiniteTransition(label = "reloj").animateFloat(0f, 3600f, infiniteRepeatable(tween(3_600_000, easing = androidx.compose.animation.core.LinearEasing), RepeatMode.Restart), label = "t")
+    // el reloj de todas las poses de reposo (fruta y enemigos); con «Animaciones: Menos» no corre y todos quedan en su pose base
+    val clock = idleAnim(0f, 3600f, infiniteRepeatable(tween(3_600_000, easing = androidx.compose.animation.core.LinearEasing), RepeatMode.Restart), "t")
     var drag by remember { mutableStateOf<DragState?>(null) }
     val multi = ui.enemies.size > 1
     val discarding = ctl.discarding

@@ -2,6 +2,7 @@ package com.yokyznt.fruitspire.nativo
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.SoundPool
 import android.os.Build
@@ -73,6 +74,34 @@ class AndroidAudio(context: Context, private val settings: Settings, private val
         } catch (e: Exception) { Log.w(TAG, "no se pudo vibrar", e) }
     }
 
+    // ---------- foco de audio ----------
+    // Una llamada o la música de otra app le quita el foco: la música del juego se pausa y vuelve sola al recuperarlo.
+    private val audioManager = app.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    private var focusLost = false
+    private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+        when (change) {
+            AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                focusLost = true
+                try { player?.pause() } catch (e: Exception) { /* sin reproductor */ }
+            }
+            AudioManager.AUDIOFOCUS_GAIN -> if (focusLost) {
+                focusLost = false
+                if (!paused) try { player?.start() } catch (e: Exception) { /* sin reproductor o aún preparando */ }
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun requestFocus() {
+        try { audioManager?.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN) } catch (e: Exception) { /* sin foco */ }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun abandonFocus() {
+        try { audioManager?.abandonAudioFocus(focusListener) } catch (e: Exception) { /* sin foco */ }
+        focusLost = false
+    }
+
     // ---------- música ----------
     private var place: String? = null
     private var playingPlace: String? = null
@@ -98,11 +127,15 @@ class AndroidAudio(context: Context, private val settings: Settings, private val
             mp.isLooping = (GEN_PLAYLISTS[place]?.size ?: 0) == 1 // una lista de una sola canción se repite
             mp.setOnCompletionListener { if (player === it) startSong() }
             mp.setOnErrorListener { p, _, _ -> if (player === p) stopPlayer(fade = false); true }
-            mp.prepare()
             val g = Volume.curve(settings.music).toFloat()
             mp.setVolume(g, g)
-            mp.start()
+            // se prepara en segundo plano: antes `prepare()` detenía la pantalla unos instantes en cada cambio de canción
+            mp.setOnPreparedListener { p ->
+                if (player === p && !paused && !focusLost) try { p.start() } catch (e: Exception) { Log.w(TAG, "no arrancó la música", e) }
+            }
             player = mp
+            requestFocus()
+            mp.prepareAsync()
         } catch (e: Exception) {
             Log.w(TAG, "no se pudo tocar la música de $place", e)
             player = null
@@ -159,6 +192,8 @@ class AndroidAudio(context: Context, private val settings: Settings, private val
 
     override fun release() {
         stopPlayer(fade = false)
+        abandonFocus()
+        handler.removeCallbacksAndMessages(null) // los fundidos pendientes ya no hacen falta
         pool.release()
     }
 

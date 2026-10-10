@@ -58,7 +58,7 @@ fun PassScreen(
     // el nivel recién reclamado reaparece con `pop` (just-claimed de la web); vive fuera del key(rev), que reconstruye la pista
     var justClaimed by remember { mutableIntStateOf(0) }
     // un solo ciclo de 1,6 s para todos los premios listos: flotan 4 dp (passReady); se lee al dibujar, sin recomponer
-    val ready = rememberInfiniteTransition(label = "pase").animateFloat(0f, 1f, infiniteRepeatable(tween(1600, easing = LinearEasing)), label = "flota")
+    val ready = idleAnim(0f, 1f, infiniteRepeatable(tween(1600, easing = LinearEasing)), "flota")
     key(rev) { // se redibuja cada vez que se reclama algo (el progreso no es observable por Compose)
         val st = Pass.state(progress)
         val claimable = Pass.unclaimed(progress)

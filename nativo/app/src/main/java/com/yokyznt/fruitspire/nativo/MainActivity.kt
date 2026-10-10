@@ -53,7 +53,9 @@ import com.yokyznt.fruitspire.nativo.ui.FateScreen
 import com.yokyznt.fruitspire.nativo.ui.Fonts
 import com.yokyznt.fruitspire.nativo.ui.GameAudio
 import com.yokyznt.fruitspire.nativo.ui.GameOverScreen
+import com.yokyznt.fruitspire.nativo.ui.ConfirmDialog
 import com.yokyznt.fruitspire.nativo.ui.FlyLayer
+import com.yokyznt.fruitspire.nativo.ui.Fx
 import com.yokyznt.fruitspire.nativo.ui.HudBar
 import com.yokyznt.fruitspire.nativo.ui.LocalHudAnchors
 import com.yokyznt.fruitspire.nativo.ui.LocalLootNudge
@@ -103,9 +105,16 @@ class MainActivity : ComponentActivity() {
         val settings = Settings(this)
         // el sonido: los ajustes de volumen y vibración le llegan al momento
         val sound = AndroidAudio(this, settings)
-        settings.onChanged = sound::settingChanged
+        // Pantalla › Animaciones y Gráficos los lee todo el dibujo (Fx); el resto de ajustes los atiende el sonido
+        Fx.calm = settings.motion == "menos"
+        Fx.lite = settings.graphics == "rapido"
+        settings.onChanged = { key ->
+            sound.settingChanged(key)
+            when (key) { "motion" -> Fx.calm = settings.motion == "menos"; "graphics" -> Fx.lite = settings.graphics == "rapido" }
+        }
         audio = sound
         vm.audio = sound
+        vm.settings = settings
         setContent {
             // Ajustes → Pantalla encendida
             LaunchedEffect(settings.awake) {
@@ -119,6 +128,12 @@ class MainActivity : ComponentActivity() {
     // En segundo plano todo se calla (música y vibración) y al volver se retoma
     override fun onPause() { audio.pause(); super.onPause() }
     override fun onResume() { super.onResume(); audio.resume() }
+
+    // Con poca memoria libre se sueltan dibujos de la caché (se vuelven a preparar al hacer falta)
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        SpriteStore.trim(level)
+    }
 
     override fun onDestroy() {
         audio.release()
@@ -136,6 +151,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** La política de privacidad (la misma que pide Google Play). Sin navegador instalado simplemente no pasa nada. */
+private const val PRIVACY_URL = "https://fruit-spire.vercel.app/privacidad.html"
+
+private fun openPrivacy(context: android.content.Context) {
+    try {
+        val view = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(PRIVACY_URL))
+        context.startActivity(view.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (e: Exception) { /* sin navegador */ }
+}
+
 /** Zoom del mapa en teléfono según Ajustes (lejos · normal · cerca). */
 private fun zoomOf(setting: String) = when (setting) { "lejos" -> 1f; "cerca" -> 1.5f; else -> 1.25f }
 
@@ -143,6 +168,8 @@ private fun zoomOf(setting: String) = when (setting) { "lejos" -> 1f; "cerca" ->
 @Composable
 fun GameRoot(vm: GameViewModel, settings: Settings) {
     var showSettings by remember { mutableStateOf(false) }
+    var confirmNew by remember { mutableStateOf(false) } // «Partida nueva» con una partida guardada: pregunta antes de perderla
+    val context = androidx.compose.ui.platform.LocalContext.current
     val toast = remember { ToastState() }
     vm.toast = { toast.show(it) }
     val soon = { toast.show("Llega en una etapa siguiente") }
@@ -153,7 +180,8 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
     Box(Modifier.fillMaxSize().notebookPaper()) {
         when (vm.screen) {
             AppScreen.MENU -> MenuScreen(
-                canContinue = vm.canContinue, onContinue = vm::continueGame, onNewGame = vm::newGame,
+                canContinue = vm.canContinue, onContinue = vm::continueGame,
+                onNewGame = { if (vm.canContinue) confirmNew = true else vm.newGame() },
                 onTutorial = vm::startTutorial, onPass = vm::openPass, onWardrobe = vm::openWardrobe, onCollection = vm::openCollection, onNotes = vm::openNotes,
                 onSettings = { showSettings = true }, passBadge = Pass.unclaimed(vm.progress), notesBadge = vm.progress.notesAreNew()
             )
@@ -174,7 +202,13 @@ fun GameRoot(vm: GameViewModel, settings: Settings) {
             )
             AppScreen.RUN -> RunHost(vm, settings, onSettings = { showSettings = true }, onBag = vm::openBag)
         }
-        if (showSettings) SettingsWindow(settings) { showSettings = false }
+        if (showSettings) SettingsWindow(settings, onClose = { showSettings = false }, onErase = vm::eraseProgress, onPrivacy = { openPrivacy(context) })
+        if (confirmNew) {
+            ConfirmDialog(
+                "Ya tienes una partida guardada. Si empiezas otra, se pierde.", "Empezar otra", "Seguir con la mía",
+                onYes = { confirmNew = false; vm.newGame() }, onNo = { confirmNew = false }
+            )
+        }
         toast.Host(Modifier.align(Alignment.BottomCenter).padding(bottom = 40.dp))
     }
     }

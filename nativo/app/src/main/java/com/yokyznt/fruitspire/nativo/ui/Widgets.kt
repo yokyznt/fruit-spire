@@ -172,7 +172,7 @@ fun Logo(text: String, fontSize: Float, modifier: Modifier = Modifier) {
 /** Hoja de papel con borde: el panel del juego. */
 fun Modifier.paperPanel(radius: Dp = 22.dp, fill: Color = Ink.paper2): Modifier = drawBehind {
     val ink = 3.dp.toPx()
-    drawRoundRect(Color(0x404A3428), Offset(6.dp.toPx(), 12.dp.toPx()), size, CornerRadius(radius.toPx()))
+    if (!Fx.lite) drawRoundRect(Color(0x404A3428), Offset(6.dp.toPx(), 12.dp.toPx()), size, CornerRadius(radius.toPx())) // «Gráficos: Rápidos»: sin sombra
     drawRoundRect(Ink.ink, Offset(-ink, -ink), Size(size.width + ink * 2, size.height + ink * 2), CornerRadius(radius.toPx() + ink))
     drawRoundRect(fill, Offset.Zero, size, CornerRadius(radius.toPx()))
 }

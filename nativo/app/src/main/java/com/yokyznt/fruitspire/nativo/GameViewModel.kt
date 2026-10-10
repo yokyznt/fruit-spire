@@ -105,6 +105,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     /** El sonido (lo pone la actividad; sin él, como en las pruebas y las vistas previas, no suena nada). */
     var audio: GameAudio = NoAudio
 
+    /** Los ajustes del jugador (los pone la actividad): el combate lee de aquí la velocidad y el aviso de fin de turno. */
+    var settings: Settings? = null
+
     /** Lo que se les da a los controladores de combate y de mesa: siempre habla con el sonido de ahora, aunque la actividad se recree. */
     private val sound = object : GameAudio {
         override fun play(sfx: Sfx, variant: Int) = audio.play(sfx, variant)
@@ -246,6 +249,22 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun newGame() { screen = AppScreen.CHARACTER_SELECT }
+
+    /**
+     * Ajustes › «Borrar progreso»: la partida guardada y todo lo ganado (colores, pase, mascotitas, colección, grados) se borran
+     * del dispositivo. Los ajustes (volumen, zoom…) se quedan.
+     */
+    fun eraseProgress() {
+        soonJob?.cancel(); soonJob = null
+        run = null
+        store.clearRun()
+        store.clearProgress()
+        progress = Save.decodeProgress(null)
+        selectedChar = "manzana"
+        selectedDiff = "madura"
+        toMenu()
+        bump()
+    }
 
     fun selectChar(id: String) {
         selectedChar = id
@@ -413,6 +432,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val type = r.map.grid[y][x] // al llegar la casilla se consume: se lee antes
         viewModelScope.launch {
             delay(460)
+            // si saliste al menú (o cargaste otra partida) mientras la ficha caminaba, ya no se llega a ninguna casilla
+            if (moving == null || run !== r) return@launch
             val pc = r.arrive(x, y)
             moving = null
             arrivalSound(type, r)
@@ -473,6 +494,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val c = r.startCombat(pc, onEnd = { res -> val k = ctl; if (k != null) k.onEnd(res) else earlyResult = res })
         val made = CombatController(r, c, uiScope ?: viewModelScope, { toast(it) }, { result -> finishCombat(result) }, sound)
         if (r.tutorial != null) made.gate = combatGate
+        made.pace = { settings?.paceFactor ?: 1f }
+        made.confirmEnd = { settings?.confirmEnd == true }
         ctl = made
         earlyResult?.let { made.onEnd(it) }
         combat = made

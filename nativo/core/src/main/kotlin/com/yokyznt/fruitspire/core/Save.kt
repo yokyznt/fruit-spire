@@ -47,6 +47,19 @@ private class LootSave(val k: String, val n: Int = 0, val id: String? = null, va
 private class DungeonSave(val cleared: List<List<Boolean>>, val posX: Int, val posY: Int, val exitX: Int, val exitY: Int, val deco: Int)
 
 @Serializable
+private class ShopCardSave(val id: String, val price: Int, val sale: Boolean = false)
+
+@Serializable
+private class ShopItemSave(val id: String, val price: Int)
+
+/** El surtido de una tienda a medias: lo que queda a la venta y si ya se usó «Quitar una carta». */
+@Serializable
+private class ShopSave(
+    val cards: List<ShopCardSave> = emptyList(), val relics: List<ShopItemSave> = emptyList(),
+    val seeds: List<ShopItemSave> = emptyList(), val removeUsed: Boolean = false
+)
+
+@Serializable
 private class RunSave(
     val version: Int = 1,
     val characterId: String,
@@ -62,7 +75,10 @@ private class RunSave(
     val loot: List<LootSave> = emptyList(),
     val wellSpins: Int = 0,
     val wellMessage: String = "",
-    val dungeon: DungeonSave? = null
+    val dungeon: DungeonSave? = null,
+    /** Tienda abierta (pantalla SHOP) y evento abierto (pantalla EVENT): Android puede matar la app con ellas a medias. */
+    val shop: ShopSave? = null,
+    val eventId: String? = null
 )
 
 @Serializable
@@ -77,8 +93,14 @@ private class ProgressSave(
 object Save {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-    /** Pantallas a las que se puede volver al continuar; el resto regresa al mapa. */
-    private val RESUMABLE = setOf(RunScreen.ACT_INTRO, RunScreen.REWARD, RunScreen.BOSS_RELIC, RunScreen.WELL, RunScreen.DUNGEON)
+    /**
+     * Pantallas a las que se puede volver al continuar; el resto regresa al mapa. El campamento, la tienda y el misterio cuentan:
+     * si Android mata la app con ellos abiertos no se pierde la cura, la compra ni el evento (la casilla ya estaba gastada).
+     */
+    private val RESUMABLE = setOf(
+        RunScreen.ACT_INTRO, RunScreen.REWARD, RunScreen.BOSS_RELIC, RunScreen.WELL, RunScreen.DUNGEON,
+        RunScreen.REST, RunScreen.SHOP, RunScreen.EVENT
+    )
 
     /** ¿Tiene sentido guardar ahora? (no a mitad de un combate ni cuando la partida ya terminó). */
     fun shouldSave(run: Run): Boolean = run.screen != RunScreen.COMBAT && !run.isOver && run.tutorial == null // ni a mitad de un combate ni en el tutorial
@@ -109,14 +131,28 @@ object Save {
             ),
             visited = run.visited.toList(),
             posX = run.pos.x, posY = run.pos.y,
-            screen = (if (run.screen in RESUMABLE) run.screen else RunScreen.MAP).name,
+            screen = (if (run.screen in RESUMABLE && hasContent(run)) run.screen else RunScreen.MAP).name,
             rewardCards = run.rewardCards, rewardPicked = run.rewardCardPicked,
             afterReward = run.afterReward, combatKind = run.combatKind,
             loot = run.loot.filter { it.isOpen }.map { LootSave(it.k, it.n, it.id, it.heal) },
             wellSpins = run.wellSpins, wellMessage = run.wellMessage,
-            dungeon = run.dungeon?.let { dg -> DungeonSave(dg.cleared.map { row -> row.toList() }, dg.pos.x, dg.pos.y, dg.exit.x, dg.exit.y, dg.deco) }
+            dungeon = run.dungeon?.let { dg -> DungeonSave(dg.cleared.map { row -> row.toList() }, dg.pos.x, dg.pos.y, dg.exit.x, dg.exit.y, dg.deco) },
+            shop = run.shopStock?.takeIf { run.screen == RunScreen.SHOP }?.let { s ->
+                ShopSave(
+                    s.cards.map { ShopCardSave(it.cardId, it.price, it.sale) }, s.relics.map { ShopItemSave(it.relicId, it.price) },
+                    s.seeds.map { ShopItemSave(it.seedId, it.price) }, s.removeUsed
+                )
+            },
+            eventId = run.currentEvent?.id?.takeIf { run.screen == RunScreen.EVENT }
         )
         return json.encodeToString(RunSave.serializer(), data)
+    }
+
+    /** ¿Tiene lo que su pantalla necesita para volver (surtido de la tienda, evento)? Si no, se guarda en el mapa. */
+    private fun hasContent(run: Run): Boolean = when (run.screen) {
+        RunScreen.SHOP -> run.shopStock != null
+        RunScreen.EVENT -> run.currentEvent != null
+        else -> true
     }
 
     /** Reconstruye la partida; null si el texto está dañado. Lo que ya no existe en el juego se descarta. */
@@ -183,6 +219,26 @@ object Save {
             }
             RunScreen.BOSS_RELIC -> run.openBossRelics() // se vuelven a sortear las opciones
             RunScreen.DUNGEON -> if (run.dungeon == null) run.screen = RunScreen.MAP
+            RunScreen.REST -> run.pickerMode = null
+            RunScreen.SHOP -> {
+                val s = d.shop
+                if (s == null) run.screen = RunScreen.MAP
+                else {
+                    // lo que ya no existe en el juego se descarta, como con las cartas y los objetos del jugador
+                    run.shopStock = ShopStock(
+                        s.cards.filter { Cards.get(it.id) != null }.map { ShopCard(it.id, it.price, it.sale) }.toMutableList(),
+                        s.relics.filter { Relics.get(it.id) != null }.map { ShopRelic(it.id, it.price) }.toMutableList(),
+                        s.seeds.filter { Seeds.get(it.id) != null }.map { ShopSeed(it.id, it.price) }.toMutableList(),
+                        s.removeUsed
+                    )
+                    run.pickerMode = null
+                }
+            }
+            RunScreen.EVENT -> {
+                val ev = Events.all.firstOrNull { it.id == d.eventId }
+                if (ev == null) run.screen = RunScreen.MAP
+                else { run.currentEvent = ev; run.lastEventId = ev.id }
+            }
             else -> {}
         }
         // fuera de las recompensas, lo que quedó sin recoger (tesoro, cofre…) se da solo

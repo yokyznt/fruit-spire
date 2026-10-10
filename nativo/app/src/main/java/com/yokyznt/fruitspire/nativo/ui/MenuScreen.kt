@@ -52,9 +52,7 @@ fun MenuScreen(
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             // las cuatro frutas se mecen, cada una a su ritmo
-            val time by rememberInfiniteTransition(label = "menu").animateFloat(
-                0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), label = "mecer"
-            )
+            val time by idleAnim(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), "mecer")
             Row(horizontalArrangement = Arrangement.spacedBy(40.dp)) {
                 listOf("manzana", "platanin", "kiwi", "uva").forEachIndexed { i, id ->
                     FruitSprite(id, 108.dp, Modifier.graphicsLayer {
