@@ -70,8 +70,8 @@ private val TYPE_LABELS = mapOf("attack" to "ataque", "skill" to "habilidad", "p
 fun Modifier.stickerCard(radius: Dp = 16.dp, fill: Color = Ink.edge, glow: Color? = null): Modifier = drawBehind {
     val r = radius.toPx()
     val ink = 2.dp.toPx()
-    drawRoundRect(Color(0x2E4A3428), Offset(2.dp.toPx(), 4.dp.toPx()), size, CornerRadius(r))
-    if (glow != null) {
+    if (!Fx.lite) drawRoundRect(Color(0x2E4A3428), Offset(2.dp.toPx(), 4.dp.toPx()), size, CornerRadius(r)) // «Gráficos: Rápidos»: sin sombra
+    if (glow != null && !Fx.lite) {
         val g = 6.dp.toPx()
         drawRoundRect(glow.copy(alpha = .5f), Offset(-g, -g), Size(size.width + g * 2, size.height + g * 2), CornerRadius(r + g))
     }

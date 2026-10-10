@@ -1,6 +1,12 @@
 package com.yokyznt.fruitspire.nativo.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Alignment
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
@@ -85,16 +91,25 @@ fun DesignCanvas(content: @Composable () -> Unit) {
     val cut = WindowInsets.displayCutout
     val cutLeft = cut.getLeft(real, dir)
     val cutRight = cut.getRight(real, dir)
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val scale = constraints.maxHeight / DESIGN_H
+    BoxWithConstraints(Modifier.fillMaxSize().background(Ink.paper)) {
+        // El lienzo mide 660 de alto y, como poco, MIN_DESIGN_W de ancho (4:3). En una ventana más estrecha —tabletas y plegables en
+        // vertical (Android 16 ya no respeta la orientación fija en pantallas grandes), pantalla dividida— el juego se encoge para
+        // caber y sobra papel arriba y abajo, en vez de apretarse hasta romper la interfaz.
+        val scale = minOf(constraints.maxHeight / DESIGN_H, constraints.maxWidth / MIN_DESIGN_W)
         val width = constraints.maxWidth / scale
-        CompositionLocalProvider(
-            LocalDensity provides Density(density = scale, fontScale = 1f),
-            LocalDesignWidth provides width,
-            LocalSafeInsets provides SafeInsets(cutLeft / scale, cutRight / scale)
-        ) { content() }
+        val canvasHeight = with(real) { (DESIGN_H * scale).roundToInt().toDp() }
+        Box(Modifier.align(Alignment.Center).fillMaxWidth().height(canvasHeight)) {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = scale, fontScale = 1f),
+                LocalDesignWidth provides width,
+                LocalSafeInsets provides SafeInsets(cutLeft / scale, cutRight / scale)
+            ) { content() }
+        }
     }
 }
+
+/** El ancho de diseño más angosto que aguanta la interfaz (4:3 con el alto de 660). */
+const val MIN_DESIGN_W = 880f
 
 /** Lo que tapa el recorte de la pantalla (la cámara) a cada lado, en px de diseño. */
 class SafeInsets(val left: Float, val right: Float) {

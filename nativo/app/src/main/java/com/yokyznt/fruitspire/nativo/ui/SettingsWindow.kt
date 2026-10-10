@@ -16,7 +16,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,35 +36,74 @@ import com.yokyznt.fruitspire.nativo.Settings
 
 /** Ventana de ajustes (renderSettings de js/settings.js). */
 @Composable
-fun SettingsWindow(settings: Settings, onClose: () -> Unit) {
+fun SettingsWindow(settings: Settings, onErase: () -> Unit = {}, onPrivacy: (() -> Unit)? = null, onClose: () -> Unit) {
     val noRipple = remember { MutableInteractionSource() }
+    var asking by remember { mutableStateOf(false) } // «¿Borrar todo?»: se pide confirmar antes de borrar
     Box(
         Modifier.fillMaxSize().background(Color(0x804A3428)).clickable(noRipple, null) { },
         contentAlignment = Alignment.Center
     ) {
-        Column(Modifier.paperPanel().padding(horizontal = 30.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.paperPanel().padding(horizontal = 30.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Sprite("ui_gear", 44.dp)
+                Sprite("ui_gear", 40.dp)
                 Spacer(Modifier.width(10.dp))
-                BasicText("Ajustes", style = Fonts.hand(46f))
+                BasicText("Ajustes", style = Fonts.hand(42f))
             }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                Group("Sonido") {
-                    SettingRow("Música") { Volume(settings.music) { settings.putMusic(it) } }
-                    SettingRow("Efectos") { Volume(settings.sfx) { settings.putSfx(it) } }
-                    SettingRow("Vibración") { Segments(listOf(true to "Sí", false to "No"), settings.vibrate) { settings.putVibrate(it) } }
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Top) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Group("Sonido") {
+                        SettingRow("Música") { Volume(settings.music) { settings.putMusic(it) } }
+                        SettingRow("Efectos") { Volume(settings.sfx) { settings.putSfx(it) } }
+                        SettingRow("Vibración") { Segments(listOf(true to "Sí", false to "No"), settings.vibrate) { settings.putVibrate(it) } }
+                    }
+                    Group("Combate") {
+                        SettingRow("Velocidad") { Segments(listOf("normal" to "Normal", "rapido" to "Rápida"), settings.pace) { settings.putPace(it) } }
+                        SettingRow("Avisar fin de turno") { Segments(listOf(true to "Sí", false to "No"), settings.confirmEnd) { settings.putConfirmEnd(it) } }
+                    }
                 }
                 Group("Pantalla") {
                     SettingRow("Zoom del mapa") { Segments(listOf("lejos" to "Lejos", "normal" to "Normal", "cerca" to "Cerca"), settings.mapZoom) { settings.putMapZoom(it) } }
+                    SettingRow("Gráficos") { Segments(listOf("bonito" to "Bonitos", "rapido" to "Rápidos"), settings.graphics) { settings.putGraphics(it) } }
                     SettingRow("Animaciones") { Segments(listOf("todas" to "Todas", "menos" to "Menos"), settings.motion) { settings.putMotion(it) } }
                     SettingRow("Pantalla encendida") { Segments(listOf(true to "Sí", false to "No"), settings.awake) { settings.putAwake(it) } }
                 }
             }
+            Spacer(Modifier.height(6.dp))
+            BasicText("Fruit Spire ${GameInfo.VERSION} · ${GameInfo.CREATOR}", style = Fonts.hand(20f, Ink.inkSoft))
             Spacer(Modifier.height(8.dp))
-            BasicText("Fruit Spire ${GameInfo.VERSION} · ${GameInfo.CREATOR}", style = Fonts.hand(21f, Ink.inkSoft))
-            Spacer(Modifier.height(12.dp))
-            StickerButton("Listo", onClose, color = Ink.mint, fontSize = 21f)
+            if (asking) {
+                BasicText("¿Borrar tu partida y todo lo que ganaste? No se puede deshacer.", style = Fonts.body(18f, FontWeight.SemiBold))
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    StickerButton("Sí, borrar todo", { asking = false; onErase(); onClose() }, color = Ink.strawberryBtn, fontSize = 20f)
+                    StickerButton("No", { asking = false }, secondary = true, fontSize = 20f)
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    if (onPrivacy != null) StickerButton("Política de privacidad", onPrivacy, secondary = true, fontSize = 19f)
+                    StickerButton("Borrar progreso", { asking = true }, secondary = true, fontSize = 19f)
+                    StickerButton("Listo", onClose, color = Ink.mint, fontSize = 21f)
+                }
+            }
+        }
+    }
+}
+
+/** Una pregunta de sí o no sobre el resto de la pantalla (p. ej. «Partida nueva» cuando ya hay una guardada). */
+@Composable
+fun ConfirmDialog(text: String, yes: String, no: String, onYes: () -> Unit, onNo: () -> Unit) {
+    val noRipple = remember { MutableInteractionSource() }
+    Box(Modifier.fillMaxSize().background(Color(0x804A3428)).clickable(noRipple, null) { }, contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.paperPanel().padding(horizontal = 34.dp, vertical = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            BasicText(text, style = Fonts.hand(30f).copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center), modifier = Modifier.width(560.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                StickerButton(yes, onYes, color = Ink.mint, fontSize = 24f)
+                StickerButton(no, onNo, secondary = true, fontSize = 24f)
+            }
         }
     }
 }

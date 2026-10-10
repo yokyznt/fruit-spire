@@ -218,8 +218,7 @@ private fun SpeechBubble(text: String, modifier: Modifier = Modifier, fontSize: 
  */
 @Composable
 private fun Dealer(table: Table, dealer: String, modifier: Modifier = Modifier) {
-    val wobble = rememberInfiniteTransition(label = "crupier")
-    val tilt by wobble.animateFloat(-3f, 3f, infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Reverse), label = "tilt")
+    val tilt by idleAnim(-3f, 3f, infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Reverse), "crupier", rest = 0f)
     val mood = when { table.ahead > 0 -> "hurt"; table.ahead < 0 -> "wink"; else -> null }
     Column(modifier.width(DEALER_W.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         SpeechBubble(table.dealerLine, Modifier.padding(bottom = 24.dp))

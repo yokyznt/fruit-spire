@@ -19,6 +19,7 @@ class SaveStore(context: Context) {
 
     fun readProgress(): String? = read(progressFile)
     fun writeProgress(text: String) = write(progressFile, text)
+    fun clearProgress() { progressFile.delete() }
 
     private fun read(f: File): String? = try { if (f.exists()) f.readText() else null } catch (e: Exception) { null }
 

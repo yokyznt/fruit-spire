@@ -4,6 +4,8 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -70,9 +72,8 @@ private fun Polaroid(c: CharacterDef, index: Int, selected: Boolean, progress: P
     val tilt = floatArrayOf(-4f, 2f, -1.5f, 3f)[index % 4]
     val drop = floatArrayOf(0f, 12f, 0f, 6f)[index % 4]
     val photoColors = listOf(Ink.bananaSoft to Ink.peachSoft, Ink.mintSoft to Color(0xFFFFF6D6), Color(0xFFE9F6D6) to Ink.grapeSoft, Ink.grapeSoft to Color(0xFFFFE6F0))[index % 4]
-    val hop by rememberInfiniteTransition(label = "salto").animateFloat(
-        0f, 1f, infiniteRepeatableHop(), label = "hop"
-    )
+    // solo la fruta elegida salta: las otras no gastan una animación sin fin
+    val hop by (if (selected) idleAnim(0f, 1f, infiniteRepeatableHop(), "hop") else remember { mutableFloatStateOf(0f) })
     val level = progress.level(c.id)
     Box(
         Modifier.width(width.dp).graphicsLayer {

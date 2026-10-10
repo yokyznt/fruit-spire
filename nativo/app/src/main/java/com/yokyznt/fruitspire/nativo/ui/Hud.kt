@@ -80,7 +80,7 @@ fun hudStateOf(run: Run, seedReady: Boolean = false, flights: List<Flight> = emp
 fun Modifier.chip(radius: Dp = 99.dp, fill: Color = Ink.edge): Modifier = drawBehind {
     val r = radius.toPx().coerceAtMost(size.minDimension / 2f)
     val ink = 2.dp.toPx()
-    drawRoundRect(Color(0x2E4A3428), Offset(2.dp.toPx(), 4.dp.toPx()), size, CornerRadius(r))
+    if (!Fx.lite) drawRoundRect(Color(0x2E4A3428), Offset(2.dp.toPx(), 4.dp.toPx()), size, CornerRadius(r)) // «Gráficos: Rápidos»: sin sombra
     drawRoundRect(Ink.ink, Offset(-ink, -ink), Size(size.width + ink * 2, size.height + ink * 2), CornerRadius(r + ink))
     drawRoundRect(fill, Offset.Zero, size, CornerRadius(r))
 }

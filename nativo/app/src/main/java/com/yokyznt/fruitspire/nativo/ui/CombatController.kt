@@ -143,7 +143,10 @@ fun intentOf(c: Combat, e: EnemyInstance): IntentUi {
 // ---------------------------------------------------------------------------------------------------------------
 // Poses de las animaciones de ataque (los @keyframes aLunge, aBite… de css/style.css)
 // ---------------------------------------------------------------------------------------------------------------
-class AnimInfo(val dur: Int, val hit: Int, val melee: Boolean)
+class AnimInfo(val dur: Int, val hit: Int, val melee: Boolean) {
+    /** La misma animación más rápida (o lenta) por el factor [k] (Ajustes › Combate: Rápido). */
+    fun scaled(k: Float): AnimInfo = if (k == 1f) this else AnimInfo((dur * k).toInt().coerceAtLeast(1), (hit * k).toInt(), melee)
+}
 
 val ANIMS: Map<String, AnimInfo> = mapOf(
     "lunge" to AnimInfo(640, 300, true), "bite" to AnimInfo(660, 290, true), "charge" to AnimInfo(900, 520, true),
@@ -365,6 +368,15 @@ class CombatController(
     private var finishing = false
     private var wantsEndTurn = false
 
+    /** Cuánto dura cada animación respecto a lo normal (Ajustes › Combate): 1 = normal, 0,6 = rápido. La pone quien crea el controlador. */
+    var pace: () -> Float = { 1f }
+    /** Ajustes › «Avisar al terminar el turno»: pide tocar otra vez si aún tienes cartas que jugar. */
+    var confirmEnd: () -> Boolean = { false }
+    private var endArmed = false
+
+    /** Espera [ms] (a la velocidad de combate de los ajustes). */
+    private suspend fun wait(ms: Long) = delay((ms * pace()).toLong().coerceAtLeast(1L))
+
     /** Lo que dibuja la pantalla; se vuelve a leer del motor con [refresh] después de cada acción. */
     var ui by mutableStateOf(buildUi())
         private set
@@ -453,7 +465,7 @@ class CombatController(
     private suspend fun entrance() {
         actors.forEach { a -> a.enter.snapTo(0f) }
         actors.forEachIndexed { i, a -> scope.launch { delay(100L + max(0, i - 1) * 100L); a.enter.animateTo(1f, tween(1100, easing = LinearEasing)) } }
-        delay(1250)
+        wait(1250)
         showTurn("¡Tu turno!", yours = true)
         busy = false
         checkFinish()
@@ -475,7 +487,7 @@ class CombatController(
     private fun centerOf(key: String): Offset? = anchors[key]?.center
 
     private suspend fun playAnim(key: String, kind: String, targetKey: String?): AnimInfo {
-        val info = ANIMS[kind] ?: ANIMS.getValue("cast")
+        val info = (ANIMS[kind] ?: ANIMS.getValue("cast")).scaled(pace())
         val a = actor(key)
         val me = centerOf(key)
         val tg = targetKey?.let { centerOf(it) }
@@ -624,10 +636,19 @@ class CombatController(
         hiddenSlot = -1L
         refresh()
         spawnFx(c.lastEvents, card.fx ?: "punch")
-        delay(max(260, info.dur - info.hit - 120).toLong())
+        val base = ANIMS[anim] ?: ANIMS.getValue("cast")
+        wait(max(260, base.dur - base.hit - 120).toLong())
         if (!c.ended) busy = false
         gate?.notify("card:${card.type}")
         afterEngine()
+        runQueuedEndTurn()
+    }
+
+    /** Si tocaste «Terminar turno» mientras algo se animaba, se hace en cuanto se puede (como `wantsEndTurn` de la web). */
+    private fun runQueuedEndTurn() {
+        if (!wantsEndTurn || !canPlayNow()) return
+        wantsEndTurn = false
+        scope.launch { endTurnSeq() }
     }
 
     // ---------- semillas (la bolsa de la mochila) ----------
@@ -671,14 +692,15 @@ class CombatController(
         run.player.seeds[slot] = null
         banner("player", seed.name, null)
         playAnim("player", "cast", null)
-        delay(320)
+        wait(320)
         c.useSeed(id, target)
         refresh()
         spawnFx(c.lastEvents, "burst")
-        delay(400)
+        wait(400)
         if (!c.ended) busy = false
         gate?.notify("seed-use")
         afterEngine()
+        runQueuedEndTurn()
     }
 
     /** Terminar el turno: la mano se descarta y cada enemigo vivo actúa, uno detrás de otro. */
@@ -689,8 +711,22 @@ class CombatController(
             return
         }
         wantsEndTurn = false
+        // «Avisar al terminar el turno»: con cartas que aún puedes jugar, la primera vez solo avisa (fuera del tutorial)
+        if (gate == null && confirmEnd() && !endArmed && hasPlayableCard()) {
+            endArmed = true
+            toast("Aún puedes jugar cartas. Toca «Terminar turno» otra vez para seguir")
+            scope.launch { delay(2500); endArmed = false }
+            return
+        }
+        endArmed = false
         gate?.notify("turn-end")
         scope.launch { endTurnSeq() }
+    }
+
+    /** ¿Queda en la mano alguna carta que se pueda jugar con la energía que tienes? */
+    private fun hasPlayableCard(): Boolean {
+        val p = combat.player
+        return p.hand.any { id -> Cards.get(id)?.let { !it.unplayable && it.cost <= p.energy } == true }
     }
 
     private suspend fun endTurnSeq() {
@@ -700,7 +736,7 @@ class CombatController(
         // 1) la mano vuela al descarte
         deckBump++
         discarding = true
-        delay(if (c.player.hand.isEmpty()) 100 else 400L + c.player.hand.size * 45L)
+        wait(if (c.player.hand.isEmpty()) 100 else 400L + c.player.hand.size * 45L)
         c.endPlayerTurn()
         refresh()
         discarding = false
@@ -708,7 +744,7 @@ class CombatController(
         if (afterEngine()) return
         // 2) turno enemigo
         showTurn(if (c.aliveEnemies().size > 1) "Turno de los enemigos" else "Turno del enemigo", yours = false)
-        delay(900)
+        wait(900)
         for (k in 0 until c.enemies.size) {
             if (c.ended) return
             val e = c.enemies[k]
@@ -717,11 +753,11 @@ class CombatController(
             acting = k
             if (e.getStatus("frozen") != 0) {
                 scope.launch { actors[1 + k].shiver.snapTo(0f); actors[1 + k].shiver.animateTo(1f, tween(300, easing = LinearEasing)) }
-                delay(250)
+                wait(250)
                 c.enemyAct(k)
                 refresh()
                 spawnFx(c.lastEvents, null)
-                delay(750)
+                wait(750)
                 continue
             }
             val move = e.nextMove!!
@@ -735,7 +771,8 @@ class CombatController(
             c.enemyAct(k)
             refresh()
             spawnFx(c.lastEvents, move.fx ?: "claw")
-            delay(max(300, info.dur - info.hit) + c.lastEvents.size * 110L + 120)
+            val baseMove = ANIMS[anim] ?: ANIMS.getValue("cast")
+            wait(max(300, baseMove.dur - baseMove.hit) + c.lastEvents.size * 110L + 120)
         }
         acting = -1
         if (c.ended) { afterEngine(); return }
@@ -745,7 +782,7 @@ class CombatController(
         spawnFx(c.lastEvents, null)
         if (afterEngine()) return
         showTurn("¡Tu turno!", yours = true)
-        delay(400)
+        wait(400)
         if (!c.ended) busy = false
     }
 

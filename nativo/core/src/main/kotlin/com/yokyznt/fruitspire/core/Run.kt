@@ -496,7 +496,8 @@ class Run(val player: Player, val progress: Progress = Progress()) {
 
     // ---------- eventos de misterio ----------
     var currentEvent: EventDef? = null
-    private var lastEventId: String? = null
+    /** El último misterio que salió (no se repite dos veces seguidas); [Save] lo restaura al reanudar un evento. */
+    var lastEventId: String? = null
     /** Lo que le pasó al mazo en el último evento, pozo o cofre (para mostrarlo animado). */
     var deckChanges: List<DeckChange> = emptyList()
     /** Aviso de una trampa (el cofre era un mímico). */
