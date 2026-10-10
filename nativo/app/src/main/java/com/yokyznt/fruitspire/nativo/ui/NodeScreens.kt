@@ -1,6 +1,7 @@
 package com.yokyznt.fruitspire.nativo.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,14 +26,19 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,6 +52,7 @@ import com.yokyznt.fruitspire.core.data.Relics
 import com.yokyznt.fruitspire.core.data.SeedDef
 import com.yokyznt.fruitspire.core.data.Seeds
 import kotlin.math.PI
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** Una carta que se está madurando o quitando: la pantalla la anima antes de que el núcleo cambie el mazo. */
@@ -238,18 +245,69 @@ private fun PriceTag(price: Int, affordable: Boolean, sale: Boolean = false) {
     }
 }
 
+/**
+ * Un artículo de la tienda con su precio. Lleva 8 dp de aire a cada lado (así el hueco de lo comprado puede cerrarse del todo).
+ * [key] ("card:2"…) lo anota para saber desde dónde vuela; [nopeTick] cambia cuando no alcanzó y lo hace temblar (shakeSoft).
+ */
 @Composable
-private fun ShopItem(price: Int?, affordable: Boolean, sale: Boolean = false, enabled: Boolean = true, onClick: () -> Unit, content: @Composable () -> Unit) {
-    Column(Modifier.tutAnchor("shop-items"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Scaled(SHOP_SCALE, CARD_W, CARD_H, Modifier.tap(enabled, onClick)) { content() }
+private fun ShopItem(
+    price: Int?, affordable: Boolean, sale: Boolean = false, enabled: Boolean = true, onClick: () -> Unit,
+    key: String? = null, nopeTick: Int = 0, anchored: Boolean = true, content: @Composable () -> Unit
+) {
+    val shake = remember { Animatable(1f) }
+    var seen by remember { mutableIntStateOf(nopeTick) } // lo que ya traía al componerse no cuenta
+    LaunchedEffect(nopeTick) {
+        if (nopeTick != seen) {
+            seen = nopeTick
+            if (nopeTick > 0) { shake.snapTo(0f); shake.animateTo(1f, tween(SHAKE_MS, easing = LinearEasing)) }
+        }
+    }
+    val rects = LocalLootRects.current
+    val anchor = if (anchored) Modifier.tutAnchor("shop-items") else Modifier
+    Column(
+        Modifier.padding(horizontal = 8.dp).then(anchor).graphicsLayer { translationX = shakeSoft(shake.value) * density },
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        val note = if (key != null) Modifier.noteLootRect(rects, "shop:$key") else Modifier
+        Scaled(SHOP_SCALE, CARD_W, CARD_H, note.tap(enabled, onClick)) { content() }
         if (price != null) PriceTag(price, affordable, sale) else Box(Modifier.height(32.dp))
+    }
+}
+
+/** El hueco de un artículo recién comprado: se desvanece y encoge y luego cierra su ancho para que los demás se deslicen (soldOut, 0,4 s). */
+@Composable
+private fun SoldSlot(sale: ShopSale, onDone: () -> Unit) {
+    val t = remember { Animatable(0f) }
+    LaunchedEffect(sale.id) { t.animateTo(1f, tween(SOLD_MS, easing = LinearEasing)); onDone() }
+    Box(
+        Modifier
+            .layout { measurable, constraints ->
+                val p = measurable.measure(constraints)
+                val w = (p.width * soldPose(t.value).width).roundToInt()
+                layout(w, p.height) { p.placeRelative((w - p.width) / 2, 0) }
+            }
+            // sin capa de opacidad: el contorno de las cartas dibuja fuera de sus límites y se recortaría
+            .graphicsLayer {
+                val pose = soldPose(t.value)
+                alpha = pose.alpha; scaleX = pose.scale; scaleY = pose.scale
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+            }
+    ) {
+        ShopItem(sale.price, affordable = true, sale = sale.sale, enabled = false, onClick = {}, anchored = false) {
+            when (sale.group) {
+                "card" -> Cards.get(sale.itemId)?.let { CardView(it) }
+                "relic" -> Relics.get(sale.itemId)?.let { RelicCardView(it) }
+                else -> Seeds.get(sale.itemId)?.let { SeedCardView(it, false) }
+            }
+        }
     }
 }
 
 @Composable
 fun ShopScreen(
     run: Run, flash: PickFlash?, onBuyCard: (Int) -> Unit, onBuyRelic: (Int) -> Unit, onBuySeed: (Int) -> Unit,
-    onRemoval: () -> Unit, onPick: (Int) -> Unit, onClosePicker: () -> Unit, onLeave: () -> Unit
+    onRemoval: () -> Unit, onPick: (Int) -> Unit, onClosePicker: () -> Unit, onLeave: () -> Unit,
+    sales: List<ShopSale> = emptyList(), nope: ShopNope? = null, onSaleDone: (Int) -> Unit = {}
 ) {
     val stock = run.shopStock ?: return
     if (run.pickerMode == "remove") {
@@ -267,27 +325,56 @@ fun ShopScreen(
             Sprite("node_shop", 46.dp)
             BasicText("Tiendita", style = Fonts.hand(38f))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
-            stock.cards.forEachIndexed { k, item ->
+        // cada fila deja, en el sitio de lo comprado, un hueco que se cierra (SoldSlot) mientras lo comprado vuela a la barra
+        fun tickOf(key: String) = nope?.takeIf { it.key == key }?.tick ?: 0
+        @Composable
+        fun Ghosts(group: String, live: Int, item: @Composable (Int) -> Unit) {
+            shopSlots(live, sales.filter { it.group == group }).forEach { slot ->
+                val ghost = slot.ghost
+                if (ghost != null) androidx.compose.runtime.key("sold${ghost.id}") { SoldSlot(ghost) { onSaleDone(ghost.id) } }
+                else item(slot.live)
+            }
+        }
+        Row(verticalAlignment = Alignment.Top) {
+            Ghosts("card", stock.cards.size) { k ->
+                val item = stock.cards[k]
                 Cards.get(item.cardId)?.let { card ->
-                    ShopItem(item.price, gold >= item.price, item.sale, onClick = { onBuyCard(k) }) { CardView(card, dimmed = gold < item.price) }
+                    androidx.compose.runtime.key(item) {
+                        ShopItem(item.price, gold >= item.price, item.sale, onClick = { onBuyCard(k) }, key = "card:$k", nopeTick = tickOf("card:$k")) {
+                            CardView(card, dimmed = gold < item.price)
+                        }
+                    }
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
-            stock.relics.forEachIndexed { k, item ->
+        Row(verticalAlignment = Alignment.Top) {
+            Ghosts("relic", stock.relics.size) { k ->
+                val item = stock.relics[k]
                 Relics.get(item.relicId)?.let { relic ->
-                    ShopItem(item.price, gold >= item.price, onClick = { onBuyRelic(k) }) { RelicCardView(relic, dimmed = gold < item.price) }
+                    androidx.compose.runtime.key(item) {
+                        ShopItem(item.price, gold >= item.price, onClick = { onBuyRelic(k) }, key = "relic:$k", nopeTick = tickOf("relic:$k")) {
+                            RelicCardView(relic, dimmed = gold < item.price)
+                        }
+                    }
                 }
             }
-            stock.seeds.forEachIndexed { k, item ->
+            Ghosts("seed", stock.seeds.size) { k ->
+                val item = stock.seeds[k]
                 Seeds.get(item.seedId)?.let { seed ->
-                    ShopItem(item.price, gold >= item.price, onClick = { onBuySeed(k) }) { SeedCardView(seed, gold < item.price) }
+                    androidx.compose.runtime.key(item) {
+                        ShopItem(item.price, gold >= item.price, onClick = { onBuySeed(k) }, key = "seed:$k", nopeTick = tickOf("seed:$k")) {
+                            SeedCardView(seed, gold < item.price)
+                        }
+                    }
                 }
             }
             val rp = run.removalPrice()
-            ShopItem(if (stock.removeUsed) null else rp, gold >= rp, enabled = !stock.removeUsed, onClick = onRemoval) { ServiceCardView(stock.removeUsed, gold < rp) }
-            if (stock.isSoldOut) BasicText("…¡lo compraste todo!", style = Fonts.hand(26f, Ink.inkSoft), modifier = Modifier.align(Alignment.CenterVertically))
+            ShopItem(
+                if (stock.removeUsed) null else rp, gold >= rp, enabled = !stock.removeUsed, onClick = onRemoval, nopeTick = tickOf("remove")
+            ) { ServiceCardView(stock.removeUsed, gold < rp) }
+            if (stock.isSoldOut && sales.isEmpty()) {
+                BasicText("…¡lo compraste todo!", style = Fonts.hand(26f, Ink.inkSoft), modifier = Modifier.align(Alignment.CenterVertically).padding(start = 8.dp))
+            }
         }
         StickerButton("Salir", onLeave, Modifier.tutAnchor("shop-leave"), secondary = true, fontSize = 24f)
     }

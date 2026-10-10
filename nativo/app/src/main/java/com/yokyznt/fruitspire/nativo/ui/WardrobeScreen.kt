@@ -1,6 +1,8 @@
 package com.yokyznt.fruitspire.nativo.ui
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -21,8 +23,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,7 +51,15 @@ fun WardrobeScreen(
     progress: Progress, charId: String, rev: Int,
     onSelectChar: (String) -> Unit, onEquip: (String) -> Unit, onClear: (String) -> Unit, onBack: () -> Unit
 ) {
+    // al ponerse algo la fruta da un saltito (dress-pop de la web); esto vive fuera del key(rev), que reconstruye la pantalla en cada cambio
+    var wornTick by remember { mutableIntStateOf(0) }
+    var shownTick by remember { mutableIntStateOf(0) }
+    val equip: (String) -> Unit = { id -> if (progress.isOwned(id)) wornTick++; onEquip(id) }
     key(rev) { // se redibuja cada vez que cambia lo puesto (el progreso no es observable por Compose)
+        val pop = remember { Animatable(1f) }
+        LaunchedEffect(Unit) {
+            if (wornTick > shownTick) { shownTick = wornTick; pop.snapTo(0f); pop.animateTo(1f, tween(500, easing = LinearEasing)) }
+        }
         val ch = World.character(charId) ?: World.characters.first()
         val eq = progress.equippedFor(ch.id)
         val skins = Cosmetics.skinsOf(ch.id)
@@ -68,7 +82,12 @@ fun WardrobeScreen(
                 }
                 val hop by rememberInfiniteTransition(label = "vestidor").animateFloat(0f, 1f, infiniteRepeatable(tween(1500, easing = EaseInOut), RepeatMode.Reverse), label = "salto")
                 Box(Modifier.height(190.dp), contentAlignment = Alignment.BottomCenter) {
-                    Box(Modifier.graphicsLayer { translationY = -hop * 6f * density }) { FruitSprite(ch.id, 176.dp, override = eq) }
+                    Box(
+                        Modifier.graphicsLayer {
+                            translationY = -hop * 6f * density
+                            if (pop.value < 1f) { val (s, r) = dressPopPose(pop.value); scaleX = s; scaleY = s; rotationZ = r }
+                        }
+                    ) { FruitSprite(ch.id, 176.dp, override = eq) }
                 }
                 BasicText(ch.name, style = Fonts.hand(32f))
                 BasicText("${progress.owned.size} de ${Cosmetics.all.size} conseguidos", style = Fonts.body(15f, FontWeight.Medium, Ink.inkSoft))
@@ -83,11 +102,11 @@ fun WardrobeScreen(
                 Modifier.weight(1f).fillMaxHeight().paperPanel().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Section("Colores") { skins.forEach { WardItem(progress, it, it.id == currentSkin) { onEquip(it.id) } } }
+                Section("Colores") { skins.forEach { WardItem(progress, it, it.id == currentSkin) { equip(it.id) } } }
                 Cosmetics.SLOT_NAMES.forEach { (slot, title) ->
                     Section(title) {
                         NoneItem(on = eq.inSlot(slot) == null) { onClear(slot) }
-                        Cosmetics.forSlot(slot, ch.id).forEach { WardItem(progress, it, eq.inSlot(slot) == it.id) { onEquip(it.id) } }
+                        Cosmetics.forSlot(slot, ch.id).forEach { WardItem(progress, it, eq.inSlot(slot) == it.id) { equip(it.id) } }
                     }
                 }
             }

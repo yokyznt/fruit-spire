@@ -1,5 +1,8 @@
 package com.yokyznt.fruitspire.nativo.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,7 +20,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -27,6 +34,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -112,9 +121,36 @@ fun HudBar(
     onDeck: () -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
-    compact: Boolean = false
+    compact: Boolean = false,
+    /** Sube con cada compra que no alcanzó: la casilla del oro tiembla (shakeSoft). */
+    goldNope: Int = 0,
+    /** Sube cuando un objeto se activa en combate: la mochila pulsa (deckBump). */
+    bagBump: Int = 0
 ) {
     val scale = if (compact) 1f else 1.17f
+    // la casilla del oro: se sacude si no alcanzó (shakeSoft) y da un pulso al gastar (coinSpend, 0,45 s)
+    val goldShake = remember { Animatable(1f) }
+    var seenNope by remember { mutableIntStateOf(goldNope) }
+    LaunchedEffect(goldNope) {
+        if (goldNope != seenNope) {
+            seenNope = goldNope
+            goldShake.snapTo(0f); goldShake.animateTo(1f, tween(SHAKE_MS, easing = LinearEasing))
+        }
+    }
+    val bagPulse = remember { Animatable(1f) }
+    var seenBag by remember { mutableIntStateOf(bagBump) }
+    LaunchedEffect(bagBump) {
+        if (bagBump != seenBag) {
+            seenBag = bagBump
+            bagPulse.snapTo(0f); bagPulse.animateTo(1f, tween(500, easing = LinearEasing))
+        }
+    }
+    val goldSpend = remember { Animatable(1f) }
+    var lastGold by remember { mutableIntStateOf(state.gold) }
+    LaunchedEffect(state.gold) {
+        if (state.gold < lastGold) { goldSpend.snapTo(0f); goldSpend.animateTo(1f, tween(SHAKE_MS, easing = LinearEasing)) }
+        lastGold = state.gold
+    }
     val safe = LocalSafeInsets.current
     // en pantallas poco anchas (4:3, tabletas) se quita lo repetido o secundario para que nada se salga por la derecha
     val narrow = LocalDesignWidth.current < 1000f
@@ -147,8 +183,15 @@ fun HudBar(
         }
         // oro
         HudGain(state.gold, Color(0xFFC98A00), "gold") {
+            val spend = spendPulse(goldSpend.value)
             Row(
-                Modifier.rotate(1.5f).chip().padding(start = 8.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
+                Modifier
+                    .graphicsLayer {
+                        translationX = shakeSoft(goldShake.value) * density
+                        rotationZ = -4.5f * spend; scaleX = 1f + .15f * spend; scaleY = 1f + .15f * spend
+                    }
+                    .rotate(1.5f).chip(fill = lerp(Ink.edge, Ink.bananaSoft, spend))
+                    .padding(start = 8.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Sprite("ui_coin", 24.dp)
@@ -158,7 +201,9 @@ fun HudBar(
         // mochila: cuántos objetos, los dos últimos y las semillas
         HudGain(state.bag, Color(0xFF8C5A3C), "bag") {
             Row(
-                Modifier.chip(14.dp, if (state.seedReady) Ink.mintSoft else Ink.edge).tapButton { onBag() }
+                Modifier
+                    .graphicsLayer { if (bagPulse.value < 1f) { val (s, r) = deckBumpPose(bagPulse.value); scaleX = s; scaleY = s; rotationZ = r } }
+                    .chip(14.dp, if (state.seedReady) Ink.mintSoft else Ink.edge).tapButton { onBag() }
                     .padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {

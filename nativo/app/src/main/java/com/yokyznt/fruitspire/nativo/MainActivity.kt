@@ -224,7 +224,8 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
             RunScreen.REST -> RestScreen(run, vm.flash, vm::restHeal, vm::setPicker, vm::pickCard, vm::leaveNode)
             RunScreen.SHOP -> ShopScreen(
                 run, vm.flash, vm::buyShopCard, vm::buyShopRelic, vm::buyShopSeed,
-                vm::startShopRemoval, vm::pickCard, onClosePicker = { vm.setPicker(null) }, onLeave = vm::leaveNode
+                vm::startShopRemoval, vm::pickCard, onClosePicker = { vm.setPicker(null) }, onLeave = vm::leaveNode,
+                sales = vm.sales.toList(), nope = vm.nope, onSaleDone = vm::endSale
             )
             RunScreen.TREASURE, RunScreen.KEY_FOUND, RunScreen.VAULT -> NodeResultScreen(run, vm::collectLoot, vm::dropLoot, vm::leaveNode)
             RunScreen.EVENT -> EventScreen(run, vm::chooseEventOption)
@@ -242,7 +243,7 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
             HudBar(
                 hudStateOf(run, seedReady, vm.flights.toList()), onMenu = { if (tut != null) vm.tutQuit(null) else vm.toMenu() }, onBag = onBag, onDeck = vm::showDeck,
                 onSettings = { if (tut != null) vm.tutDeniedTap() else onSettings() },
-                modifier = Modifier.align(Alignment.TopStart), compact = run.screen == RunScreen.COMBAT
+                modifier = Modifier.align(Alignment.TopStart), compact = run.screen == RunScreen.COMBAT, goldNope = vm.goldNope, bagBump = ctl?.bagBump ?: 0
             )
             FlyLayer(vm.flights.toList(), vm.hudAnchors, vm::landFlight)
         }

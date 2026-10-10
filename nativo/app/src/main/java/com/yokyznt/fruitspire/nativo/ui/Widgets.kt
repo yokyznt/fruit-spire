@@ -1,6 +1,7 @@
 package com.yokyznt.fruitspire.nativo.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -27,6 +28,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -184,8 +186,24 @@ class ToastState {
     @Composable
     fun Host(modifier: Modifier = Modifier) {
         val text = message ?: return
-        LaunchedEffect(serial) { delay(1800); message = null }
-        Box(modifier.paperPanel(radius = 18.dp).padding(horizontal = 22.dp, vertical = 10.dp)) {
+        // toastIn de la web: baja mientras aparece, se queda y se desvanece; un aviso nuevo lo reinicia
+        val progress = remember { Animatable(0f) }
+        LaunchedEffect(serial) {
+            progress.snapTo(0f)
+            progress.animateTo(1f, tween(TOAST_MS, easing = LinearEasing))
+            message = null
+        }
+        Box(
+            modifier
+                .graphicsLayer {
+                    val pose = toastPose(progress.value)
+                    translationY = pose.dy * density
+                    alpha = pose.alpha
+                    // sin capa de opacidad: el contorno y la sombra del panel dibujan fuera de sus límites
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                }
+                .paperPanel(radius = 18.dp).padding(horizontal = 22.dp, vertical = 10.dp)
+        ) {
             BasicText(text, style = Fonts.body(19f, FontWeight.Medium).copy(textAlign = TextAlign.Center))
         }
     }

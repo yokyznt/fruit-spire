@@ -255,8 +255,11 @@ class Actor {
 /** Número o aviso que sube y se desvanece sobre un personaje. */
 class FloatFx(val id: Long, val anchor: String, val text: String, val sprite: String?, val color: Color, val dx: Float)
 
-/** Golpe visual sobre un personaje: tipo (garras, tajo, puñetazo, estallido…). */
+/** Golpe visual sobre un personaje: tipo (garras, tajo, puñetazo, estallido, humo, cosecha…). */
 class HitFx(val id: Long, val anchor: String, val kind: String)
+
+/** Un objeto que se activó en combate y salta sobre la mochila. */
+class RelicPop(val id: Long, val relicId: String)
 
 /** Proyectil que vuela de un personaje a otro. */
 class ProjectileFx(val id: Long, val from: String, val to: String, val color: Color)
@@ -345,6 +348,14 @@ class CombatController(
         private set
     var deckBump by mutableIntStateOf(0)
         private set
+    /** Sube cuando entra energía: la naranja pulsa (`.energy-orange.bump`). */
+    var orangeBump by mutableIntStateOf(0)
+        private set
+    /** Sube cuando un objeto se activa: la mochila de la barra pulsa (`.hud-bag.bump`). */
+    var bagBump by mutableIntStateOf(0)
+        private set
+    /** Los objetos que saltan sobre la mochila al activarse (`relic-pop`, 1,1 s). */
+    val relicPops = mutableStateListOf<RelicPop>()
 
     private var nextId = 1L
     private var slots = ArrayList<Pair<Long, String>>()
@@ -779,7 +790,8 @@ class CombatController(
         projectiles.remove(p)
     }
 
-    private fun spawnFx(events: List<CombatEvent>, fx: String?) {
+    /** Dibuja los efectos de los eventos del motor, uno tras otro (internal: la prueba de efectos lo llama directo). */
+    internal fun spawnFx(events: List<CombatEvent>, fx: String?) {
         events.forEachIndexed { idx, ev -> scope.launch { delay(idx * 130L); spawnOne(ev, fx) } }
     }
 
@@ -806,7 +818,15 @@ class CombatController(
             "returncards" -> { floatText("player", "+${ev.amount} cartas recuperadas", "st_thief", FxHeal); return }
             "breed" -> { floatText(target, "¡Cría!", "st_breed", FxStatus); return }
             "drainenergy" -> { orangeNope++; floatText("player", "-${ev.amount} energía", "st_drained", FxPoison); return }
-            "relic" -> return
+            "relic" -> {
+                // el objeto salta sobre la mochila y la mochila pulsa
+                val relicId = ev.str("relicId") ?: return
+                bagBump++
+                val pop = RelicPop(id(), relicId)
+                relicPops.add(pop)
+                scope.launch { delay(1100); relicPops.remove(pop) }
+                return
+            }
             "exhaust" -> { deckBump++; return }
             "addcard" -> {
                 val card = Cards.get(ev.str("cardId"))
@@ -818,17 +838,20 @@ class CombatController(
             "gold" -> { floatText("player", "+${ev.amount} oro", "ui_coin", FxHeal); audio.play(Sfx.COIN); return }
             "skip" -> { hitFx(target, "ice"); floatText(target, "¡Congelado!", "st_frozen", FxStatus); return }
             "plant", "harvest" -> {
-                if (t == "harvest") Sprouts.get(ev.str("sprout") ?: "")?.let { floatText("player", "¡Cosecha! ${it.name}", it.sprite, FxHeal) }
+                if (t == "harvest") {
+                    hitFx("garden", "harvest") // estallido sobre el viñedo
+                    Sprouts.get(ev.str("sprout") ?: "")?.let { floatText("player", "¡Cosecha! ${it.name}", it.sprite, FxHeal) }
+                }
                 return
             }
-            "energy" -> { floatText("player", "+${ev.amount} energía", null, FxEnergy); return }
+            "energy" -> { orangeBump++; floatText("player", "+${ev.amount} energía", null, FxEnergy); return }
             "negate" -> { floatText(target, "¡Anulado! ${statusName(ev.str("statusId") ?: "")}", "st_wax", FxStatus); return }
-            "revive" -> { floatText(target, "¡Revive!", "st_regrow", FxHeal); return }
+            "revive" -> { hitFx(target, "puff"); floatText(target, "¡Revive!", "st_regrow", FxHeal); return }
             "split" -> { floatText(target, "¡Se divide!", "st_split", FxStatus); return }
             "flee" -> { floatText(target, "¡Huye!", null, FxStatus); return }
             "explode" -> { hitFx(target, "burst"); floatText(target, "¡BOOM!", null, FxDamage); return }
             "clock" -> { toast("¡Se acabó el tiempo! El enemigo se enfurece."); return }
-            "summon" -> { return }
+            "summon" -> { hitFx(target, "puff"); return }
         }
         val a = actorOrNull(target) ?: return
         if (t == "damage" && !ev.flag("poison") && ev.int("blocked") > 0 && !ev.flag("split")) {

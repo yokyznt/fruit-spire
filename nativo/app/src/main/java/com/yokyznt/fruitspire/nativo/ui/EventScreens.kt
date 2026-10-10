@@ -100,29 +100,12 @@ fun EventScreen(run: Run, onOption: (Int) -> Unit) {
     }
 }
 
-/** Lo que le pasó al mazo (madurar, quitar, transformar, maldición que entra), una sola vez y animado al aparecer. */
+/** Lo que le pasó al mazo (madurar, quitar, transformar, maldición que entra): la animación de la web, una vez al aparecer. */
 @Composable
 private fun DeckChangesRow(changes: List<DeckChange>) {
     if (changes.isEmpty()) return
     Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(22.dp), verticalAlignment = Alignment.Top) {
-        changes.take(4).forEachIndexed { i, ch ->
-            val appear = remember { Animatable(0f) }
-            LaunchedEffect(Unit) { kotlinx.coroutines.delay(i * 140L); appear.animateTo(1f, spring(dampingRatio = .55f, stiffness = Spring.StiffnessMediumLow)) }
-            Column(
-                Modifier.graphicsLayer { scaleX = .6f + .4f * appear.value; scaleY = scaleX; alpha = appear.value.coerceIn(0f, 1f) },
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ch.from?.let { id -> Cards.get(id)?.let { c -> Scaled(.4f, CARD_W, CARD_H, Modifier.graphicsLayer { alpha = if (ch.to != null) .55f else 1f }) { CardView(c) } } }
-                    if (ch.from != null && ch.to != null) BasicText("→", style = Fonts.display(28f))
-                    ch.to?.let { id -> Cards.get(id)?.let { c -> Scaled(.4f, CARD_W, CARD_H) { CardView(c, glow = if (ch.kind == "upgrade") Ink.mint else null) } } }
-                }
-                val name = Cards.get(ch.to ?: ch.from)?.name ?: ""
-                val label = when (ch.kind) { "transform" -> "se transformó"; "upgrade" -> "¡madurada!"; "remove" -> "salió de tu mazo"; else -> "entró a tu mazo" }
-                BasicText(name, style = Fonts.hand(18f))
-                BasicText(label, style = Fonts.body(12.5f, color = Ink.inkSoft))
-            }
-        }
+        changes.take(4).forEach { ch -> DeckChangeView(ch) }
     }
 }
 
