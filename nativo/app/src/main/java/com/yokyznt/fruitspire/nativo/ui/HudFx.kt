@@ -212,6 +212,65 @@ private val SpendVals = floatArrayOf(0f, 1f, 0f)
 /** `coinSpend`: 0 en reposo y 1 a los 40 % de 0,45 s (entonces la casilla del oro va a −3°, escala 1,15 y se pinta de banana). */
 fun spendPulse(t: Float): Float = keyed(t, SpendAt, SpendVals, EaseOut)
 
+// ---------------------------------------------------------------------------------------------------------------
+// Combate: el pulso de la energía y de la mochila (deckBump), el objeto que salta (relicPop) y las motas (splatOut)
+// ---------------------------------------------------------------------------------------------------------------
+
+private val EaseBack = CubicBezierEasing(.34f, 1.36f, .64f, 1f)
+
+/** `deckBump` (0,5 s, ease-back por tramo): tamaño y giro (grados) a los [t] (0..1). Sube a 1,18 y −5° al 40 % y baja a 0,97 al 70 %. */
+fun deckBumpPose(t: Float): Pair<Float, Float> {
+    val at = floatArrayOf(0f, .4f, .7f, 1f)
+    return keyed(t, at, floatArrayOf(1f, 1.18f, .97f, 1f), EaseBack) to keyed(t, at, floatArrayOf(-1f, -5f, 1f, -1f), EaseBack)
+}
+
+/** Cómo va el objeto que salta sobre la mochila: opacidad, cuánto ha bajado (dp) y tamaño. */
+class RelicPopPose(val alpha: Float, val dy: Float, val scale: Float)
+
+/** `relicPop` (1,1 s, ease-out por tramo): aparece chico, baja un poco con un salto de tamaño, y se desvanece al final. */
+fun relicPopPose(t: Float): RelicPopPose {
+    val at = floatArrayOf(0f, .25f, .7f, 1f)
+    return RelicPopPose(
+        keyed(t, at, floatArrayOf(0f, 1f, 1f, 0f), EaseOut),
+        keyed(t, at, floatArrayOf(-10f, 8f, 14f, 30f), EaseOut),
+        keyed(t, at, floatArrayOf(.4f, 1.15f, 1f, .8f), EaseOut)
+    )
+}
+
+/** Una mota que sale despedida: [move] es qué parte del camino a su destino lleva (0..1), con su tamaño y opacidad. */
+class SplatPose(val move: Float, val scale: Float, val alpha: Float)
+
+/** `splatOut` (0,6 s, ease-out): sale a 0,3 de su tamaño, llega a su destino a 1 y se desvanece del 60 % al final. */
+fun splatPose(t: Float): SplatPose {
+    val p = t.coerceIn(0f, 1f)
+    val e = EaseOut.transform(p)
+    return SplatPose(e, .3f + .7f * e, keyed(p, floatArrayOf(0f, .6f, 1f), floatArrayOf(1f, 1f, 0f), EaseOut))
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Pase y vestidor: el premio listo que flota (passReady), el nivel recién reclamado (pop) y la fruta al vestirse (dressPop)
+// ---------------------------------------------------------------------------------------------------------------
+
+private val CssEaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
+
+/** `passReady` (1,6 s sin parar, ease-in-out): cuánto sube el premio listo para reclamar (dp, negativo = arriba). [t] es el avance 0..1 del ciclo. */
+fun passFloat(t: Float): Float = keyed(t, floatArrayOf(0f, .5f, 1f), floatArrayOf(0f, -4f, 0f), CssEaseInOut)
+
+/** Cómo va algo que aparece con `pop`: tamaño, giro (grados) y opacidad. */
+class PopPose(val scale: Float, val rot: Float, val alpha: Float)
+
+/** `pop` (0,5 s, ease-back): aparece a 0,3 girado −20° y llega a su tamaño, derecho y opaco. */
+fun popPose(t: Float): PopPose {
+    val e = EaseBack.transform(t.coerceIn(0f, 1f))
+    return PopPose(.3f + .7f * e, -20f * (1f - e), e.coerceIn(0f, 1f))
+}
+
+/** `dressPop` (0,5 s, ease-back por tramo): tamaño y giro de la fruta al ponerse algo: de 0,85 y −6° a 1,08 y 3° al 60 % y de vuelta a 1. */
+fun dressPopPose(t: Float): Pair<Float, Float> {
+    val at = floatArrayOf(0f, .6f, 1f)
+    return keyed(t, at, floatArrayOf(.85f, 1.08f, 1f), EaseBack) to keyed(t, at, floatArrayOf(-6f, 3f, 0f), EaseBack)
+}
+
 /** Cómo va el aviso: opacidad y cuánto le falta bajar (dp, negativo = más arriba de su sitio). */
 class ToastPose(val alpha: Float, val dy: Float)
 

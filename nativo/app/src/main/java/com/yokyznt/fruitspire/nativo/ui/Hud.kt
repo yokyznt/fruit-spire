@@ -123,7 +123,9 @@ fun HudBar(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
     /** Sube con cada compra que no alcanzó: la casilla del oro tiembla (shakeSoft). */
-    goldNope: Int = 0
+    goldNope: Int = 0,
+    /** Sube cuando un objeto se activa en combate: la mochila pulsa (deckBump). */
+    bagBump: Int = 0
 ) {
     val scale = if (compact) 1f else 1.17f
     // la casilla del oro: se sacude si no alcanzó (shakeSoft) y da un pulso al gastar (coinSpend, 0,45 s)
@@ -133,6 +135,14 @@ fun HudBar(
         if (goldNope != seenNope) {
             seenNope = goldNope
             goldShake.snapTo(0f); goldShake.animateTo(1f, tween(SHAKE_MS, easing = LinearEasing))
+        }
+    }
+    val bagPulse = remember { Animatable(1f) }
+    var seenBag by remember { mutableIntStateOf(bagBump) }
+    LaunchedEffect(bagBump) {
+        if (bagBump != seenBag) {
+            seenBag = bagBump
+            bagPulse.snapTo(0f); bagPulse.animateTo(1f, tween(500, easing = LinearEasing))
         }
     }
     val goldSpend = remember { Animatable(1f) }
@@ -191,7 +201,9 @@ fun HudBar(
         // mochila: cuántos objetos, los dos últimos y las semillas
         HudGain(state.bag, Color(0xFF8C5A3C), "bag") {
             Row(
-                Modifier.chip(14.dp, if (state.seedReady) Ink.mintSoft else Ink.edge).tapButton { onBag() }
+                Modifier
+                    .graphicsLayer { if (bagPulse.value < 1f) { val (s, r) = deckBumpPose(bagPulse.value); scaleX = s; scaleY = s; rotationZ = r } }
+                    .chip(14.dp, if (state.seedReady) Ink.mintSoft else Ink.edge).tapButton { onBag() }
                     .padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {

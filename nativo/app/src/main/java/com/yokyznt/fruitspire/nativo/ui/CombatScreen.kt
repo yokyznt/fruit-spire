@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.yokyznt.fruitspire.core.PreviewResult
+import com.yokyznt.fruitspire.core.data.Relics
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -410,9 +411,17 @@ private fun Garden(garden: List<GardenUi>, modifier: Modifier = Modifier) {
 private fun EnergyOrange(energy: Int, max: Int, nope: Int, ctl: CombatController, modifier: Modifier = Modifier) {
     val shake = remember { Animatable(0f) }
     LaunchedEffect(nope) { if (nope > 0) { shake.snapTo(0f); shake.animateTo(1f, tween(400)) } }
+    // pulso al entrar energía (`.energy-orange.bump`, deckBump 0,5 s)
+    val pulse = remember { Animatable(1f) }
+    LaunchedEffect(ctl.orangeBump) {
+        if (ctl.orangeBump > 0) { pulse.snapTo(0f); pulse.animateTo(1f, tween(500, easing = androidx.compose.animation.core.LinearEasing)) }
+    }
     Box(
         modifier.size(124.dp).onGloballyPositioned { ctl.anchors["orange"] = it.boundsInRoot() }
-            .graphicsLayer { translationX = if (shake.value in 0.001f..0.999f) sin(shake.value * PI.toFloat() * 6f) * 8f * density else 0f }
+            .graphicsLayer {
+                translationX = if (shake.value in 0.001f..0.999f) sin(shake.value * PI.toFloat() * 6f) * 8f * density else 0f
+                if (pulse.value < 1f) { val (s, r) = deckBumpPose(pulse.value); scaleX = s; scaleY = s; rotationZ = r }
+            }
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val k = size.width / 140f
@@ -606,11 +615,43 @@ private fun FloatFxView(f: FloatFx, ctl: CombatController) {
     }
 }
 
+/** A dónde va cada mota del humo (`.hit-puff span:nth-child`) y de la cosecha (`.hit-harvest`), en px de diseño. */
+private val PuffDests = listOf(-50f to 0f, 50f to 0f, 0f to -40f)
+private val HarvestDests = listOf(-50f to -30f, 40f to -44f, 56f to 10f, -40f to 20f, 0f to -60f)
+
+/** Un objeto que se activó: salta sobre la mochila de la barra con un resplandor (`relic-pop`, 1,1 s). */
+@Composable
+private fun RelicPopView(pop: RelicPop) {
+    val bag = LocalHudAnchors.current.rects["bag"] ?: return
+    if (Relics.get(pop.relicId) == null) return
+    val t = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { t.animateTo(1f, tween(1100, easing = androidx.compose.animation.core.LinearEasing)) }
+    val density = LocalDensity.current.density
+    Box(
+        Modifier.offset { IntOffset(bag.center.x.roundToInt(), (bag.bottom + 6f * density).roundToInt()) }
+            .wrapContentSize(Alignment.TopStart, unbounded = true)
+            .graphicsLayer {
+                val p = relicPopPose(t.value)
+                translationX = -size.width / 2f
+                translationY = p.dy * density
+                scaleX = p.scale; scaleY = p.scale
+                alpha = p.alpha
+                // sin capa de opacidad: el resplandor dibuja fuera de los límites del dibujo
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+            }
+            .drawBehind { drawCircle(Color(0x66FFCF4D), size.minDimension * .62f) }
+    ) { Sprite(pop.relicId, 64.dp) }
+}
+
 @Composable
 private fun HitFxView(h: HitFx, ctl: CombatController) {
     val a = ctl.anchors[h.anchor] ?: return
     val t = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { t.animateTo(1f, tween(600)) }
+    // el humo y la cosecha siguen la curva `splatOut` de la web (progreso lineal; la suavización va dentro de splatPose)
+    val linear = h.kind == "puff" || h.kind == "harvest"
+    LaunchedEffect(Unit) {
+        t.animateTo(1f, tween(600, easing = if (linear) androidx.compose.animation.core.LinearEasing else androidx.compose.animation.core.FastOutSlowInEasing))
+    }
     val density = LocalDensity.current.density
     val cx = a.center.x
     val cy = a.top + a.height * .45f
@@ -635,6 +676,20 @@ private fun HitFxView(h: HitFx, ctl: CombatController) {
                 val ang = i * 60f * PI.toFloat() / 180f
                 val d = 20f * k + p * 60f * k
                 drawRoundRect(Color(0xFFCDEBF5).copy(alpha = fade), Offset(cx + cos(ang) * d - 7f * k, cy + sin(ang) * d - 7f * k), Size(14f * k, 14f * k), CornerRadius(3f * k))
+            }
+            "puff", "harvest" -> {
+                // `hit-puff` (tres bolas blancas que suben y a los lados) y `hit-harvest` (cinco motas moradas y verdes sobre el viñedo)
+                val puff = h.kind == "puff"
+                val s = splatPose(p)
+                val dests = if (puff) PuffDests else HarvestDests
+                val oy = if (puff) cy else a.center.y
+                dests.forEachIndexed { i, d ->
+                    val r = (if (puff) 22f else 8f) * k * s.scale
+                    val c = Offset(cx + d.first * k * s.move, oy + d.second * k * s.move)
+                    val fill = if (puff) Color.White else if (i % 2 == 1) Color(0xFF9BD66A) else Color(0xFF9B7FD4)
+                    drawCircle(Ink.ink.copy(alpha = s.alpha), r + 2.5f * k, c)
+                    drawCircle(fill.copy(alpha = s.alpha), r, c)
+                }
             }
             "seeds", "splat", "splash", "shock" -> for (i in 0 until 6) {
                 val ang = (i * 60f + 20f) * PI.toFloat() / 180f
@@ -850,7 +905,7 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
             val me = ui.player
             Box {
                 CombatantView(me, ctl.actors[0], ctl, clock, meW, if (multi) 108f else 140f, multi, 0)
-                if (ui.showGarden) Garden(ui.garden, Modifier.align(Alignment.TopCenter))
+                if (ui.showGarden) Garden(ui.garden, Modifier.align(Alignment.TopCenter).onGloballyPositioned { ctl.anchors["garden"] = it.boundsInRoot() })
             }
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                 BasicText("vs", style = Fonts.hand(40f, Color(0xFFA57A4E)), modifier = Modifier.graphicsLayer { rotationZ = -8f })
@@ -893,6 +948,7 @@ fun CombatScreen(ctl: CombatController, bg: String, modifier: Modifier = Modifie
         Box(Modifier.fillMaxSize()) {
             ctl.floats.forEach { f -> key(f.id) { FloatFxView(f, ctl) } }
             ctl.hits.forEach { h -> key(h.id) { HitFxView(h, ctl) } }
+            ctl.relicPops.forEach { p -> key(p.id) { RelicPopView(p) } }
             ctl.projectiles.forEach { p -> key(p.id) { ProjectileView(p, ctl) } }
             ctl.banners.forEach { b -> key(b.id) { BannerView(b, ctl) } }
             ctl.flying?.let { f -> key(f.id) { FlyingCardView(f, ctl) } }

@@ -6,6 +6,12 @@ import com.yokyznt.fruitspire.nativo.ui.flightTarget
 import com.yokyznt.fruitspire.nativo.ui.flyPose
 import com.yokyznt.fruitspire.nativo.ui.gainBump
 import com.yokyznt.fruitspire.nativo.ui.ShopSale
+import com.yokyznt.fruitspire.nativo.ui.deckBumpPose
+import com.yokyznt.fruitspire.nativo.ui.dressPopPose
+import com.yokyznt.fruitspire.nativo.ui.passFloat
+import com.yokyznt.fruitspire.nativo.ui.popPose
+import com.yokyznt.fruitspire.nativo.ui.relicPopPose
+import com.yokyznt.fruitspire.nativo.ui.splatPose
 import com.yokyznt.fruitspire.nativo.ui.shakeSoft
 import com.yokyznt.fruitspire.nativo.ui.shopSlots
 import com.yokyznt.fruitspire.nativo.ui.soldPose
@@ -102,6 +108,62 @@ class HudFxTest {
         val out = toastPose(1f)
         assertEquals(0f, out.alpha, eps); assertEquals(0f, out.dy, eps)
         assertEquals("a medias de la salida va a medio desvanecer", .5f, toastPose(.9f).alpha, eps)
+    }
+
+    // ---- combate: pulso de energía y mochila (deckBump), objeto que salta (relicPop) y motas (splatOut) ----
+
+    @Test fun elPulsoDeEnergiaYMochilaSubeA118ConGiro() {
+        val (s0, r0) = deckBumpPose(0f)
+        assertEquals(1f, s0, eps); assertEquals(-1f, r0, eps)
+        val (s4, r4) = deckBumpPose(.4f)
+        assertEquals(1.18f, s4, eps); assertEquals(-5f, r4, eps)
+        val (s7, r7) = deckBumpPose(.7f)
+        assertEquals(.97f, s7, eps); assertEquals(1f, r7, eps)
+        val (s1, r1) = deckBumpPose(1f)
+        assertEquals(1f, s1, eps); assertEquals(-1f, r1, eps)
+    }
+
+    @Test fun elObjetoQueSaltaAparecePequenoCaeYSeDesvanece() {
+        val a = relicPopPose(0f)
+        assertEquals(0f, a.alpha, eps); assertEquals(-10f, a.dy, eps); assertEquals(.4f, a.scale, eps)
+        val b = relicPopPose(.25f)
+        assertEquals(1f, b.alpha, eps); assertEquals(8f, b.dy, eps); assertEquals(1.15f, b.scale, eps)
+        val c = relicPopPose(.7f)
+        assertEquals(1f, c.alpha, eps); assertEquals(14f, c.dy, eps); assertEquals(1f, c.scale, eps)
+        val z = relicPopPose(1f)
+        assertEquals(0f, z.alpha, eps); assertEquals(30f, z.dy, eps); assertEquals(.8f, z.scale, eps)
+    }
+
+    @Test fun lasMotasSalenPequenasSeAlejanYSeDesvanecenAlFinal() {
+        val a = splatPose(0f)
+        assertEquals(0f, a.move, eps); assertEquals(.3f, a.scale, eps); assertEquals(1f, a.alpha, eps)
+        assertEquals("sigue visible hasta el 60 %", 1f, splatPose(.6f).alpha, eps)
+        val z = splatPose(1f)
+        assertEquals(1f, z.move, eps); assertEquals(1f, z.scale, eps); assertEquals(0f, z.alpha, eps)
+    }
+
+    // ---- pase y vestidor: passReady, pop (just-claimed) y dressPop ----
+
+    @Test fun elPremioListoFlotaCuatroYVuelveACaer() {
+        assertEquals(0f, passFloat(0f), eps)
+        assertEquals(-4f, passFloat(.5f), eps)
+        assertEquals(0f, passFloat(1f), eps)
+    }
+
+    @Test fun elNivelRecienReclamadoApareceGirandoYCreciendo() {
+        val a = popPose(0f)
+        assertEquals(.3f, a.scale, eps); assertEquals(-20f, a.rot, eps); assertEquals(0f, a.alpha, eps)
+        val z = popPose(1f)
+        assertEquals(1f, z.scale, eps); assertEquals(0f, z.rot, eps); assertEquals(1f, z.alpha, eps)
+    }
+
+    @Test fun alPonerseAlgoLaFrutaDaUnSaltito() {
+        val (s0, r0) = dressPopPose(0f)
+        assertEquals(.85f, s0, eps); assertEquals(-6f, r0, eps)
+        val (s6, r6) = dressPopPose(.6f)
+        assertEquals(1.08f, s6, eps); assertEquals(3f, r6, eps)
+        val (s1, r1) = dressPopPose(1f)
+        assertEquals(1f, s1, eps); assertEquals(0f, r1, eps)
     }
 
     @Test fun gastarOroDaUnPulsoQueSubeAl40YVuelve() {

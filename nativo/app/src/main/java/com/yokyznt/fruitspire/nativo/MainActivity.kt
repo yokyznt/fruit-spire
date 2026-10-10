@@ -243,7 +243,7 @@ fun RunHost(vm: GameViewModel, settings: Settings, onSettings: () -> Unit, onBag
             HudBar(
                 hudStateOf(run, seedReady, vm.flights.toList()), onMenu = { if (tut != null) vm.tutQuit(null) else vm.toMenu() }, onBag = onBag, onDeck = vm::showDeck,
                 onSettings = { if (tut != null) vm.tutDeniedTap() else onSettings() },
-                modifier = Modifier.align(Alignment.TopStart), compact = run.screen == RunScreen.COMBAT, goldNope = vm.goldNope
+                modifier = Modifier.align(Alignment.TopStart), compact = run.screen == RunScreen.COMBAT, goldNope = vm.goldNope, bagBump = ctl?.bagBump ?: 0
             )
             FlyLayer(vm.flights.toList(), vm.hudAnchors, vm::landFlight)
         }

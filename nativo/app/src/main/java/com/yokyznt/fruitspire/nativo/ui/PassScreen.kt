@@ -1,5 +1,11 @@
 package com.yokyznt.fruitspire.nativo.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +23,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -25,6 +36,8 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +55,10 @@ import kotlin.math.min
 fun PassScreen(
     progress: Progress, rev: Int, onClaim: (Int) -> Unit, onClaimAll: () -> Unit, onWardrobe: () -> Unit, onBack: () -> Unit
 ) {
+    // el nivel recién reclamado reaparece con `pop` (just-claimed de la web); vive fuera del key(rev), que reconstruye la pista
+    var justClaimed by remember { mutableIntStateOf(0) }
+    // un solo ciclo de 1,6 s para todos los premios listos: flotan 4 dp (passReady); se lee al dibujar, sin recomponer
+    val ready = rememberInfiniteTransition(label = "pase").animateFloat(0f, 1f, infiniteRepeatable(tween(1600, easing = LinearEasing)), label = "flota")
     key(rev) { // se redibuja cada vez que se reclama algo (el progreso no es observable por Compose)
         val st = Pass.state(progress)
         val claimable = Pass.unclaimed(progress)
@@ -68,14 +85,15 @@ fun PassScreen(
                 }
                 XpBar(st.pct, if (st.level >= st.max) "¡Pase completo!" else "${st.into} / ${st.need} XP")
                 StickerButton(
-                    "Reclamar todo${if (claimable > 0) " ($claimable)" else ""}", onClaimAll, color = Ink.banana, enabled = claimable > 0, fontSize = 20f
+                    "Reclamar todo${if (claimable > 0) " ($claimable)" else ""}", { justClaimed = 0; onClaimAll() },
+                    color = Ink.banana, enabled = claimable > 0, fontSize = 20f
                 )
             }
             LazyRow(
                 Modifier.fillMaxWidth().height(236.dp), state = track, horizontalArrangement = Arrangement.spacedBy(14.dp),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically
             ) {
-                items(Pass.rewards) { r -> LevelCard(st, r, onClaim) }
+                items(Pass.rewards) { r -> LevelCard(st, r, { justClaimed = it; onClaim(it) }, pop = r.level == justClaimed, ready = ready) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 StickerButton("Ir al Vestidor", onWardrobe, color = Ink.grapeBtn, fontSize = 20f)
@@ -99,13 +117,27 @@ private fun XpBar(pct: Int, label: String) {
 }
 
 @Composable
-private fun LevelCard(st: Pass.State, r: Pass.Reward, onClaim: (Int) -> Unit) {
+private fun LevelCard(st: Pass.State, r: Pass.Reward, onClaim: (Int) -> Unit, pop: Boolean, ready: State<Float>) {
     val c = Cosmetics.get(r.id) ?: return
     val reached = r.level <= st.level
     val claimed = r.level in st.claimed
     val fill = if (claimed) Ink.mintSoft else if (reached) Ink.bananaSoft else Color(0xFFF1EADB)
+    // recién reclamado: reaparece con `pop` (0,5 s)
+    val appear = remember { Animatable(if (pop) 0f else 1f) }
+    LaunchedEffect(Unit) { if (pop) appear.animateTo(1f, tween(500, easing = LinearEasing)) }
+    val floats = reached && !claimed
     Column(
-        Modifier.width(128.dp).height(204.dp).stickerCard(18.dp, fill = fill, glow = if (reached && !claimed) Ink.banana else null).padding(horizontal = 6.dp, vertical = 8.dp),
+        Modifier.width(128.dp).height(204.dp)
+            .graphicsLayer {
+                if (floats) translationY = passFloat(ready.value) * density
+                if (appear.value < 1f) {
+                    val p = popPose(appear.value)
+                    scaleX = p.scale; scaleY = p.scale; rotationZ = p.rot; alpha = p.alpha
+                    // sin capa de opacidad: el contorno de la ficha dibuja fuera de sus límites y se recortaría
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                }
+            }
+            .stickerCard(18.dp, fill = fill, glow = if (reached && !claimed) Ink.banana else null).padding(horizontal = 6.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
         BasicText("${r.level}", style = Fonts.hand(27f))
