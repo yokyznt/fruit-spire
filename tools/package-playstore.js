@@ -15,7 +15,7 @@ const root = path.resolve(__dirname, '..');
 const nativo = path.join(root, 'nativo');
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith('--')));
-const dest = path.resolve(args.find((a) => !a.startsWith('--')) || path.join(os.homedir(), 'Desktop', 'FruitSpire-PlayStore'));
+const dest = path.resolve(args.find((a) => !a.startsWith('--')) || path.join(os.homedir(), 'Trabajos', 'APKs', 'FruitSpire-PlayStore'));
 
 const say = (m) => console.log(`\n== ${m}`);
 const die = (m) => { console.error(`\nERROR: ${m}`); process.exit(1); };
